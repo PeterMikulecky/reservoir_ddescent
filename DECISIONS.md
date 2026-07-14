@@ -118,6 +118,54 @@ of static inputs. With coupling in the operative range, static gives ~124–159%
 across density — as good as or better than temporal. The static/temporal axis was never
 the binding constraint.
 
+### D015 — The density→PR finding is scoped narrowly; it does NOT bear on Frank's core claim
+**2026-07-14 · Accepted**
+Our result "PR decreases as density increases" is recorded as: *one route* to more wiring
+(uniform ER density at fixed per-synapse weight), in *one* coupling regime, at N=300, one
+input distribution, unstructured graph. It is **not** evidence for or against Frank.
+*Reasoning:* (a) **generalization is still entirely unmeasured** — H1 (PR → generalization)
+is the load-bearing claim and we have not touched it; (b) Recanatesi et al. show
+dimensionality varies widely *at fixed density* by motif arrangement, and reciprocal/trace
+motifs can *raise* it — so "more wiring" arranged differently may well raise PR, and ER
+density is the least structured possible way to add wiring, whereas regulatory networks are
+modular/hierarchical; (c) Litwin-Kumar et al. (2017) find dimension is an **inverted-U** in
+in-degree — our p = 0.02–0.4 at N=300 (K ≈ 6–120) likely sits almost entirely on the
+descending limb (their optimum was K ≈ 9 at N=1000), so we may simply never have observed
+the ascending limb. **Action:** sweep much lower densities before making any directional
+claim. *Standing rule:* no claim about Frank's thesis until generalization is measured.
+
+### D016 — PR is our chosen operationalization of Frank's "dimensionality"; this is an interpretive commitment, not a measurement
+**2026-07-14 · Accepted · refines D002**
+Frank's "overparameterization" is a **parameter count** (as in the ML double-descent
+literature, where the x-axis is #parameters vs #data). Our PR is a property of the
+**representation**. Equating them is a substantive interpretive choice that must be argued
+explicitly in any writeup, not inherited silently. *Consequence:* H5 (does the interpolation
+threshold scale with PR rather than nominal count?) is not a side hypothesis — it is the test
+of whether this very identification holds, and is the most Frank-specific thing we have.
+*Alternative measures to consider:* kernel rank / generalization rank (Legenstein & Maass
+2007), information processing capacity (Dambre et al. 2012).
+
+### D017 — Systematic related-work review precedes further building; E1 repositions toward a fixed-count motif dissociation
+**2026-07-14 · Accepted-provisional (needs group endorsement)**
+A first targeted search shows the individual links we planned to test are largely
+established: readout double descent = random-feature double descent (Belkin 2019);
+density → dimensionality = Litwin-Kumar (2017, feedforward, inverted-U) and Recanatesi
+(2019, recurrent spiking); dimensionality → task performance = Litwin-Kumar 2017,
+Cayco-Gajic 2017, Legenstein & Maass 2007; E2/E3/E4 mechanisms = the very papers Frank
+cites. See REFERENCES.md "Positioning".
+*Decision:* (1) do a **systematic related-work review before further building**; (2)
+reposition E1 away from the density sweep toward the design that appears genuinely open —
+**hold N *and* synapse count fixed, vary only motif structure (SONET) to move PR, and test
+whether generalization tracks PR.** This isolates dimensionality from parameter count and
+directly pits Frank's "dimensionality per se" against "specific circuit features" (motifs
+*are* circuit features), so either outcome is informative. *Enabled by:* Recanatesi et al.'s
+finding that PR varies widely at fixed p by arrangement.
+*Reasoning:* the pilot as designed is largely a re-derivation of known results in a new
+substrate wearing an evolutionary frame. Acceptable for a group pilot; not what we said we
+were building. Better to learn this now than after the flagship run.
+*Open:* whether the group wants novelty at the framing level (evolutionary/comparative,
+E7) or at the result level (the motif dissociation, H5). These call for different investments.
+
 ### D014 — Recurrent coupling uses fixed per-synapse weights (w0), not gain renormalization
 **2026-07-14 · Accepted · supersedes D012**
 `ConnectivityConfig.w0` (fixed per-synapse weight, no renormalization) is the coupling
