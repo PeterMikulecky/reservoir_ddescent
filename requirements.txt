@@ -1,0 +1,7 @@
+brian2>=2.7
+numpy
+scipy
+pandas
+scikit-learn
+statsmodels
+pyarrow

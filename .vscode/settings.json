@@ -1,0 +1,18 @@
+{
+  // Use the project virtual environment created by setup.bat
+  "python.defaultInterpreterPath": ".venv\\Scripts\\python.exe",
+  "python.terminal.activateEnvironment": true,
+
+  // Default the integrated terminal to Windows cmd (matches the project docs)
+  "terminal.integrated.defaultProfile.windows": "Command Prompt",
+
+  // Keep run OUTPUT data off the local drive: point this at another drive, then
+  // uncomment. Scripts and provenance read DDESCENT_RUNS_ROOT automatically.
+  // (Leave commented to default outputs to <repo>\runs on the local disk.)
+  // "terminal.integrated.env.windows": { "DDESCENT_RUNS_ROOT": "D:\\ddescent_runs" },
+
+  // Don't let VS Code index/watch the (potentially huge) outputs tree
+  "files.exclude": { "**/__pycache__": true, "**/*.egg-info": true },
+  "files.watcherExclude": { "**/runs/**": true },
+  "search.exclude": { "**/runs/**": true }
+}
