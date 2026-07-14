@@ -99,9 +99,9 @@ scripts and the project's path/env conventions target cmd; PowerShell differs on
 invocation and env syntax.
 
 ### D012 — E1 flagship pivots from static to temporal inputs
-**2026-07-14 · Accepted-provisional**
+**2026-07-14 · SUPERSEDED by D014 (2026-07-14)** — the premise was a misdiagnosis; see D014.
 E1 (the fixed-N dissociation) moves from static input patterns to a temporal task.
-*Reasoning:* the T0 tuning sweep showed that with static, settled-state reading, PR
+*Reasoning (as stated at the time, now known to be wrong):* the T0 tuning sweep showed that with static, settled-state reading, PR
 varies <2% across the full connectivity range (and only ~3.7% even reading the
 transient) — PR is anchored to input dimensionality, and recurrent connectivity is only
 a second-order effect. Recurrence genuinely shapes effective dimensionality only when
@@ -113,6 +113,52 @@ models (instantaneous map → memory/trajectory system); requires re-examining w
 H1–H5 need restatement. See design_doc.md temporal-pivot revision.
 *Rejected:* staying static with higher input dim K and a chaotic regime — likely fights
 the same input-anchoring problem.
+**Why superseded:** the flat PR was an artifact of our own weight scaling, not a property
+of static inputs. With coupling in the operative range, static gives ~124–159% PR spread
+across density — as good as or better than temporal. The static/temporal axis was never
+the binding constraint.
+
+### D014 — Recurrent coupling uses fixed per-synapse weights (w0), not gain renormalization
+**2026-07-14 · Accepted · supersedes D012**
+`ConnectivityConfig.w0` (fixed per-synapse weight, no renormalization) is the coupling
+mode for E1. Operative range for this LIF model is **w0 ≈ 0.5–3.0**.
+
+*Reasoning — two compounding faults found, both ours, not the model's:*
+1. **Renormalization erased the effect under test.** Both prior modes held effective
+   coupling ~constant as density varied: the `spectral_radius` mode rescales W to a fixed
+   target rho; the `gain` mode divides by √(p·N), which also pins rho ≈ gain. Sweeping
+   density while renormalizing gain holds constant the very quantity that mediates
+   density → dimensionality. Recanatesi et al. (2019) vary connection probability
+   *without* renormalizing, and dimensionality responds strongly.
+2. **The weight scale was ~60× too small for recurrence to matter at all.** Control test:
+   at w0 = 0.05 (≈ what spectral-radius normalization produced) PR was numerically
+   identical to a network with *no recurrent synapses whatsoever* (15.06 vs 14.97).
+   The "edge of chaos at rho ≈ 1" heuristic is a **rate-network** result; in this spiking
+   LIF model with reset and refractoriness, the entire rho ∈ [0.5, 2.0] sweep sits in a
+   dead zone where recurrence has no measurable effect on PR.
+
+*Evidence:* with w0 in the operative range, PR spread across density = **124–159% (static)**
+and **127% (temporal)**, versus ~0–4% under renormalization. Direction matches Recanatesi
+et al.: **PR decreases as density increases.**
+
+*Consequences:*
+- **E1 is viable, and stays static.** No framing change; H1–H5 need no restatement on this
+  account. The design_doc temporal-pivot revision is not needed.
+- **H2 gains strong prior support.** Frank's intuition is that more wiring → more
+  dimensionality; Recanatesi et al. and our own data both show dimensionality *decreasing*
+  with connectivity. This sharpens H2 from "possibly non-monotonic" to a directional
+  prediction with independent literature backing.
+- `spectral_radius` is retained only for legacy comparison and is documented as unsuitable
+  for E1; the ConnectivityConfig docstrings now carry the warning.
+- **Methodological lesson (generalize this):** when sweeping a structural variable, verify
+  no normalization is holding the mediating quantity constant, and run a
+  *disconnected-network control* to confirm the manipulated component has any effect at all
+  before interpreting a null. Both faults were invisible to the tuning sweep, which was
+  measuring a real quantity in a regime where the independent variable did nothing.
+
+*Credit:* found via targeted literature search (Recanatesi/Ocker/Buice/Shea-Brown 2019,
+PLOS Comp Biol; Legenstein & Maass 2007; Büsing et al. 2010), not from first-principles
+reasoning — which had produced a confident and wrong mechanistic story.
 
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**

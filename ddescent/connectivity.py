@@ -30,8 +30,23 @@ import numpy as np
 class ConnectivityConfig:
     N: int = 1000
     density: float = 0.1          # p: fraction of possible recurrent synapses present
-    spectral_radius: float | None = 0.95  # target rho of linear W; None -> use raw gain
-    gain: float = 1.0             # scale used when spectral_radius is None
+    # --- coupling mode: pick ONE ---
+    w0: float | None = None       # PREFERRED for E1. Fixed per-synapse weight scale, NO
+                                  # renormalization: adding synapses genuinely increases
+                                  # recurrent coupling. This is the Recanatesi et al. (2019)
+                                  # setup and the ONLY mode in which density can move PR.
+                                  # Operative range for this LIF model is ~0.5-3.0; values
+                                  # ~0.05 leave recurrence numerically negligible.
+    spectral_radius: float | None = 0.95  # target rho of the LINEAR W. WARNING: this
+                                  # renormalizes gain, which HOLDS COUPLING CONSTANT as
+                                  # density varies and therefore ERASES the density->PR
+                                  # effect. Also note rho~1 is a rate-network notion of the
+                                  # edge of chaos; in this spiking model with reset and
+                                  # refractoriness, rho<=2 is still in the regime where
+                                  # recurrence has no measurable effect on PR. Use w0 for E1.
+    gain: float = 1.0             # used when spectral_radius is None and w0 is None;
+                                  # scales by 1/sqrt(p*N), which ALSO renormalizes away
+                                  # the density effect. Kept for legacy comparisons only.
     ei_split: float | None = None # e.g. 0.8 -> 80% excitatory (Dale's law). None -> unsigned
     seed: int | None = None
 
@@ -67,6 +82,16 @@ def make_recurrent_weights(cfg: ConnectivityConfig) -> np.ndarray:
 
 
 def _rescale_gain(W: np.ndarray, cfg: ConnectivityConfig, rng) -> np.ndarray:
+    """Apply the chosen coupling mode.
+
+    IMPORTANT (see DECISIONS.md D014): the w0 mode is the only one that preserves the
+    density -> coupling -> dimensionality pathway. Both renormalizing modes below hold
+    the spectral radius ~constant as density varies, which makes PR inert to density --
+    the artifact that stalled the T0 tuning sweeps.
+    """
+    if cfg.w0 is not None:
+        # fixed per-synapse strength; total recurrent coupling grows with density
+        return W * cfg.w0
     if cfg.spectral_radius is not None:
         rho = _spectral_radius(W)
         if rho > 0:
