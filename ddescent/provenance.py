@@ -84,6 +84,16 @@ def git_info(repo_dir: Path) -> tuple[str, bool]:
         return "nogit", False
 
 
+def git_message(repo_dir: Path) -> str:
+    """Return the subject line of HEAD's commit ('' if unavailable). A bare hash is
+    opaque in a lab notebook; the message is what makes a run's code state legible."""
+    try:
+        return subprocess.run(["git", "-C", str(repo_dir), "log", "-1", "--pretty=%s"],
+                              capture_output=True, text=True, check=True).stdout.strip()
+    except Exception:
+        return ""
+
+
 def _codever(commit: str, dirty: bool) -> str:
     return f"g{commit}" + ("+dirty" if dirty else "")
 
@@ -129,6 +139,7 @@ class Run:
     runhash: str
     dir: Path
     manifest: dict = field(default_factory=dict)
+    project_root: Path | None = None      # repo root; where LAB_NOTEBOOK.md lives
 
     # canonical subdirectories
     @property
@@ -152,12 +163,46 @@ class Run:
     def table_path(self, slug: str = "results", ext: str = "parquet") -> Path:
         return self.data / f"{slug}.{ext}"
 
-    def finalize(self, status: str = "complete", **extra):
+    def finalize(self, status: str = "complete", notebook_note: str | None = None,
+                 notebook: bool = True, **extra):
         self.manifest["status"] = status
         self.manifest["finished_utc"] = datetime.now(timezone.utc).isoformat()
         self.manifest.update(extra)
         _robust_write(self.dir / "manifest.json", json.dumps(self.manifest, indent=2))
         _update_index(self)
+        # auto-append the factual skeleton to the lab notebook (skip smoke tests).
+        # The interpretation line is left blank on purpose, for a human to fill in.
+        if notebook and self.project_root and self.manifest.get("type") != "smoke":
+            _append_notebook(self.project_root, self.manifest, notebook_note)
+
+
+# ------------------------------------------------------------------ notebook
+def _append_notebook(project_root: Path, manifest: dict, note: str | None):
+    """Append a dated, factual run stub to LAB_NOTEBOOK.md with a blank interpretation
+    line. Facts are automatic; meaning is hand-written. The notebook lives in the repo
+    (version-controlled), NOT in the runs tree, because it is narrative, not data."""
+    nb = Path(project_root) / "LAB_NOTEBOOK.md"
+    when = (manifest.get("finished_utc") or "")[:16].replace("T", " ")
+    git = manifest.get("git_commit", "?")
+    msg = manifest.get("git_message", "")
+    gitstr = f"`g{git}`" + (f" ({msg})" if msg else "")
+    if manifest.get("git_dirty"):
+        gitstr += " +dirty"
+    entry = (
+        f"\n## {when} — `{manifest.get('run_id','?')}`  <!-- auto -->\n"
+        f"- type `{manifest.get('type','?')}` · stage `{manifest.get('stage','?')}` · "
+        f"git {gitstr} · status **{manifest.get('status','?')}**\n"
+        f"- result: {note or '(no result note passed to finalize)'}\n"
+        f"- _interpretation:_ \n"
+    )
+    try:
+        if not nb.exists():
+            nb.write_text("# Lab notebook\n\n(newest entries at the bottom; "
+                          "`<!-- auto -->` stubs are machine-written, prose is hand-written)\n")
+        with open(nb, "a", encoding="utf-8") as f:
+            f.write(entry)
+    except Exception:
+        pass   # never let notebook I/O break a run's finalize
 
 
 # ------------------------------------------------------------------ factory
@@ -212,6 +257,7 @@ def new_run(stage: str, run_type: str, *, project_root: str | Path = ".",
     manifest = dict(
         run_id=rid, runhash=rh, stage=stage, slug=CANONICAL[stage],
         type=run_type, tag=tag, git_commit=commit, git_dirty=dirty,
+        git_message=git_message(root),
         created_utc=datetime.now(timezone.utc).isoformat(), finished_utc=None,
         status="running", hostname=socket.gethostname(), user=_safe_user(),
         runs_root=str(runs_base),
@@ -222,7 +268,7 @@ def new_run(stage: str, run_type: str, *, project_root: str | Path = ".",
         notes=notes,
     )
     _robust_write(run_dir / "manifest.json", json.dumps(manifest, indent=2))
-    run = Run(rid, rh, run_dir, manifest)
+    run = Run(rid, rh, run_dir, manifest, project_root=root)
     _update_index(run)
     return run
 

@@ -59,17 +59,28 @@ def _probe_cell(payload: dict) -> dict:
     X = res.run_static(U)
     eps = 1e-6
     return dict(bias=p["bias"], input_gain=p["ig"], spectral_radius=p["sr"],
-                density=p["density"], pr=participation_ratio(X),
-                effective_rank=effective_rank(X),
+                density=p["density"], present_ms=p["res_kw"].get("present_ms", 150.0),
+                pr=participation_ratio(X), effective_rank=effective_rank(X),
                 activity=float((X > eps).mean()), rate=float(X.mean()))
 
 
 def run_cells(grid: dict, N, K, n_probe, seed, res_kw, n_workers, verbose=True) -> pd.DataFrame:
     import itertools
+    present_list = grid.get("present_ms_list") or [res_kw.get("present_ms", 150.0)]
     cells = list(itertools.product(grid["biases"], grid["gains"],
-                                   grid["radii"], grid["densities"]))
+                                   grid["radii"], grid["densities"], present_list))
+
+    def _cell_res_kw(pm):
+        # derive readout window / sampling so short (transient) reads still work
+        rk = dict(res_kw)
+        rk["present_ms"] = pm
+        rk["readout_window_ms"] = min(rk.get("readout_window_ms", 60.0), 0.6 * pm)
+        rk["sample_ms"] = max(2.0, pm / 10.0)
+        return rk
+
     payloads = [dict(bias=b, ig=g, sr=r, density=d, N=N, K=K, n_probe=n_probe,
-                     seed=seed, res_kw=res_kw) for (b, g, r, d) in cells]
+                     seed=seed, res_kw=_cell_res_kw(pm))
+                for (b, g, r, d, pm) in cells]
     rows = []
     if n_workers <= 1:
         for i, pl in enumerate(payloads):
@@ -88,7 +99,8 @@ def run_cells(grid: dict, N, K, n_probe, seed, res_kw, n_workers, verbose=True) 
 
 
 def aggregate(df: pd.DataFrame) -> pd.DataFrame:
-    g = (df.groupby(["bias", "input_gain", "spectral_radius"])
+    keys = ["bias", "input_gain", "spectral_radius", "present_ms"]
+    g = (df.groupby(keys)
            .agg(pr_mean=("pr", "mean"), pr_max=("pr", "max"), pr_min=("pr", "min"),
                 pr_std=("pr", "std"), activity_mean=("activity", "mean"),
                 rate_mean=("rate", "mean"))
@@ -138,6 +150,9 @@ def main():
     ap.add_argument("--gains", type=_floats, default=None)
     ap.add_argument("--radii", type=_floats, default=None)
     ap.add_argument("--densities", type=_floats, default=None)
+    ap.add_argument("--present-ms", type=_floats, default=None,
+                    help="sweep readout timing: short values read the recurrent "
+                         "TRANSIENT (restores PR responsiveness); e.g. 20,40,80,150")
     ap.add_argument("--tag", default=None)
     ap.add_argument("--project-root", default=".")
     ap.add_argument("--runs-root", default=None)
@@ -149,14 +164,17 @@ def main():
                       ("radii", args.radii), ("densities", args.densities)]:
         if val is not None:
             grid[name] = val
+    if args.present_ms is not None:
+        grid["present_ms_list"] = args.present_ms
     N = args.N or preset["N"]
     n_probe = args.n_probe or preset["n_probe"]
     workers = 1 if (args.smoke or args.preset == "smoke") else args.workers
 
     cfg = dict(grid=grid, N=N, K=preset["K"], n_probe=n_probe, seed=args.seed,
                res_kw=preset["res_kw"], workers=workers, preset=args.preset)
+    n_present = len(grid.get("present_ms_list") or [1])
     n_cells = (len(grid["biases"]) * len(grid["gains"]) *
-               len(grid["radii"]) * len(grid["densities"]))
+               len(grid["radii"]) * len(grid["densities"]) * n_present)
 
     run = P.new_run("T0", preset["run_type"], project_root=args.project_root,
                     runs_root=args.runs_root, config=cfg, tag=args.tag or preset["tag"],
@@ -199,18 +217,24 @@ def main():
                 print("     the recurrent TRANSIENT rather than the settled fixed point, or "
                       "move to temporal inputs.")
         print("\ntop candidate operating points:")
-        show = ["bias", "input_gain", "spectral_radius", "pr_mean", "pr_max",
-                "pr_range", "activity_mean", "healthy"]
+        show = ["bias", "input_gain", "spectral_radius", "present_ms", "pr_mean",
+                "pr_max", "pr_range", "activity_mean", "healthy"]
         print(ranked[show].head(8).round(3).to_string(index=False))
 
         best = ranked.iloc[0]
         chosen = dict(bias=float(best.bias), input_gain=float(best.input_gain),
                       spectral_radius=float(best.spectral_radius),
+                      present_ms=float(best.present_ms),
                       pr_mean=float(best.pr_mean), pr_max=float(best.pr_max),
                       pr_range=float(best.pr_range), activity_mean=float(best.activity_mean),
                       healthy=bool(best.healthy))
         (run.analysis / "chosen_operating_point.json").write_text(pd.Series(chosen).to_json(indent=2))
-        run.finalize(status="complete", n_conditions=len(df), chosen_operating_point=chosen)
+        note = (f"{n_healthy}/{len(agg)} healthy; best pr_range={best.pr_range:.2f} "
+                f"(pr_mean={best.pr_mean:.1f}); peak PR={agg.pr_max.max():.1f}; "
+                f"chosen bias={best.bias} gain={best.input_gain} sr={best.spectral_radius} "
+                f"present_ms={best.present_ms}")
+        run.finalize(status="complete", n_conditions=len(df), chosen_operating_point=chosen,
+                     notebook_note=note)
         print(f"\nsuggested operating point written to chosen_operating_point.json")
         print("  (inspect operating_points.parquet before committing to it)")
     except Exception as e:
