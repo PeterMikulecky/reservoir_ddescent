@@ -269,6 +269,46 @@ required. At N=1000, pop 50 × 100 gens ≈ **1–2 h on 6 workers**. Affordable
 *Also:* N=1000 matches the group's original brainstorm and both Litwin-Kumar (2017) and
 Recanatesi (2019) — direct comparability. Prototype at N=300; scaling checks per D020.
 
+### D025 — Metric strategy: store the spectrum, not the scalars; tier by real cost
+**2026-07-14 · Accepted**
+Adopt PJM's principle (collecting beats re-running), but implement it by storing **the
+object the metrics derive from**, not a longer list of scalars.
+*Core insight:* PR, edof, effective rank, kernel rank and spectral entropy are all
+**functionals of the same eigenvalue spectrum**. So `metrics.spectrum()` stores the top-k
+singular values (float32, ~320 B/individual → **1.6 MB per 5000-evaluation GA run**), and
+every spectral metric — including ones we have not thought of — is recoverable post hoc
+without re-running anything. Verified: PR and edof recomputed from the stored spectrum alone.
+*Why this matters concretely:* at our operative point PR = 14.6 but **edof ≈ 79** — same
+spectrum, two functionals, 5× disagreement. Storing only PR would have made D018's edof
+question unanswerable without a full re-run.
+*Cost tiers (measured):*
+- **FREE** (battery = 113 ms vs 2400 ms simulation, <5% overhead): spectrum, PR, edof at
+  several κ, effective rank, spectral entropy, numerical/kernel rank, rate + diversity +
+  synchrony stats, weight norm, synapse count, sparse spectral radius.
+- **CHEAP** (one extra sim pass): generalization rank (needs noisy input variants).
+- **EXPENSIVE** (separate protocol per individual): IPC (Dambre), Lyapunov exponent,
+  robustness interval. **Do NOT run per-individual in a 5000-eval GA** — run on the final
+  evolved population or a curated subset, where they are informative anyway.
+- **Irrelevant**: energy efficiency (not a hardware project).
+*Optimizations that made it free:* derive rank from the already-computed spectrum rather than
+a second SVD; subsample neurons for the O(N²) correlation; sparse `eigs` for spectral radius
+instead of O(N³) full `eig`. (3× speedup, identical values.)
+*On the source list:* it recommends targeting spectral radius ≈ 1 for the edge of chaos —
+the **rate-network heuristic D014 disproved for this LIF model** (our whole ρ ∈ [0.5, 2.0]
+sweep was a dead zone; the battery now measures ρ = 8.4 at the operative w0, independently
+confirming it). ρ is retained as a *descriptor* for literature comparability (Recanatesi's
+density effect concentrates near ρ→1), **not** a tuning target. The list also omits **edof**,
+the most relevant quantity per D018.
+*Guard against the obvious hazard:* breadth invites the garden of forking paths. **PR remains
+the pre-specified confirmatory measure (D002/D016); everything else in the battery is
+exploratory** and must be reported as such. The `reg` firewall and pre-registration exist to
+keep this honest — a 20-metric battery mined for whichever correlates with generalization is
+p-hacking with extra steps.
+*Also store:* raw state matrices X for a **subsample** (e.g. best + a few random individuals
+per generation), which future-proofs *non*-spectral state metrics too. Full storage is ~800 KB
+per individual → ~4 GB per run; subsampling keeps that manageable.
+*Credit:* PJM.
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this
