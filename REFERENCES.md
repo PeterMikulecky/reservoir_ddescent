@@ -129,6 +129,49 @@ capacity of dynamical systems. *Sci. Rep.* 2, 514.
 — Task-independent capacity measure; a principled alternative to task-specific error.
 **Priority read** — could strengthen our outcome measure.
 
+## Reservoir dynamics, capacity, and the input-scaling tradeoff (searched 2026-07-16, after D030)
+
+**Dambre, J., Verstraeten, D., Schrauwen, B., Massar, S. (2012).** Information processing
+capacity of dynamical systems. *Sci. Rep.* 2, 514.
+— 🔴🟢 **Two results that bear directly on the project.**
+(1) **The memory–nonlinearity tradeoff**, mediated by **input scaling**. Memory-intensive
+tasks favour near-linear dynamics (low input scaling: inputs map directly into distinct
+states); nonlinear tasks need much larger input weights. The optimum spans **~100x** across
+tasks. **This IS our D030 gain tension** — our 0.1 -> 10 finding is a rediscovery of this
+curve, and our nested-tanh task being nonlinear is why high gain wins. Reassuring: the
+parameter space is mapped, we were not lost in it.
+(2) **Total computational capacity is bounded by the number of linearly independent state
+variables, and EQUALS it under fading memory** — "the total number of linearly independent
+functions of its stimuli the system can compute." **Implication for Frank: N sets the
+ceiling; connectivity determines how much of the ceiling is USED, never raises it.** Our
+density->PR result reframes as *connectivity wastes capacity*, not *creates dimensionality*.
+
+**Hülser, T., et al. (2022/2023).** Deriving task specific performance from the information
+processing capacity of a reservoir computer. *Nanophotonics*.
+— 🔴 **The strongest prior against H1 we have found.** Demonstrates on standard benchmarks
+that **total IPC correlates POORLY with task-specific performance**. What predicts performance
+is the **decomposition** of capacity across basis functions, weighted by the task's actual
+requirements. A single scalar dimensionality measure is precisely what this literature has
+tested and found wanting. **Our D028 wobble — PR predicting in the variance channel,
+anti-predicting in the mean channel — looks less like our bug and more like this phenomenon.**
+*Consequence:* H1 ("PR predicts generalization") may be answering a question the field has
+already answered in the negative. See D031.
+
+**Verstraeten, D., Dambre, J., Dutoit, X., Schrauwen, B. (2010).** Memory versus non-linearity
+in reservoirs. *IJCNN*. — The tradeoff's first systematic treatment.
+
+**"Boosting reservoir computing with brain-inspired adaptive control of E-I balance"**
+(arXiv:2504.12480, 2025).
+— 🟢 **A concrete fix for our saturation problem.** Adaptive inhibitory control of E/I balance
+improves RC performance *across* input link scaling, with the largest gains near each task's
+optimum. Directly relevant: at the useful gain (~10) our network **saturates** (activity 0.935)
+and PR responsiveness collapses to 6%. `ConnectivityConfig.ei_split` exists and is **unused**.
+E/I balance may restore dynamic range in the regime that actually computes — i.e. it may
+dissolve the D030 tension rather than force a choice.
+
+**Jaeger, H. (2002).** Short-term memory in echo state networks. — MC <= N for i.i.d. input;
+the origin of the capacity-bounded-by-N result.
+
 ## E/I structure and heterogeneity (unexplored levers for us)
 
 **"How the layer-dependent ratio of excitatory to inhibitory cells shapes cortical coding in

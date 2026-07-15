@@ -497,6 +497,46 @@ at all.
 sane — they weren't, in-distribution either. D029 was correct and still needed; it just was not
 the binding problem.
 
+### D031 — The literature says our D030 tension is known, and that H1 may be asking a question already answered "no"
+**2026-07-16 · Accepted** (findings) · **Open** (what to do about it)
+Targeted search on spiking-reservoir parameter space, prompted by the run of surprises.
+
+**1. The gain tension is Dambre et al.'s memory–nonlinearity tradeoff.** Mediated by input
+scaling; task-dependent optimum spanning **~100x**; memory tasks want low scaling, nonlinear
+tasks want high. **Our 0.1 -> 10 (D030) is a rediscovery of this curve.** Our task is nonlinear,
+so high gain winning is *expected*. Reassuring: the space is mapped; we were not thrashing.
+
+**2. Total capacity is bounded by N and equals it under fading memory** (Dambre 2012).
+**Connectivity cannot raise the ceiling — only determine how much is used.** Reframes our
+density->PR finding: connectivity **wastes capacity** rather than **creating dimensionality**.
+Coherent with Frank's "more parameters -> more capacity" (N is the parameter), but it means
+wiring *reallocates*.
+
+**3. The serious one: total IPC correlates POORLY with task-specific performance** (Hülser et
+al.). What predicts performance is the **decomposition** of capacity across basis functions,
+weighted by task requirements — not any single scalar. **This is a strong prior against H1 as
+operationalized** (D002/D016: PR as the measure). The field has tested "does a scalar
+dimensionality measure predict performance" and found it wanting. **D028's wobble (PR predicts
+in the variance channel, anti-predicts in the mean channel) now looks less like our bug and
+more like this known phenomenon.**
+
+**4. A concrete fix for the D030 tension:** adaptive E/I balance control boosts RC performance
+across input scaling (arXiv:2504.12480). At our useful gain (~10) the network **saturates**
+(activity 0.935, PR responsiveness 6%). `ei_split` exists and is **unused**. E/I balance may
+**dissolve** the tension rather than force a choice between computing and having a live PR axis.
+**Try this before concluding E9's premise fails.**
+
+**What this opens (not yet decided).** If a scalar dimensionality measure cannot predict
+performance, the sharper — and more novel — question may not be "does dimensionality predict
+generalization" (largely answered, no) but **"does SELECTION ALLOCATE capacity toward
+generalizable functions?"** That is E9 with an **IPC decomposition** as the measure instead of
+PR. It keeps the evolutionary novelty (the literature still has no selection), uses the
+field's own validated instrument, and sidesteps the objection that our measure is known not to
+work. Cost: IPC is EXPENSIVE (D025 tiers it as per-population, not per-individual). Requires
+thought before committing.
+*Credit:* PJM's call for the search — the second time this instinct has caught something two
+sessions of reasoning missed (cf. D014).
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this
