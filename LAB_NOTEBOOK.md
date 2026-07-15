@@ -207,3 +207,8 @@ instead of discarding it). Without any one of them, the variance channel would s
 E9. See QUEUE.md.
 
 <!-- Future run stubs will be auto-appended below this line. -->
+
+## 2026-07-15 18:57 — `T0-tune_operating_point__20260715-184541__exp__gc50dabe__coarse-w0-skill`  <!-- auto -->
+- type `exp` · stage `T0` · git `gc50dabe` (D030: baseline gate - reservoir loses to raw input at T0's operating point; T0 rev3 gates on skill; D029 task fix) · status **complete**
+- result: skill_med=1.45 (baseline 0.217); 79/135 conditions beat baseline; chosen bias=0.6 gain=10.0; PR_mean=7.4 PR_var=27.0
+- _interpretation:_ 
