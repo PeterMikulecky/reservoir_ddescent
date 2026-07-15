@@ -45,6 +45,57 @@ That silently fuses **two quantities the ML literature carefully separates**:
 In a typical ML network, P and D both scale with width, so they move together and you cannot
 tell which one double descent is *about*. **They are confounded by construction.**
 
+## 2b. Ontology: phenotype, fitness, metrics (PJM, 2026-07-16 — corrects a confusion of mine)
+
+**The phenotype is the network's dynamic behavior in response to an environment. The behavior
+itself.** Mean rate, rate vector, variance, spectrum, PR — these are **measurements of** the
+phenotype, not candidates for **being** it. Asking "which summary is the phenotype?" is
+malformed, like asking whether an organism's phenotype is its weight or its height.
+
+Three things I had fused, now separate:
+
+| | what it is | who chooses |
+|---|---|---|
+| **Phenotype** | the network's behavior under an environment — the thing itself | nature |
+| **Fitness** | a functional of (behavior × environment). What **selection** reads. | **us — a design choice** |
+| **Metrics** | other functionals of behavior. What **we** read. | us — measurement |
+
+**This dissolves the channel tangle.** "Which channel?" was ontological-sounding and
+unanswerable because it was two questions at once:
+1. *Which functional does **fitness** read?* — a design decision, defensible on biological grounds.
+2. *Which functional's **dimensionality** predicts generalization?* — the experiment.
+D026/D027/D028 were an attempt to answer both under one label. They come apart cleanly now.
+
+**And it opens the sharper question.** If the phenotype is behavior, then **behavior has a
+dimensionality too** — not only the internal state. So "what is D?" is not merely *which
+internal channel*, but **internal representation, or expressed behavior?** Frank's "regulatory
+dimensionality" is ambiguous between them, and our substrate can measure both. That is a
+sharper form of the P-vs-D question than §5 states.
+
+## 2c. What survives of the task (and what was a reservoir artifact)
+
+`tasks.anisotropic_regression` fused an **environment generator** with a **scoring rule**. They
+have different fates.
+
+**Survives — the anisotropic environment structure.** Some directions of environmental
+variation well-sampled, others barely. That is Schaeffer's (2023) geometry, which **Frank
+explicitly invokes**, and it is substrate-independent: a claim about what environments *are*,
+not about how anything reads them.
+
+**Dies — the scalar tanh target.** It existed only because a linear readout emits a number, so
+the task had to demand a number. A reservoir artifact wearing a task's clothes. (The
+novel-direction construction was already dead — D029.)
+
+**What environments should demand instead.** Frank: *"Phenotypic responses are the outputs. The
+fitness landscape mirrors the training-error surface, ranking parameters by their performance in
+encountered environments."* Each environment demands a **response profile** — an expression
+pattern — because that is what a phenotype is. Fitness = distance between expressed behavior and
+demanded profile.
+*Consequences:* (a) **D029 becomes natural** — a novel-but-related environment is a **new target
+profile from the same class**, i.e. Frank's snakeness, instead of a geometric hack about
+displacing along sampled axes; (b) **constraints = n_env × d**, not n_env, giving a second
+independent knob on where |W| crosses the threshold — exactly what the P-vs-D design needs.
+
 ## 3. Why a spiking substrate? — stated honestly (corrected 2026-07-16, D035)
 
 **The P/D separation is NOT the reason.** An earlier draft of this document claimed the

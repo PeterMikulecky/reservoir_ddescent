@@ -714,6 +714,46 @@ extrapolation and is now flagged as such in FRAMING.md.
 **Net:** the case for spiking is **one real finding of ours + one strategic consideration** —
 thinner than the P/D argument implied, but genuine. Defend it on the variance channel.
 
+### D036 — Ontology: the phenotype IS the behavior; fitness and metrics are functionals of it
+**2026-07-16 · Accepted** · *Credit: PJM* · adds `FRAMING.md` §2b–2c; retires the scoring half of `tasks.py`
+**My error:** I spent three exchanges asking "which summary is the phenotype — mean rate? rate
+vector?" **That question is malformed.** The phenotype is the network's **dynamic behavior**
+under an environment. Mean rate, variance, spectrum, PR are **measurements of** it, not
+candidates for being it — like asking whether an organism's phenotype is its weight or its
+height.
+
+**The three-way split I had fused:**
+- **Phenotype** — the behavior itself.
+- **Fitness** — a functional of (behavior × environment); what **selection** reads. **Our design
+  choice**, defensible on biological grounds.
+- **Metrics** — other functionals; what **we** read. Measurement.
+
+**This dissolves the channel tangle.** "Which channel?" was two questions at once: *which
+functional does fitness read* (design) and *which functional's dimensionality predicts
+generalization* (experiment). D026/D027/D028 tried to answer both under one label, which is why
+they never resolved.
+
+**It also opens a sharper question than FRAMING §5 states.** If the phenotype is behavior, then
+**behavior has a dimensionality too**, not just the internal state. So "what is D?" is not only
+*which internal channel* but **internal representation vs expressed behavior** — and Frank's
+"regulatory dimensionality" is ambiguous between them. Our substrate can measure both.
+
+**Task triage (PJM's challenge: "is that task still ours?").** `anisotropic_regression` fused an
+**environment generator** with a **scoring rule**:
+- **Survives:** the anisotropic **environment structure** (some directions well-sampled, others
+  barely) — Schaeffer's geometry, which **Frank explicitly invokes**; substrate-independent.
+- **Dies:** the **scalar tanh target** — it existed only because a linear readout emits a number.
+  A reservoir artifact. (Novel-direction construction already dead: D029.)
+- **Replacement:** environments demand a **response profile** (expression pattern); fitness =
+  distance between expressed behavior and demanded profile. Frank: *"Phenotypic responses are the
+  outputs. The fitness landscape mirrors the training-error surface..."*
+- **Two payoffs:** D029 becomes natural (novel-but-related = a new target profile from the same
+  class = snakeness); and **constraints = n_env × d**, a second independent knob on the
+  interpolation threshold — which the P-vs-D design needs.
+
+**Still open (decide, do not default):** how many output neurons **d**, and is d evolvable? It is
+`M` from the reservoir design in disguise — capacity as a gene.
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this
