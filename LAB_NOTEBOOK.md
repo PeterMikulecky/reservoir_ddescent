@@ -170,3 +170,8 @@ E9; (3) build `evolve.py`. See GA_DESIGN.md.
 - type `exp` · stage `T0` · git `gefee6c4` (feature check: sweep seeds internally, separate net/task seeds, pooled mixed model) · status **complete**
 - result: FIRST generalization measurement. median novel NMSE: mean=5.681, inst=22.496, var=13.661; best=mean
 - _interpretation:_ 
+
+## 2026-07-15 06:54 — `AN-analysis__20260715-065428__exp__g2798ab0__feature-check-models`  <!-- auto -->
+- type `exp` · stage `AN` · git `g2798ab0` (lab nb update) · status **complete**
+- result: M1/M2/M3 x {test,novel} on T0-tune_operating_point__20260715-053812__exp__gefee6c4__feature-n1000; M2 beta_pr (test): mean=+0.19, inst=-0.50, var=-246.84
+- _interpretation:_ 
