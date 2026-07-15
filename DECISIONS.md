@@ -537,6 +537,120 @@ thought before committing.
 *Credit:* PJM's call for the search — the second time this instinct has caught something two
 sessions of reasoning missed (cf. D014).
 
+### D032 — REFRAME: the substrate separates quantities Frank fused; the model becomes an evolvable spiking network with W as genome
+**2026-07-16 · Accepted** · spec: `FRAMING.md` · supersedes the reservoir approach (D021/D023 revised)
+*Credit: PJM.* The governing insight: **Frank is thinking more abstractly than his words let
+on.** Substrate vocabulary was leading us astray — including me, repeatedly. Default hypothesis
+**H0: the process is substrate-independent and the challenge is ours, to find the mapping.**
+H1 (spiking genuinely does not instantiate it) is reachable only *after* H0 is honestly
+attempted. We have already mistaken a mapping error for a property of nature once (D030).
+
+**Frank's claim, substrate-free:** a system has adjustable DOF; an optimizer tunes them against
+a finite sample of challenges; at DOF ≈ sample the fit is exact and brittle; at DOF >> sample,
+many equivalent fits exist and the optimizer's implicit bias selects smooth ones.
+
+**The conflation this exposes.** Frank's "more parameters → more dimensionality → better
+generalization" fuses two quantities the ML literature separates: **P** (parameter count,
+double descent's x-axis) and **D** (effective capacity — Dambre's bound, RMT `edof`). In
+typical ML networks both scale with width, so they are **confounded by construction** and you
+cannot tell which one double descent is about.
+
+**Why spiking is the right instrument (not an exotic detour).** In a recurrent spiking net the
+two come apart **~100:1**: P = evolvable synapses ≈ p·N² (~100,000 at N=1000, p=0.1) while
+D ≤ N = 1000 (Dambre). **The substrate separates the quantities Frank fused**, turning an
+ambiguity in his theory into an experiment. *And it returns to his own substrate:* a GRN with G
+genes has capacity ≤ G but up to G² connections — **the same separation exists in Frank's own
+model**, invisible only because nobody looked through the capacity lens. So the contribution is
+**a structural ambiguity in the theory that our substrate makes measurable** — not "spiking is
+different," and not out-Franking Frank on his own ground.
+
+**The experiment (three rival predictions, three independent knobs):**
+- **H_param:** threshold at P ≈ n_env (p·N² ≈ n_env) — Frank's literal words
+- **H_capacity:** threshold at N ≈ n_env — Dambre's bound
+- **H_realized:** threshold at PR ≈ n_env — our D002/D016 operationalization
+Knobs: **p** sets P (evolvable) · **N** sets D_max (experimental arm) · connectivity/gain set
+realized PR. Concrete: N=100, n_env=50, sweep p 0.005→0.5 (P: ~50 → ~5,000) with D_max fixed
+at 2× n_env. A peak as p crosses ~0.005 ⇒ H_param; no peak ⇒ H_capacity; peak tracking PR ⇒
+H_realized.
+
+**Model consequences:**
+1. **W is the genome** — Frank's parameters are regulatory connections; a reservoir freezes
+   them as architecture. This single change makes the model able to answer the question.
+   **Spiking is retained** (D014: rate-network intuitions demonstrably fail here; and the
+   P/D separation is a spiking property).
+2. **No trained readout.** Input and output neurons; phenotype = output response; selection
+   acts on the whole network. **Dissolves the entire D026/D027/D028 "which channel does fitness
+   read?" tangle** — there is no separate learned component to disagree about.
+3. **Density becomes Frank's x-axis literally** — Figure 1 with regulatory connections on it,
+   which the reservoir structurally could not provide.
+4. **Scale inverts: N ≈ 100, not 1000.** The reservoir needed a big random feature pool; an
+   evolvable network with no readout does not. Threshold crossings land inside a natural
+   density range; simulation gets much cheaper.
+5. **Measure P, D_max, PR separately, always.** Their dissociation is the point.
+6. **The baseline gate (D030) comes with us.**
+
+**What carries over:** provenance, metrics battery + spectrum storage (D025), `baseline.py`,
+the analysis pipeline, `tasks.py`, the decision log, and every method lesson (log-transform
+heavy-tailed outcomes, disconnected-network control, commit-before-reg). **The infrastructure
+was the bulk of the work and it is model-agnostic.** What we lose is `reservoir.py`'s streaming
+machinery and the readout stack — largely workarounds for problems this design does not have.
+
+**Literature position (D031 search + neuroevolution search).** Three-way gap is real:
+evolvability theory (Wagner, Kouvaris, Watson, Frank) has selection + theory, no spiking;
+spiking-dimensionality (Recanatesi, Litwin-Kumar) has spiking, no selection; neuroevolution of
+SNNs (NeuEvo PNAS 2023; NEAT-SNN; **ELSM** — multi-objective Evolutionary Liquid State Machine
+with small-world + criticality objectives, 97-98% on N/MNIST) has spiking + selection but is
+**entirely engineering** — benchmark accuracy, no theory question. **ELSM is methodologically
+almost exactly what we were about to build; the difference is purpose.**
+*Honest risk:* an empty intersection may be empty because neither community wants it —
+evolutionary biologists do not model spiking nets; neuroevolution reviewers want accuracy.
+**This is a positioning problem, and the resolution is venue: ALife / complex systems** (the
+group's actual home; cf. Kouvaris in PLOS CB, Watson & Szathmáry in TREE), where "evolve a
+system, ask a theory question about evolvability" is native.
+*Practical gain:* methods are mature — NEAT's direct encoding with historical markings enables
+meaningful crossover, and speciation protects innovation, which addresses the "can 100
+individuals search 100,000 weights?" worry.
+
+**Retrospect, not regret.** The reservoir was chosen to answer "can a reservoir show double
+descent." The question turned out to be "what does overparameterization mean in an evolving
+system." D014, D026, D030 were all the instrument saying *I am not built for this* — and the
+tire-kicking is what produced the clarity. It clarified the questions, the parameters, and
+forced the reckoning with the literature. That was its job.
+
+### D033 — D030's tension DISSOLVED; and the reservoir compresses in the mean channel, expands only in the variance channel
+**2026-07-16 · Accepted** · closes D030's open risk
+Baseline-gated T0 (N=300, 135 conditions) result:
+- **baseline (raw input) test NMSE = 0.217**; reservoir **skill median 1.15, max 1.77**;
+  **79/135 conditions beat baseline**. The gate works — every top-ranked point is gain=10,
+  exactly the regime the old PR-only objective rejected.
+- **The D030 tension is GONE.** At gain=10: **skill 1.448 AND pr_rel 49%** simultaneously —
+  a live dimensionality axis *and* a computing network. My "the useful regime may have no PR
+  axis" warning came from the N=120 **smoke** run and was wrong at N=300. Lesson: do not raise
+  structural alarms from smoke-preset numbers.
+- **The reservoir's advantage is MODEST** (median skill 1.15). For a task that is near-linear
+  around the origin, the reservoir contributes some nonlinearity and little else.
+
+**The finding that outlives the model.** At a *validated* operating point, with K=20 inputs:
+**PR_mean ≈ 7.4 — the mean channel COMPRESSES 20 dimensions into ~7.** Meanwhile
+**PR_var ≈ 27 — the variance channel EXPANDS beyond the input dimension.**
+A reservoir's entire purpose is to expand inputs into a higher-dimensional space where the task
+becomes linearly separable. **Ours compresses, in the channel we had been reading, at a
+validated operating point.** Expansion happens only in the fluctuations.
+*This independently corroborates D028's variance-channel story from a different direction, and
+retroactively explains why PR_mean anti-predicted generalization: we were measuring the
+dimensionality of a lossy compression.*
+*Carry into the new model (D032):* check whether the phenotype channel we select on actually
+expands or compresses relative to input dimensionality. "Does the representation expand?" is a
+cheap, decisive diagnostic we did not have and should have.
+
+**Does not disturb D032.** The reason to leave the reservoir was never "it does not work" — it
+is that a reservoir **freezes W**, so it cannot test a claim about regulatory connections being
+the evolved parameters. We now leave it knowing it works, modestly, at a validated operating
+point: a principled exit rather than a defeat.
+*Optional, not queued:* re-running the feature check at gain=10 would say whether D028's
+variance-channel result survives at a valid operating point. Interesting, but the same question
+gets asked with better tools in the new model.
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this
