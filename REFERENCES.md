@@ -188,6 +188,59 @@ heterogeneity promotes robust learning. *Nat. Commun.* 12, 5791.
 **Gast, R., et al.** Spike-threshold heterogeneity increases dimensionality of neural
 dynamics (via the E/I paper above). — Not yet located precisely. **To find.**
 
+## Algorithmic simplicity bias — THE ML↔evolution bridge (searched 2026-07-16). Likely our intellectual home.
+
+**Dingle, K., Camargo, C. Q., Louis, A. A. (2018).** Input–output maps are strongly biased
+towards simple outputs. *Nature Communications* 9, 761.
+— 🔴🟢 The probability that a randomly sampled input produces output *x* decays exponentially
+with its approximate Kolmogorov complexity: **P(x) ≲ 2^(−aK̃(x)−b)**, with a and b predictable
+from minimal knowledge of the map. Demonstrated for RNA secondary structure, coupled ODEs, and
+a financial model; later shown for **gene-regulatory network concentration profiles**, protein
+quaternary structures, and biomorphs.
+
+**Valle-Pérez, G., Camargo, C. Q., Louis, A. A.** Deep learning generalizes because the
+parameter-function map is biased towards simple functions. arXiv:1805.08522.
+— 🔴 **Same group, the other end of the bridge.** Applies the Dingle et al. simplicity-bias
+framework to neural networks: deep learning generalizes *because* the parameter-function map is
+biased toward simple functions.
+
+**Johnston, I. G., Dingle, K., Greenbury, S. F., Camargo, C. Q., Doye, J. P. K., Ahnert, S. E.,
+Louis, A. A. (2022).** Symmetry and simplicity spontaneously emerge from the algorithmic nature
+of evolution. *PNAS* 119, e2113883119.
+
+**Greenbury, S. F., Louis, A. A., Ahnert, S. E. (2022).** The structure of genotype-phenotype
+maps makes fitness landscapes navigable. *Nature Ecology & Evolution* 6, 1742.
+**Greenbury, S. F., Schaper, S., Ahnert, S. E., Louis, A. A. (2016).** Genetic correlations
+greatly increase mutational robustness and can both reduce and enhance evolvability.
+*PLOS Comput Biol* 12, e1004773.
+
+### Why this matters to us — a killed hypothesis
+
+**The "does selection have an implicit bias?" question is ANSWERED, and against my framing.**
+I argued that Frank imports double descent from ML while never checking that selection has the
+implicit smoothness bias the second descent depends on — "nobody knows." **Wrong.** The Louis
+group has shown simplicity bias holds in GP maps *and* in the parameter-function map of neural
+networks, by the same algorithmic-information argument. And **Frank's Wilson citation — "simple
+solutions occupy larger regions of parameter space, and learning dynamics are more likely to
+find big regions than small ones" — IS the volume argument** this framework formalizes. His
+assumption is not unexamined; it is supported.
+*Consequence:* **do not build the project around implicit bias** (D034).
+
+**What survives, and is better positioned.** The Louis group works in **genotype space**:
+parameter count and *phenotype complexity* (Kolmogorov). They do **not** measure **effective
+dimensionality** — capacity, PR, Dambre's bound. Their axis is output complexity; ours is
+representational dimensionality. **Orthogonal.** `FRAMING.md`'s P-vs-D question stands.
+
+**Positioning.** This is the real ML↔evolution bridge literature — more so than neuroevolution
+engineering (NeuEvo, ELSM: benchmark accuracy) or spiking dimensionality (Recanatesi,
+Litwin-Kumar: no selection). It is where Frank's argument actually lives and where a paper on
+"what does overparameterization mean in an evolving system" would be read.
+
+**A live connection, and a trap.** Simplicity bias implies *more parameters → larger neutral
+sets for simple phenotypes → stronger bias toward simplicity* — a **mechanism** for Frank's
+"more parameters → better generalization", and testable. But it is squarely the Louis group's
+turf: pursuing it directly is the out-Franking trap in a new costume.
+
 ## Evolvability / evolutionary framing (Frank's lineage)
 
 **Kouvaris, K., Clune, J., Kounios, L., Brede, M., Watson, R. A. (2017).** How evolution

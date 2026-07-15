@@ -651,6 +651,38 @@ point: a principled exit rather than a defeat.
 variance-channel result survives at a valid operating point. Interesting, but the same question
 gets asked with better tools in the new model.
 
+### D034 — The implicit-bias question does NOT survive the literature; FRAMING.md stands unchanged
+**2026-07-16 · Accepted** (a killed hypothesis, logged because negatives matter)
+*Prompted by PJM: "test my intuitions against what's been published before we incorporate it."*
+I had proposed that Frank's load-bearing assumption is unexamined — that he imports double
+descent from ML without checking that **selection** possesses the implicit smoothness bias the
+second descent depends on, and that "nobody knows" whether it does.
+**That is wrong.** The Louis group (Oxford) has built both ends of the bridge:
+- **Dingle, Camargo & Louis (2018, Nat Comms):** input–output maps are strongly biased toward
+  simple outputs, P(x) ≲ 2^(−aK̃(x)−b). Shown for **GRN concentration profiles**, RNA, proteins,
+  biomorphs.
+- **Valle-Pérez, Camargo & Louis:** deep learning generalizes *because* the parameter-function
+  map is biased toward simple functions — same framework, applied to NNs.
+- **Johnston et al. (2022, PNAS):** symmetry and simplicity emerge from the algorithmic nature
+  of evolution.
+Moreover **Frank's own Wilson citation IS the volume argument** ("simple solutions occupy larger
+regions of parameter space; learning dynamics find big regions") — precisely what this framework
+formalizes and extends to GP maps. **His assumption is supported, not unexamined.**
+*Decision:* **do not build the project around implicit bias.** `FRAMING.md` is unchanged.
+*What survives, better positioned:* the Louis group works in **genotype space** (parameter count,
+phenotype *complexity*). They do not measure **effective dimensionality** (capacity, PR, Dambre's
+bound). Their axis is output complexity; ours is representational dimensionality. **Orthogonal.**
+The P-vs-D question is untouched.
+*Positioning gain:* this is the actual ML↔evolution bridge literature — where Frank's argument
+lives, and the natural readership for "what does overparameterization mean in an evolving
+system." More apt than neuroevolution engineering or spiking-dimensionality work.
+*Trap noted:* simplicity bias implies *more parameters → larger neutral sets for simple
+phenotypes → stronger simplicity bias*, a testable mechanism for Frank's chain — but it is the
+Louis group's home turf. Pursuing it is out-Franking Frank in a new costume.
+*Method note:* this is the **third** time a PJM-requested literature search has overturned my
+reasoning (cf. D014 normalization, D031 memory–nonlinearity). The pattern is now unambiguous:
+**search before building, not after.**
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this
