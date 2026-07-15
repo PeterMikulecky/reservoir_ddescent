@@ -374,6 +374,71 @@ dimensionality. D014's evidence and the T0 operating point stand.
 *Method note:* the check needs ~11 window samples/pattern (sample_ms=5), vs the default
 sample_ms=15 which yields ~4 — too few to estimate variance or attractor PR.
 
+### D028 — FIRST evidence for Frank's claim H — in the VARIANCE channel; D026's fitness feature is reversed
+**2026-07-15 · Accepted-provisional** (gated on the task fix, D029)
+First real test of H1 (D015: no claim about Frank until generalization is measured).
+N=1000, 16 conditions x 10 seeds = 160 rows, log-transformed NMSE, mixed models with
+net_seed random effect.
+
+**Result — a clean dissociation between readout channels:**
+
+| channel | M2 (screening-off), test | M2, novel |
+|---|---|---|
+| `X_var` | pr **-0.626 (p=0.037)**, w0 +0.248 (p=0.31), density +0.276 (p=0.26) | pr **-1.503 (p<0.0001)**, w0 (p=0.95), density (p=0.89) |
+| `X_mean` | pr **+0.230 (p=0.006)**, w0 -0.234 (p=0.005) | pr **+0.383 (p=0.002)**, w0 (p<0.0001), density (p<0.0001) |
+
+* **Variance channel: PR predicts error negatively AND screens off structure** (w0/density
+  non-significant). This is D019's screening-off criterion met, i.e. **Frank's claim H
+  supported** — the first support this project has found.
+* **Mean channel: PR predicts error POSITIVELY** (wrong direction, significant) and fails to
+  screen off structure — structure does the predicting. On the channel used for **every
+  measurement in this project** (the density->PR story, D014's evidence, T0's operating
+  point), dimensionality anti-predicts performance.
+
+**The noise worry is resolved.** PR_var was suspect because noise is also high-dimensional.
+But **noise cannot predict generalization**, and PR_var does (p<0.0001 novel, p=0.037 test).
+The fluctuations carry real structure. With D027's finding that PR_var is highest exactly
+where PR_mean collapses, the coherent reading is: **under strong coupling the representation
+RELOCATES into the fluctuations, and that is where the computation lives.** The mean channel
+plausibly carries input leakage — which would explain why more of it is worse.
+
+**Consequence — D026 is reversed.** Fitness must NOT read `X_mean`: doing so would make
+Frank's mechanism invisible to E9 by construction, selecting on the one channel where
+dimensionality anti-predicts performance. Candidate replacement: `X_var`, or a concatenation
+of both. **Do not finalize until D029 (task fix).**
+
+**Method note (important).** The un-transformed analysis was WRONG and its output must be
+discarded: NMSE spanned 1.2-180,657 (~5 orders of magnitude), so linear models fit the
+catastrophic tail, producing coefficients like beta=-6156 against a median NMSE of 5.7, plus
+singular covariances and non-PD Hessians. Demonstrated on synthetic data with a KNOWN
+negative effect + 6% outliers: raw-NMSE model p=0.746 (misses it); log model p<0.0001
+(recovers it). **Log-transform heavy-tailed error outcomes; treat convergence warnings as
+results, not noise.**
+
+**Caveats — why this is provisional, not settled:**
+1. Several `var` fits flagged DID NOT CONVERGE (M1, both outcomes). M2/M3 agree, but this
+   needs a robust re-fit.
+2. The novel task is **extrapolation, not generalization** (D029) — its p<0.0001 is on a
+   broken measure. `test` (p=0.037) is honest but marginal.
+3. One operating point (bias 0.4, gain 0.1), one task family, net/task seeds aliased.
+4. Q1 reported medians for `novel` only — we do not yet know which channel generalizes best
+   **in-distribution**, which is the comparison that matters.
+*Converging support:* test and novel agree; M2 and M3 agree; per-seed correlations agree
+independently (PR_var r=-0.283+/-0.055 consistent; PR_mean r=-0.082+/-0.182 ~zero).
+
+### D029 — The novel-environment task is broken and must be fixed before H1 is judged
+**2026-07-15 · Accepted**
+`tasks.anisotropic_regression` draws its novel set along the LOWEST-variance axes — the ones
+training barely sampled. **Every novel NMSE in the N=1000 run exceeded 1**, i.e. nothing beat
+predicting the mean. That is orthogonal **extrapolation**, not generalization.
+*Why it matters:* Frank's claim is about recognizing new instances of a *learned* class
+("the essence of snakeness"), not about inputs from directions never sampled. Our novel set
+tests the wrong thing.
+*Fix:* novel environments must be **novel-but-related** — new draws from the same structured
+class, or moderate shifts along *sampled* directions, not orthogonal ones.
+*Priority:* **highest in the project.** It gates H1, which is the only hypothesis that
+matters, and it gates finalizing D028's fitness-feature reversal.
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this
