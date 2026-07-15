@@ -683,6 +683,37 @@ Louis group's home turf. Pursuing it is out-Franking Frank in a new costume.
 reasoning (cf. D014 normalization, D031 memory–nonlinearity). The pattern is now unambiguous:
 **search before building, not after.**
 
+### D035 — Correction: the P/D separation does NOT justify spiking; the variance channel does
+**2026-07-16 · Accepted** · corrects `FRAMING.md` §3 (written same day)
+**The overclaim.** `FRAMING.md` justified the spiking substrate on the grounds that it separates
+P (≈p·N² parameters) from D (≤N capacity) by ~100:1. **True but not distinguishing:** *any*
+recurrent network with N units has ~N² weights and ~N state variables. A **rate** network at
+N=100 gives the identical separation. **P/D dissociation is a property of RECURRENCE, not of
+spiking.** It is *the question*, not the reason for the substrate. Caught by stress-testing on
+PJM's prompt ("remind me why spiking is the tool for the job") rather than reciting.
+
+**The actual justification — and it is our own finding.** D028 + D033: **D is
+channel-dependent.** At a validated operating point (K=20): **PR_mean ≈ 7.4 (the mean channel
+COMPRESSES); PR_var ≈ 27 (the variance channel EXPANDS)** — and PR_var *predicted*
+generalization while PR_mean *anti-predicted* it. So "the dimensionality of the representation"
+is not one number: it depends on the channel, and the choice **flips the sign** of the
+relationship to generalization. **Frank's framework has no notion of a channel** — regulatory
+dimensionality is a scalar. Our substrate forces *which dimensionality, measured on what?*
+**This is intrinsic to spiking as a point process:** irregularity is a *coding channel*, not
+imposed noise. A rate network's variance is something you add; a spiking network's irregularity
+*is* the code.
+
+**Supporting (weaker):** Frank explicitly names "neural wiring" and his rattlesnake/snakeness
+example is neural; D014 shows rate-network heuristics (ρ≈1) are inert here, so the substrate is
+not cosmetic.
+**Strategic, not scientific:** a rate GRN is Wagner's turf. Worth weighing; not evidence.
+**Costs of staying spiking:** speed, simplicity, and clean theory — **Dambre's bound is proved
+for input-driven fading-memory systems, NOT for spiking with reset.** Our use of it is an
+extrapolation and is now flagged as such in FRAMING.md.
+
+**Net:** the case for spiking is **one real finding of ours + one strategic consideration** —
+thinner than the P/D argument implied, but genuine. Defend it on the variance channel.
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this

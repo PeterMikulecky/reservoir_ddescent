@@ -45,28 +45,56 @@ That silently fuses **two quantities the ML literature carefully separates**:
 In a typical ML network, P and D both scale with width, so they move together and you cannot
 tell which one double descent is *about*. **They are confounded by construction.**
 
-## 3. Why a spiking network is the right instrument
+## 3. Why a spiking substrate? — stated honestly (corrected 2026-07-16, D035)
 
-In a recurrent spiking network the two **come apart by two orders of magnitude**:
+**The P/D separation is NOT the reason.** An earlier draft of this document claimed the
+justification for spiking was that it pulls P and D apart by ~100:1. That is true but **not
+distinguishing**: *any* recurrent network with N units has ~N² adjustable weights and ~N state
+variables. A **rate** network at N=100 gives the identical separation. The P/D dissociation is
+a property of **recurrence**, not of spiking. It is **the question** (§5), not the reason for
+the substrate.
 
-- **P** = evolvable synapses ≈ p·N². At N=1000, p=0.1: **~100,000**.
-- **D** ≤ **N** = 1000. Dambre (2012): total computational capacity is bounded by the number
-  of linearly independent state variables, equalling it under fading memory.
+**The real reason is something we found ourselves: D is channel-dependent.**
 
-**A 100:1 ratio.** The substrate *separates the quantities Frank fused* — which turns an
-ambiguity in his theory into an experiment.
+D028 and D033, at a *validated* operating point with K=20 inputs:
+- **PR_mean ≈ 7.4** — the mean channel **compresses** 20 input dimensions into ~7.
+- **PR_var ≈ 27** — the variance channel **expands** beyond the input dimension.
+- **PR_var predicted generalization; PR_mean anti-predicted it** (M2 screening-off: `var`
+  pr −0.626 p=0.037 with w0/density n.s.; `mean` pr **+0.230** p=0.006 with structure doing the
+  predicting).
 
-**And the payoff returns to his own substrate.** A GRN with G genes has G state variables, so
-its capacity is bounded by G, while its regulatory connections can run to G². **The same
-separation exists in Frank's own model** — invisible there only because nobody has looked
-through the capacity lens. So the finding would not be "spiking is different." It would be
-**a structural ambiguity in the theory that our substrate makes measurable.** That is a
-contribution *to* Frank's framework, not a caveat on it — and it is the opposite of
-out-Franking Frank on his own ground.
+So **"the dimensionality of the representation" is not one number.** It depends on which
+channel you read, and the choice **flips the sign** of the relationship to generalization.
+Frank's framework has no notion of a channel — "regulatory dimensionality" is a scalar. Our
+substrate forces the question *which dimensionality, measured on what?* — and answers that it
+matters more than the scalar's value.
 
-*Caveat to keep visible:* Dambre's bound is proved for input-driven systems with fading
-memory. Whether it transfers cleanly to a settling GRN needs care — the intuition (G state
-variables bound the reachable space) is more general than the theorem.
+**This is intrinsic to spiking as a point process.** Irregularity is a **coding channel**, not
+imposed noise. A rate network has a mean, and a variance if you *add* noise — but you put it
+there. In a spiking network the irregularity **is part of the code**. That is the
+substrate-specific contribution, and it is a candidate answer to "what is D?" that Frank's
+vocabulary cannot express.
+
+**Supporting reasons (weaker, stated as such):**
+- Frank explicitly names **"neural wiring"**, and his opening example — rattlesnake vs.
+  snakeness — is neural. A neural substrate tests what he actually said.
+- D014: rate-network intuitions (ρ≈1 edge of chaos) are **inert** in our LIF model; the
+  operative regime was ρ≈8. Standard heuristics do not transfer, so the substrate is not a
+  cosmetic choice.
+
+**A strategic reason, not a scientific one:** a rate GRN puts us directly on Wagner's turf
+(and Frank cites Wagner). That is the out-Franking risk. Worth weighing; not evidence.
+
+**What we give up by staying spiking:** speed; simplicity; and clean theory — **Dambre's bound
+is proved for input-driven systems with fading memory, not for spiking with reset**. Our use of
+it is an extrapolation and must be flagged as one.
+**What we would gain by going rate:** all of the above, at the cost of the variance channel,
+the neural claim, and independence from Wagner.
+
+**Honest summary:** spiking is justified by **one real finding of our own** (channel-dependent
+D, which is ours and is novel) **plus one strategic consideration**. That is a thinner case than
+the P/D argument implied. It is still a case worth backing — but it should be defended on the
+variance channel, not on a separation that any recurrent network provides.
 
 ## 4. The mapping table
 
