@@ -154,29 +154,56 @@ becomes the calibrated instrument — PJM's original instinct — rather than th
 training NMSE ≈ 0 across the genome range above threshold, the load-bearing assumption of
 E9; (3) build `evolve.py`. See GA_DESIGN.md.
 
+## 2026-07-15 — First generalization measurement: Frank's claim H holds, in a channel we weren't looking at
+Ran T0 rev2 (w0 parameterization) at N=1000: **200% PR responsiveness**, 20/20 healthy
+operating points, PR span 7.7-57.1. The D014 fix confirmed at production scale (~100x better
+than the 1.9% the spectral-radius version reported). E9 has a live dimensionality axis.
+Chose bias=0.4, gain=0.1 provisionally — note the argmax sat on the grid boundary (all top
+points at the lowest gain), and the top three differed by 0.8% with **no seed replication**.
+The robust reading is "gain=0.1 matters; bias is free in 0.2-0.5."
+
+**Readout check (D027): the averaging confound is cleared.** PR(X_inst) tracks PR(X_mean) at
+every condition and falls with density in every case (span ratios ~85-95%). The trailing-window
+average is not manufacturing the density effect. But at N=1000 the check also showed density ->
+PR is **not** a main effect: it is a **w0 x density interaction**, U-shaped at w0=3.0. H2 needs
+restating.
+
+**Feature check (D028): the first time this project measured generalization.** 160 rows
+(16 conditions x 10 seeds), log-transformed NMSE, mixed models.
+
+A clean dissociation between readout channels:
+- **`X_var`: PR predicts error negatively AND screens off structure** (test: pr -0.626 p=0.037,
+  w0/density n.s.; novel: pr -1.503 p<0.0001, w0/density n.s.). **D019's screening-off criterion
+  met = Frank's claim H supported.** First support the project has found.
+- **`X_mean`: PR predicts error POSITIVELY** (test +0.230 p=0.006; novel +0.383 p=0.002) and
+  fails to screen off structure — w0/density do the predicting. On the channel used for **every
+  prior measurement**, dimensionality anti-predicts performance.
+
+**The noise worry is resolved:** PR_var was suspect because noise is high-dimensional too — but
+noise cannot predict generalization, and PR_var does. With D027's finding that PR_var peaks
+exactly where PR_mean collapses, the reading is: **under strong coupling the representation
+relocates into the fluctuations, and that is where the computation lives.** The mean channel
+plausibly carries input leakage, explaining why more of it is worse.
+
+**This reverses D026's fitness feature.** Reading `X_mean` would have made Frank's mechanism
+invisible to E9 by construction.
+
+**Method lesson, learned painfully.** The first analysis was WRONG: NMSE spanned 1.2-180,657, so
+linear models fit the catastrophic tail (beta=-6156 against a median of 5.7) with singular
+covariances everywhere. Demonstrated on synthetic data with a known effect + 6% outliers: raw
+model p=0.746 (misses it), log model p<0.0001 (recovers it). **Log-transform heavy-tailed
+outcomes; treat convergence warnings as results.**
+
+**Not settled.** The novel task measures **extrapolation, not generalization** (D029) — every
+novel NMSE > 1, i.e. nothing beat predicting the mean. Fixing it is tomorrow's first job and the
+project's top priority: it gates H1, the only hypothesis that matters.
+
+**Credit where due.** This finding exists because of three PJM interventions, none of them mine:
+"what do we hope to capture from the settled state?" (prompted the settling test), "only two
+seeds?" (forced real replication), and the parallel-protocols proposal (forced us to KEEP X_var
+instead of discarding it). Without any one of them, the variance channel would still be invisible.
+
+*Next:* fix `tasks.anisotropic_regression` -> re-run feature check -> finalize fitness feature ->
+E9. See QUEUE.md.
+
 <!-- Future run stubs will be auto-appended below this line. -->
-
-## 2026-07-15 04:13 — `T0-tune_operating_point__20260715-033028__exp__gcae6f45__fine-w0-n1000`  <!-- auto -->
-- type `exp` · stage `T0` · git `gcae6f45` (T0 rev2: sweep w0 not spectral_radius (D014); score substrates over genome space; full metric battery) · status **complete**
-- result: 20/20 healthy; best bias=0.4 gain=0.1; PR 7.9-53.5 (rel 200%); peak PR 57.1
-- _interpretation:_ 
-
-## 2026-07-15 05:02 — `T0-tune_operating_point__20260715-050108__exp__ge927bdb__readout-check-n1000`  <!-- auto -->
-- type `exp` · stage `T0` · git `ge927bdb` (D027: three-way readout check passes - averaging confound cleared) · status **complete**
-- result: readout check @ bias=0.4 gain=0.1: inst/mean span ratio 0.96, direction agree=True
-- _interpretation:_ 
-
-## 2026-07-15 06:41 — `T0-tune_operating_point__20260715-053812__exp__gefee6c4__feature-n1000`  <!-- auto -->
-- type `exp` · stage `T0` · git `gefee6c4` (feature check: sweep seeds internally, separate net/task seeds, pooled mixed model) · status **complete**
-- result: FIRST generalization measurement. median novel NMSE: mean=5.681, inst=22.496, var=13.661; best=mean
-- _interpretation:_ 
-
-## 2026-07-15 06:54 — `AN-analysis__20260715-065428__exp__g2798ab0__feature-check-models`  <!-- auto -->
-- type `exp` · stage `AN` · git `g2798ab0` (lab nb update) · status **complete**
-- result: M1/M2/M3 x {test,novel} on T0-tune_operating_point__20260715-053812__exp__gefee6c4__feature-n1000; M2 beta_pr (test): mean=+0.19, inst=-0.50, var=-246.84
-- _interpretation:_ 
-
-## 2026-07-15 07:06 — `AN-analysis__20260715-070650__exp__ged17dc4__feature-check-models`  <!-- auto -->
-- type `exp` · stage `AN` · git `ged17dc4` (lab nb update) · status **complete**
-- result: M1/M2/M3 x {test,novel} on T0-tune_operating_point__20260715-053812__exp__gefee6c4__feature-n1000; M2 beta_pr (test): mean=+0.23, inst=+0.08, var=-0.63
-- _interpretation:_ 
