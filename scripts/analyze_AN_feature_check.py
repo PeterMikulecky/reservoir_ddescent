@@ -40,10 +40,15 @@ Usage:
 import sys, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 
-import argparse, json
+import argparse, json, warnings
 import numpy as np
 import pandas as pd
 import statsmodels.formula.api as smf
+
+# statsmodels emits a convergence/singularity warning per fit; with 3 features x 2 outcomes
+# x 3 models that is ~18 stack traces which bury the results. We surface conditioning
+# problems explicitly in the output instead (see `converged` column).
+warnings.filterwarnings("ignore")
 
 from ddescent import provenance as P
 
@@ -55,15 +60,21 @@ def fit_models(df: pd.DataFrame, tag: str, outcome_prefix: str) -> dict:
     col = f"{outcome_prefix}{tag}"
     d = df[[f"pr_{tag}", col, "w0", "density", "net_seed"]].dropna().copy()
     d.columns = ["pr", "err", "w0", "density", "net_seed"]
-    # z-score continuous predictors so coefficients are comparable
+    # LOG-TRANSFORM the outcome. NMSE here spans ~5 orders of magnitude (1.2 to 180,000);
+    # a linear model on that fits the handful of catastrophic runs, not the bulk, and
+    # statsmodels reports singular covariance / non-PD Hessians / convergence failures.
+    # log makes the model multiplicative and outlier-resistant. Coefficients are then in
+    # log-NMSE units: beta=-0.3 means ~26% lower error per SD of PR.
+    d["err"] = np.log(np.clip(d["err"].values, 1e-6, None))
     for c in ("pr", "w0", "density"):
-        s = d[c].std()
-        d[c] = (d[c] - d[c].mean()) / (s if s > 0 else 1.0)
+        sd_ = d[c].std()
+        d[c] = (d[c] - d[c].mean()) / (sd_ if sd_ > 0 else 1.0)
 
     out = {"feature": tag, "n": len(d), "n_seeds": int(d.net_seed.nunique())}
     try:
         m1 = smf.mixedlm("err ~ pr", d, groups=d.net_seed).fit(reml=False)
         out["M1_beta_pr"] = float(m1.params["pr"]); out["M1_p_pr"] = float(m1.pvalues["pr"])
+        out["M1_converged"] = bool(getattr(m1, "converged", True))
     except Exception as e:
         out["M1_beta_pr"] = np.nan; out["M1_p_pr"] = np.nan; out["M1_err"] = str(e)
     try:
@@ -138,7 +149,8 @@ def main():
                      else "   [novel-direction -- currently EXTRAPOLATION, see caveats]"))
             print("M1  err ~ pr + (1|seed)         [PR confounded with w0/density]")
             for _, r in sub.iterrows():
-                print(f"   {r.feature:>4}: beta_pr = {r.M1_beta_pr:+.3f}  p = {r.M1_p_pr:.4f}")
+                flag = "" if r.get("M1_converged", True) else "  [DID NOT CONVERGE]"
+                print(f"   {r.feature:>4}: beta_pr = {r.M1_beta_pr:+.3f}  p = {r.M1_p_pr:.4f}{flag}")
             print("M2  err ~ pr + w0 + density + (1|seed)   [D019 screening-off -- THE KEY ONE]")
             for _, r in sub.iterrows():
                 if not pd.isna(r.get("M2_beta_pr", np.nan)):
