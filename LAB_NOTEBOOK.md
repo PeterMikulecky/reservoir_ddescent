@@ -165,3 +165,8 @@ E9; (3) build `evolve.py`. See GA_DESIGN.md.
 - type `exp` · stage `T0` · git `ge927bdb` (D027: three-way readout check passes - averaging confound cleared) · status **complete**
 - result: readout check @ bias=0.4 gain=0.1: inst/mean span ratio 0.96, direction agree=True
 - _interpretation:_ 
+
+## 2026-07-15 06:41 — `T0-tune_operating_point__20260715-053812__exp__gefee6c4__feature-n1000`  <!-- auto -->
+- type `exp` · stage `T0` · git `gefee6c4` (feature check: sweep seeds internally, separate net/task seeds, pooled mixed model) · status **complete**
+- result: FIRST generalization measurement. median novel NMSE: mean=5.681, inst=22.496, var=13.661; best=mean
+- _interpretation:_ 
