@@ -30,9 +30,12 @@ design (task_seed = net_seed + 500), so network variance and environment varianc
 be separated. That needs a CROSSED design (several networks x several task draws) -- an
 additional experiment, not a re-analysis.
 
+Both outcomes (test_ = in-distribution, novel_ = novel-direction) are analyzed in ONE run:
+they are one analysis, not two. The run directory is auto-discovered if not given.
+
 Usage:
+  python scripts\analyze_AN_feature_check.py                       # newest feature-check run
   python scripts\analyze_AN_feature_check.py --run-dir runs\T0_tune_operating_point\<run_id>
-  python scripts\analyze_AN_feature_check.py --run-dir <...> --outcome test_
 """
 import sys, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
@@ -78,17 +81,33 @@ def fit_models(df: pd.DataFrame, tag: str, outcome_prefix: str) -> dict:
     return out
 
 
+def _find_latest(runs_root: pathlib.Path) -> pathlib.Path | None:
+    """Newest run containing a feature_check.parquet. Saves typing a long run ID."""
+    hits = sorted(runs_root.glob("*/*/data/feature_check.parquet"),
+                  key=lambda p: p.stat().st_mtime, reverse=True)
+    return hits[0].parent.parent if hits else None
+
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--run-dir", required=True, help="feature-check run directory")
-    ap.add_argument("--outcome", default="novel_", choices=["novel_", "test_"],
-                    help="novel_ = novel-direction (currently EXTRAPOLATION, see caveats); "
-                         "test_ = in-distribution")
+    ap.add_argument("--run-dir", default=None,
+                    help="feature-check run directory. Omit to auto-use the most recent one.")
     ap.add_argument("--project-root", default=".")
     ap.add_argument("--runs-root", default=None)
     args = ap.parse_args()
 
-    src = pathlib.Path(args.run_dir)
+    # both outcomes are analyzed in ONE run -- they are one analysis, not two
+    outcomes = ["test_", "novel_"]
+
+    if args.run_dir:
+        src = pathlib.Path(args.run_dir)
+    else:
+        import os
+        rr = pathlib.Path(args.runs_root or os.environ.get("DDESCENT_RUNS_ROOT") or "runs")
+        src = _find_latest(rr)
+        if src is None:
+            raise SystemExit(f"no feature-check run found under {rr}; pass --run-dir")
+        print(f"(auto-selected most recent feature-check run)")
     tbl = src / "data" / "feature_check.parquet"
     if not tbl.exists():
         raise SystemExit(f"no feature_check.parquet under {src}")
@@ -96,31 +115,39 @@ def main():
     up = json.loads((src / "manifest.json").read_text()).get("run_id", src.name)
 
     run = P.new_run("AN", "exp", project_root=args.project_root, runs_root=args.runs_root,
-                    config=dict(source_run=up, outcome=args.outcome),
+                    config=dict(source_run=up, outcomes=outcomes),
                     tag="feature-check-models", upstream_run_ids=[up],
-                    notes="M1/M2/M3 on the feature-check table; M2 is D019 screening-off")
+                    notes="M1/M2/M3 x {test_, novel_} on the feature-check table; M2 is D019 screening-off")
     try:
-        res = pd.DataFrame([fit_models(df, t, args.outcome) for t in FEATURES])
+        frames = []
+        for oc in outcomes:
+            r_ = pd.DataFrame([fit_models(df, t, oc) for t in FEATURES])
+            r_.insert(0, "outcome", oc.rstrip("_"))
+            frames.append(r_)
+        res = pd.concat(frames, ignore_index=True)
         res.to_parquet(run.table_path("models"))
 
         print(f"source run : {up}")
-        print(f"outcome    : {args.outcome}*   n={res.n.iloc[0]} rows, "
-              f"{res.n_seeds.iloc[0]} seeds\n")
+        print(f"rows={int(res.n.iloc[0])}, seeds={int(res.n_seeds.iloc[0])}, "
+              f"outcomes={[o.rstrip('_') for o in outcomes]}")
 
-        print("M1  err ~ pr + (1|seed)         [PR confounded with w0/density]")
-        for _, r in res.iterrows():
-            print(f"   {r.feature:>4}: beta_pr = {r.M1_beta_pr:+.3f}  p = {r.M1_p_pr:.4f}")
-
-        print("\nM2  err ~ pr + w0 + density + (1|seed)   [D019 screening-off]")
-        for _, r in res.iterrows():
-            if "M2_beta_pr" in r and not pd.isna(r.get("M2_beta_pr", np.nan)):
-                print(f"   {r.feature:>4}: pr {r.M2_beta_pr:+.3f} (p={r.M2_p_pr:.4f})   "
-                      f"w0 {r.M2_beta_w0:+.3f} (p={r.M2_p_w0:.4f})   "
-                      f"density {r.M2_beta_density:+.3f} (p={r.M2_p_density:.4f})")
-
-        print("\nM3  err ~ pr + (1 + pr|seed)     [random slope: does the slope vary?]")
-        for _, r in res.iterrows():
-            print(f"   {r.feature:>4}: beta_pr = {r.M3_beta_pr:+.3f}  p = {r.M3_p_pr:.4f}")
+        for oc in outcomes:
+            sub = res[res.outcome == oc.rstrip("_")]
+            print(f"\n{'='*66}\nOUTCOME: {oc.rstrip('_')}"
+                  + ("   [in-distribution -- the trustworthy one for now]" if oc == "test_"
+                     else "   [novel-direction -- currently EXTRAPOLATION, see caveats]"))
+            print("M1  err ~ pr + (1|seed)         [PR confounded with w0/density]")
+            for _, r in sub.iterrows():
+                print(f"   {r.feature:>4}: beta_pr = {r.M1_beta_pr:+.3f}  p = {r.M1_p_pr:.4f}")
+            print("M2  err ~ pr + w0 + density + (1|seed)   [D019 screening-off -- THE KEY ONE]")
+            for _, r in sub.iterrows():
+                if not pd.isna(r.get("M2_beta_pr", np.nan)):
+                    print(f"   {r.feature:>4}: pr {r.M2_beta_pr:+.3f} (p={r.M2_p_pr:.4f})   "
+                          f"w0 {r.M2_beta_w0:+.3f} (p={r.M2_p_w0:.4f})   "
+                          f"density {r.M2_beta_density:+.3f} (p={r.M2_p_density:.4f})")
+            print("M3  err ~ pr + (1 + pr|seed)     [random slope]")
+            for _, r in sub.iterrows():
+                print(f"   {r.feature:>4}: beta_pr = {r.M3_beta_pr:+.3f}  p = {r.M3_p_pr:.4f}")
 
         print("\nHOW TO READ:")
         print("  * H1 predicts beta_pr NEGATIVE (more dimensionality -> less error).")
@@ -132,13 +159,12 @@ def main():
         print("  * net_seed and task_seed are ALIASED in this design: (1|net_seed) absorbs")
         print("    network AND environment variance together. Separating them needs a")
         print("    crossed design, not a re-analysis.")
-        if args.outcome == "novel_":
-            print("  * novel_ is currently EXTRAPOLATION (novel set drawn along axes training")
-            print("    barely sampled), not generalization. Cross-check with --outcome test_.")
+        print("  * novel_ is currently EXTRAPOLATION (novel set drawn along axes training")
+        print("    barely sampled). Weight the test_ block more heavily until the task is fixed.")
 
-        note = ("M1/M2/M3 on " + up + "; M2 beta_pr: " +
+        note = ("M1/M2/M3 x {test,novel} on " + up + "; M2 beta_pr (test): " +
                 ", ".join(f"{r.feature}={r.get('M2_beta_pr', float('nan')):+.2f}"
-                          for _, r in res.iterrows()))
+                          for _, r in res[res.outcome == "test"].iterrows()))
         run.finalize(status="complete", n_conditions=len(df), notebook_note=note)
     except Exception as e:
         run.finalize(status="failed", error=str(e))
