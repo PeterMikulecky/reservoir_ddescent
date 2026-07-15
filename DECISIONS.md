@@ -309,6 +309,48 @@ per generation), which future-proofs *non*-spectral state metrics too. Full stor
 per individual → ~4 GB per run; subsampling keeps that manageable.
 *Credit:* PJM.
 
+### D026 — "Settled" → "stationary"; two protocols; fitness is Protocol S; the averaging check is standing
+**2026-07-14 · Accepted**  ·  spec: `PROTOCOLS.md`
+**The network does not settle.** Settling test (N=200, 400 ms constant drive): within-window
+temporal CV rises 0.077 → 0.20–0.26 as coupling grows; at w0=3, p=0.4 the rate trace still
+fluctuates ~20% after 400 ms. There is **no fixed point** in the regime we care about, and it
+is worst exactly where our headline effect lives. A protocol "designed to cleanly measure the
+settled state" would target an object that does not exist.
+*Reframe:* what is well-defined is a **stationary response distribution** (mean, covariance,
+autocorrelation time of the occupied attractor). Better because it is always defined, still
+faithful to Frank's GRN reading (a cell in a sustained environment occupies a characteristic
+expression *regime*, not necessarily a static point), and it *tells us what to measure*.
+**The confound this exposes.** We record only the distribution's mean (trailing-window average)
+and discard the rest. Averaging destroys variance, and the amount destroyed **grows with
+coupling** — a mechanism that would produce "PR falls with density/coupling" (our headline
+finding) with none of it being a property of the representation. Recanatesi et al. find the
+same direction by a different method with no window averaging — real evidence the effect is not
+purely artifact — but their model is linearized Poisson, not spiking LIF with reset, so it does
+not settle it for us. **Not demonstrated, not dismissed.**
+*Therefore — standing, never optional:* Protocol S retains **three** readouts per pattern
+(`X_mean`, `X_inst`, `X_var`) and every run reports PR on all three. Agreement ⇒ averaging is
+innocent. Divergence ⇒ the window mean is manufacturing the effect. D025's logic applied to a
+confound rather than a metric: bake the check in permanently rather than trusting one July run.
+*Two protocols (PJM's proposal):* **S (stationary)** = sustained drive, the expensive one
+(150 × 150 ms = 22.5 s sim). **T (temporal)** = one continuous stream, **~10% of S's cost** —
+the asymmetry matters: adding T is nearly free, not a doubling.
+*Metrics:* shared spectral core (D025 battery) on every state matrix; **S-specific** =
+temporal_cv, autocorr_time, attractor_pr (PR of a *single* pattern's trajectory — only exists
+under S), order_dependence (carryover check); **T-specific** = memory_capacity, separation,
+IPC (deferred to the final population per D025 tiers).
+**The thing that cannot be plural.** Metrics can be plural; **fitness cannot** — the GA needs
+one number. S-fitness and T-fitness are *two different evolutionary models*, not two views of
+one. **Decision: fitness = Protocol S** (Frank's core; already built in
+`tasks.anisotropic_regression`); **T is characterization**, explicitly exploratory. No
+forking-path risk: the confirmatory measure stays PR on `X_mean` under S (D002/D016).
+*Deferred, not rejected:* two GA arms evolving on S- vs T-fitness, compared — a real experiment
+about whether environmental structure shapes evolvability. Doubles the budget, adds a second
+flagship. Worth wanting; not first.
+*Consequence for T0:* the T0 run in flight measures PR through the window mean only. Its chosen
+operating point may need revisiting once the three-way readout comparison exists.
+*Credit:* PJM — the parallel-protocols proposal, and the prior question ("what do we hope to
+capture from the settled state?") that prompted the settling test.
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this
