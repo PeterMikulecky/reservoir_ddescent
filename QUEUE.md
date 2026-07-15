@@ -27,7 +27,17 @@ just wasn't the binding problem.
 
 ## Critical path (do in this order)
 
-### 0. RE-TUNE T0 WITH THE BASELINE GATE  ← START HERE  (D030)
+### DONE — baseline gate run (D033). Tension dissolved: at gain=10, skill 1.448 AND pr_rel 49%.
+Reservoir beats raw input (79/135 conditions, median skill 1.15) but only modestly. Key finding
+that outlives the model: **PR_mean 7.4 vs K=20 inputs — the mean channel COMPRESSES; only
+PR_var (27) expands.** Corroborates D028 independently.
+
+### SUPERSEDED BY D032 — the reservoir is being retired (W is frozen; cannot test Frank's claim)
+Everything below this line was the reservoir queue. It is retained for provenance; the live plan
+is **FRAMING.md** + D032. Next real step: design the evolvable spiking model (W as genome, no
+trained readout, N≈100, density = Frank's x-axis).
+
+### ~~0. RE-TUNE T0 WITH THE BASELINE GATE~~  (D030 — done, see D033)
 `python scripts\run_T0_tune_operating_point.py --preset coarse`   then `--preset fine`
 T0 rev3 runs a real task per condition and gates on **skill > 1** (beats a linear readout on
 the raw input) before ranking by PR. The old operating point (bias 0.4, **gain 0.1**) is
