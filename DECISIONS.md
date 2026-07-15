@@ -216,6 +216,59 @@ et al.: **PR decreases as density increases.**
 PLOS Comp Biol; Legenstein & Maass 2007; Büsing et al. 2010), not from first-principles
 reasoning — which had produced a confident and wrong mechanistic story.
 
+### D022 — Flat-landscape check: assumption confirmed, and it exposed a design flaw
+**2026-07-14 · Accepted**
+Measured (N=300, min-norm readout): **above threshold (n=50 ≪ M=300) training NMSE ≈ 1e-29
+for every genome, including PR = 2.5** — the landscape is exactly flat, as D021 assumed.
+Rank is full at min(n,M) *regardless of PR* (rank 49 at n=50), so a prior hypothesis that
+low-PR genomes would fail to interpolate was **wrong**: rank and PR are different things.
+**Below threshold (n=400 > M=300) training error varies ~6× (0.05–0.43) and favors high PR.**
+*Bonus finding:* since rank is full regardless of PR, **PR does not relocate the interpolation
+threshold** — it sits at nominal capacity. Independent confirmation of D018 (H5 retired) from
+our own data rather than the RMT literature.
+*The flaw it exposed:* "neutral network" *means* selection has no signal — that is the
+definition. Running a GA there is drift with extra steps. Frank's claim about that regime is
+that the **learning dynamics** (here: the min-norm readout solver) pick the interpolating
+solution — that is E4's implicit-bias question, not an evolutionary one. The gate did its job:
+found before building.
+
+### D023 — E9 rev. C: readout capacity M becomes a heritable gene
+**2026-07-14 · Accepted · revises D021**
+Genome gains **`M`** (readout capacity): `(M, p, w0, recip, ei)`. The readout taps M of N
+neurons; N=1000 becomes the *pool*, with **N ≫ n** the binding constraint (n ≈ 50–100).
+*Reasoning:* the double-descent x-axis is the **learned**-parameter count = the readout
+weights = M. Recurrent weights are structure, not learned. If the experimenter fixes M, "does
+evolution find overparameterization?" is unaskable — we chose the answer. **C is the only
+variant in which Frank's central claim is testable.**
+*The prediction that justifies it:* below threshold selection pushes M up (training error
+falls with M); above threshold training error is flat at zero so cost pushes M down. They meet
+at **M ≈ n = the test-error peak** → **selection with any parameter cost parks a lineage at the
+worst-generalizing capacity (G1)**. At **c_syn = 0**, the plateau is neutral with a reflecting
+boundary at M = n, so M drifts *upward* and generalization improves via the second descent
+(G2). **Frank's aside that biology doesn't penalize complexity turns out to be the precise
+condition his thesis requires.** `c_syn` is therefore the central swept axis, not a nuisance —
+the evolutionary form of E4's ridge-vs-min-norm contrast.
+*Also:* C separates two readings of Frank's "parameterization" that he does not distinguish —
+`M` (learned parameters) vs `p`/`w0`/`recip` (regulatory structure) — and can ask which
+behaves as claimed. Sharpens D016.
+*Rejected:* rev. A (below-threshold only — has signal but abandons the overparameterized
+regime, i.e. Frank's distinctive claim); rev. B (accumulating environments — the crossing is
+imposed by the experimenter growing n, whereas in C the lineage discovers it; B can be layered
+onto C later).
+*Cost concern withdrawn:* "the design grows" was filed as a cost out of a reflex toward
+minimal designs. The additions (a fifth gene, M-identity question, M×p×w0 interactions) *are*
+the mechanism of the experiment, not overhead.
+*Credit:* PJM — the question "is that growth bad?" reversed the recommendation.
+
+### D024 — Production scale is N = 1000
+**2026-07-14 · Accepted**
+N=300 was a sandbox-probe tractability choice, never a principled production decision.
+*Benchmark:* per-individual cost scales **sublinearly** in N (N=800 is 1.6× N=200, not 16×)
+because the D014 `w0` mode skips the O(N³) eigenvalue call the old `spectral_radius` mode
+required. At N=1000, pop 50 × 100 gens ≈ **1–2 h on 6 workers**. Affordable.
+*Also:* N=1000 matches the group's original brainstorm and both Litwin-Kumar (2017) and
+Recanatesi (2019) — direct comparability. Prototype at N=300; scaling checks per D020.
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this
