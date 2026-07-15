@@ -155,3 +155,8 @@ training NMSE ≈ 0 across the genome range above threshold, the load-bearing as
 E9; (3) build `evolve.py`. See GA_DESIGN.md.
 
 <!-- Future run stubs will be auto-appended below this line. -->
+
+## 2026-07-15 04:13 — `T0-tune_operating_point__20260715-033028__exp__gcae6f45__fine-w0-n1000`  <!-- auto -->
+- type `exp` · stage `T0` · git `gcae6f45` (T0 rev2: sweep w0 not spectral_radius (D014); score substrates over genome space; full metric battery) · status **complete**
+- result: 20/20 healthy; best bias=0.4 gain=0.1; PR 7.9-53.5 (rel 200%); peak PR 57.1
+- _interpretation:_ 
