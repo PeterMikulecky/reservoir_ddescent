@@ -439,6 +439,64 @@ class, or moderate shifts along *sampled* directions, not orthogonal ones.
 *Priority:* **highest in the project.** It gates H1, which is the only hypothesis that
 matters, and it gates finalizing D028's fitness-feature reversal.
 
+### D030 — THE BASELINE GATE: the reservoir was never checked against raw input, and it loses
+**2026-07-16 · Accepted** · supersedes T0's objective; puts D028 and the operating point in doubt
+**The most basic sanity check in reservoir computing — does a readout on the reservoir beat a
+readout on the RAW INPUT? — was never run in this project.** When finally run (N=300,
+K=20, density 0.15, w0 2.0, best over a ridge grid):
+
+| input_gain | best test NMSE | vs baseline 0.216 |
+|---|---|---|
+| **0.1 (T0's chosen point)** | **0.880** | **4x WORSE than no reservoir** |
+| 0.3 | 0.294 | worse |
+| 1.0 | 0.311 | worse |
+| 3.0 | 0.249 | worse |
+| 10.0 | **0.131** | **finally beats it** |
+
+At the operating point T0 selected, the reservoir **destroys information**. No ridge value
+rescues it: low alpha interpolates and test explodes (2-80), high alpha collapses to
+predicting the mean (~0.97).
+
+**Root cause — a missing constraint, not a bug.** T0 scored operating points on ONE thing:
+does PR move across the genome space? It never asked whether the state encodes the input.
+**Those objectives are in opposition:** low input gain lets recurrent dynamics dominate, which
+makes PR beautifully responsive to connectivity AND makes the state nearly independent of the
+input. We optimized into a network that ignores what we feed it, then measured the
+dimensionality of its daydreams. Performance improves *monotonically* with the very parameter
+T0 drove to its floor.
+
+**Fix:** new `ddescent/baseline.py`. `skill = baseline_nmse / reservoir_nmse` (>1 = helps).
+T0 rev3 now runs an actual TASK per condition and **gates on skill > 1 AND healthy BEFORE
+ranking by PR responsiveness**. Gain grids widened (old grids topped out at 0.6; the reservoir
+first beats baseline at 10 — we were searching entirely inside the useless regime).
+
+**What this puts in doubt:**
+- **T0's operating point (bias 0.4, gain 0.1) is INVALID** — chosen by an objective that
+  selects against usefulness. Discard.
+- **D028 is in serious doubt.** "PR_var predicts generalization" was measured at gain 0.1,
+  where nothing generalizes and every novel NMSE exceeded 1 — it may be ranking *degrees of
+  failure*. Note PR_var rises monotonically with gain (8.7 -> 38.8) alongside performance, so
+  at a useful operating point the relationship may hold, reverse, or vanish. **Unknown.**
+- **D014 and the density->PR story stand as measurements** but characterize a regime where the
+  reservoir is not computing. Their relevance is unclear.
+
+**New tension, now empirical rather than assumed.** The T0 rev3 smoke run selects gain=10
+(skill 1.24) but there PR responsiveness collapses to 6% and activity saturates (0.935).
+**The regime where the reservoir computes may be the regime where PR will not move.** If that
+holds at N=1000, E9's premise — a live dimensionality axis in a useful network — is in
+trouble, and the model may need rethinking (rate reservoir? different readout? E/I balance to
+restore dynamic range?).
+
+**Standing rule (the real lesson).** *Before interpreting any representational metric, prove
+the system performs the task better than a trivial baseline.* Dimensionality is only
+interesting in a regime that computes. This is deeper than D014's normalization bug: that one
+made us measure a real thing in a dead regime; this one means we were not measuring computation
+at all.
+
+*How it surfaced:* fixing D029's task generator, which required checking whether errors were
+sane — they weren't, in-distribution either. D029 was correct and still needed; it just was not
+the binding problem.
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this

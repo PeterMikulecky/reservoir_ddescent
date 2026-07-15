@@ -9,19 +9,40 @@ The flagship is **E9**: evolve motif-encoded reservoirs with a GA; readout = sco
 mechanism; the genome carries readout capacity `M`, so evolution — not the experimenter —
 chooses where it sits relative to the interpolation threshold (D021/D023).
 
-**Today's finding (D028, provisional):** PR behaves exactly as Frank predicts — negative
-coefficient, screens off structure — **in the variance channel** (`X_var`), and does the
-*opposite* in the mean channel (`X_mean`) we have used for every prior measurement. First
-evidence for Frank's claim H. It also reverses D026's choice of fitness feature.
+**2026-07-16 (D030): the reservoir was never checked against a raw-input baseline, and at
+T0's operating point it LOSES — 0.880 vs 0.216, four times worse than no reservoir.** T0
+optimized PR responsiveness, which is in *opposition* to encoding the input. The operating
+point is invalid, and D028 (the "PR_var supports Frank" finding) was measured there and is now
+in doubt. Fixed: `ddescent/baseline.py` + T0 rev3 gates on skill > 1 before ranking by PR.
 
-**Why it isn't settled:** the novel-environment task measures **extrapolation, not
-generalization** (D029). That gates the verdict.
+**Biggest open risk:** the useful regime (gain~10) may have no live PR axis (6% responsiveness,
+saturated activity in smoke). If that holds at N=1000, **E9's premise fails** and the model
+needs rethinking.
+
+**D029 (task fix) is DONE** — novel is now novel-but-related (displaced along a *sampled* axis),
+with graded `novel_levels` giving a generalization *curve*. It was correct and still needed; it
+just wasn't the binding problem.
 
 ---
 
 ## Critical path (do in this order)
 
-### 1. Fix the novel-environment generator  ← START HERE  (D029)
+### 0. RE-TUNE T0 WITH THE BASELINE GATE  ← START HERE  (D030)
+`python scripts\run_T0_tune_operating_point.py --preset coarse`   then `--preset fine`
+T0 rev3 runs a real task per condition and gates on **skill > 1** (beats a linear readout on
+the raw input) before ranking by PR. The old operating point (bias 0.4, **gain 0.1**) is
+**invalid**: there the reservoir scored 0.880 vs a 0.216 baseline — 4x worse than no reservoir.
+*Watch for:* the smoke run picks gain=10 (skill 1.24) but PR responsiveness collapses to 6%
+and activity saturates. **If the useful regime has no live PR axis at N=1000, E9's premise is
+in trouble** — that is the thing to find out, and it is now the project's biggest open risk.
+*If nothing beats baseline:* widen gains further (30, 100) before trusting any PR result.
+
+### 0b. Re-examine D028 at a VALID operating point
+D028's "PR_var predicts generalization / screens off structure" was measured at gain 0.1 where
+nothing generalizes. Re-run the feature check once a useful operating point exists:
+`python scripts\run_T0_feature_check.py --preset fine --seeds 10` then `python scripts\analyze_AN_feature_check.py`
+
+### 1. Fix the novel-environment generator  (D029)  [DONE — verify]
 `tasks.anisotropic_regression` draws novel inputs along the **lowest-variance axes** — the
 ones training barely sampled. Every novel NMSE in the N=1000 run exceeded 1: nothing beat
 predicting the mean. That is orthogonal extrapolation, not Frank's "new instances of a
