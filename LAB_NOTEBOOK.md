@@ -160,3 +160,8 @@ E9; (3) build `evolve.py`. See GA_DESIGN.md.
 - type `exp` · stage `T0` · git `gcae6f45` (T0 rev2: sweep w0 not spectral_radius (D014); score substrates over genome space; full metric battery) · status **complete**
 - result: 20/20 healthy; best bias=0.4 gain=0.1; PR 7.9-53.5 (rel 200%); peak PR 57.1
 - _interpretation:_ 
+
+## 2026-07-15 05:02 — `T0-tune_operating_point__20260715-050108__exp__ge927bdb__readout-check-n1000`  <!-- auto -->
+- type `exp` · stage `T0` · git `ge927bdb` (D027: three-way readout check passes - averaging confound cleared) · status **complete**
+- result: readout check @ bias=0.4 gain=0.1: inst/mean span ratio 0.96, direction agree=True
+- _interpretation:_ 
