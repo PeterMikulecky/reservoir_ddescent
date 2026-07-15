@@ -33,6 +33,15 @@ import logging as _logging
 _logging.getLogger("brian2").setLevel(_logging.WARNING)
 
 
+def _pr(X):
+    """Participation ratio; local copy to avoid a circular import."""
+    Xc = X - X.mean(axis=0, keepdims=True)
+    sv = np.linalg.svd(Xc, compute_uv=False)
+    lam = sv ** 2
+    d = np.sum(lam ** 2)
+    return float((np.sum(lam) ** 2) / d) if d > 0 else 0.0
+
+
 @dataclass
 class ReservoirConfig:
     N: int = 1000
@@ -140,3 +149,57 @@ class LIFReservoir:
         X = np.asarray(mon.r).T
         self.net.remove(mon)
         return X
+
+    def run_stationary(self, U: np.ndarray, sample_ms: float | None = None) -> dict:
+        """Protocol S (D026): stream static patterns, return THREE readouts per pattern.
+
+        The network does not settle (see PROTOCOLS.md), so what we sample is a stationary
+        response *distribution*, not a fixed point. We therefore keep its location, a
+        single unaveraged draw, and its spread -- rather than only the mean:
+
+          X_mean : trailing-window mean            (the original readout)
+          X_inst : ONE instantaneous sample        (no averaging -- the artifact control)
+          X_var  : within-window temporal variance (the dynamics we would have discarded)
+
+        Plus S-specific diagnostics that only exist under sustained drive:
+          temporal_cv  : per-pattern within-window fluctuation (is it stationary?)
+          attractor_pr : PR of a SINGLE pattern's within-window trajectory -- the
+                         dimensionality of one input's attractor, conceptually distinct
+                         from PR across inputs.
+
+        `sample_ms` overrides cfg.sample_ms: the default (15 ms) yields only ~4 samples in
+        a 60 ms window, too few to estimate variance or attractor PR. Use ~5 ms here.
+        """
+        c = self.cfg
+        n = U.shape[0]
+        dt_s = sample_ms if sample_ms is not None else c.sample_ms
+        drive = (c.input_gain * (U @ self.W_in.T)).astype(float)
+        ta = b2.TimedArray(drive, dt=c.present_ms * ms)
+
+        self.net.restore("init")
+        self.G.namespace["ta"] = ta
+        mon = b2.StateMonitor(self.G, "r", record=True, dt=dt_s * ms, name="mon_s")
+        self.net.add(mon)
+        self.net.run(n * c.present_ms * ms)
+        r = np.asarray(mon.r)                     # (N, n_samples)
+        t = np.asarray(mon.t / ms)
+        self.net.remove(mon)
+
+        X_mean = np.empty((n, c.N)); X_inst = np.empty((n, c.N)); X_var = np.empty((n, c.N))
+        temporal_cv = np.empty(n); attractor_pr = np.empty(n)
+        for k in range(n):
+            end = (k + 1) * c.present_ms
+            m = (t > end - c.readout_window_ms) & (t <= end)
+            if not m.any():
+                m = (t > end - c.present_ms) & (t <= end)
+            win = r[:, m]                          # (N, n_win)
+            X_mean[k] = win.mean(axis=1)
+            X_inst[k] = win[:, -1]                 # last sample: no averaging
+            X_var[k] = win.var(axis=1)
+            mu = win.mean(axis=1)
+            temporal_cv[k] = float(np.mean(win.std(axis=1) / (mu + 1e-9)))
+            attractor_pr[k] = _pr(win.T) if win.shape[1] >= 3 else np.nan
+        return dict(X_mean=X_mean, X_inst=X_inst, X_var=X_var,
+                    temporal_cv=float(np.mean(temporal_cv)),
+                    attractor_pr=float(np.nanmean(attractor_pr)),
+                    n_window_samples=int(m.sum()))

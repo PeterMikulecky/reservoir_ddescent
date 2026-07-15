@@ -351,6 +351,29 @@ operating point may need revisiting once the three-way readout comparison exists
 *Credit:* PJM — the parallel-protocols proposal, and the prior question ("what do we hope to
 capture from the settled state?") that prompted the settling test.
 
+### D027 — Readout check PASSED: the averaging confound is cleared
+**2026-07-14 · Accepted** · closes the open risk in D026
+The D026 standing check ran (N=300, bias 0.4, gain 0.1, 9 conditions, 11 window samples/pattern).
+**PR(X_inst) tracks PR(X_mean) at every condition and falls with density in every case.**
+Span ratios (inst/mean) across density: 40/50%, 203/211%, 113/134% → the unaveraged readout
+reproduces the effect at ~85-95% of the averaged one. **The trailing-window average is NOT
+manufacturing the headline finding.** Density and coupling genuinely collapse representational
+dimensionality. D014's evidence and the T0 operating point stand.
+*Secondary findings (kept because D026 forced us to retain all three readouts):*
+- **PR(X_inst) is consistently slightly HIGHER than PR(X_mean)** (e.g. 40.6 vs 38.3; 12.2 vs
+  9.7) — the predicted variance destruction is real but second-order. Averaging costs a few
+  percent of PR, not the effect.
+- **PR(X_var) is systematically the HIGHEST** of the three (46.6 / 45.2 / 35.4 …). The
+  *fluctuations* carry more dimensionality than the mean. Only visible because we stopped
+  discarding the variance. **Open question:** is `X_var` a better feature than `X_mean` for
+  the readout? Flagged, not acted on — changing the fitness feature is a D026-scale decision.
+- **temporal_cv is non-monotonic in coupling** (0.195 → 0.419 at w0=0.5, but 0.059 at w0=3.0,
+  p=0.1). Strong coupling does not simply mean more fluctuation; the earlier "more coupling →
+  more chaos → more averaging destroyed" story was too simple. It happened to be the right
+  worry for the wrong reason.
+*Method note:* the check needs ~11 window samples/pattern (sample_ms=5), vs the default
+sample_ms=15 which yields ~4 — too few to estimate variance or attractor PR.
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this
