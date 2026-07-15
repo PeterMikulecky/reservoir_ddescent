@@ -114,4 +114,44 @@ interpreting a null.
 input_gain) to pick an operating point with high, responsive PR and healthy activity —
 then E1 (static, as originally designed) is unblocked.
 
+## 2026-07-14 — Reframe: the flagship becomes an evolutionary model (E9)
+Four critiques from PJM, each landing, reshaped the project.
+
+**Interpretation test retired (D018).** Checked the RMT literature: the interpolation peak
+occurs where normalized effective degrees of freedom η_κ → 1 (Bach 2023; Hastie et al.).
+So "effective dimensionality, not nominal count, sets the threshold" is *already
+established*, and the literature supplies the principled metric (edof) — a different
+functional of the spectrum than PR. PJM's critique ("we'd need to show other candidates
+*aren't* the axis") forced the check. H5 demoted to a diagnostic.
+
+**Dissociation reframed (D019).** PJM caught that varying motifs *in order to* move PR
+couples them by construction — collinear predictors, same error class as the D014
+normalization bug. Correct design exploits the many-to-one structure→PR map (Recanatesi:
+PR varies widely at fixed density): build natural scatter, then test whether **PR screens
+off structure** for generalization. That *is* Frank's claim H.
+
+**E7 scoped (D020).** A reference point for messier systems must characterize its own
+scaling — what's invariant, what's substrate-specific.
+
+**Flagship = GA over motif-encoded reservoirs (D021, PJM's proposal).** The entire surveyed
+literature lacks **selection**. A GA supplies heredity, lineage, population, and makes
+Frank's mapping literal (selective history = training data; novel environments = test data)
+rather than metaphorical. Genome v1 = (p, w0, recip, ei); readout = scoring mechanism;
+metabolic cost on synapses makes "biology doesn't penalize complexity" a manipulable axis.
+
+**The structural insight.** Above the interpolation threshold every individual interpolates,
+so the fitness landscape is **flat — a neutral network**. Not a bug: it lands the population
+exactly in the regime Frank's Gavrilets/neutral-space reframing is about. Central contrast
+becomes below vs. above threshold, manipulated via size of selective history. The GA also
+generates the D019 screening-off library as a byproduct.
+
+**Where the project now stands.** It was "does dimensionality drive generalization"
+(answered, by others, 2017). It is now: **does selection over heritable regulatory structure
+produce general solutions, and does dimensionality mediate it?** The established literature
+becomes the calibrated instrument — PJM's original instinct — rather than the result.
+
+*Next:* (1) re-run T0 in the w0 parameterization; (2) **flat-landscape check** — verify
+training NMSE ≈ 0 across the genome range above threshold, the load-bearing assumption of
+E9; (3) build `evolve.py`. See GA_DESIGN.md.
+
 <!-- Future run stubs will be auto-appended below this line. -->

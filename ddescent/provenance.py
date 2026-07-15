@@ -37,6 +37,7 @@ CANONICAL = {
     "E6": "snakeness",
     "E7": "ladder",
     "E8": "neutral",
+    "E9": "evolve",
     "T0": "tune_operating_point",
     "AN": "analysis",
 }

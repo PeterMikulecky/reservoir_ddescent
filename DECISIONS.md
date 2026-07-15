@@ -9,6 +9,12 @@ a project grows or collaborators join.
 Status values: **Accepted** · **Accepted-provisional** (agreed, but gated on a pending
 check) · **Superseded** (link to the entry that replaces it).
 
+**Decision authority.** PJM has autonomy over this project's scientific direction. The
+complex-systems group is a stakeholder and audience — a source of comparison and critique,
+and the eventual venue — not an approval gate. Decisions here are made on their merits and
+recorded; group buy-in is sought where it changes what *they* do (e.g. the comparative
+ladder), not as a precondition for proceeding.
+
 ---
 
 ### D001 — Brian2 uses numpy code generation, not C++ compilation
@@ -146,7 +152,9 @@ of whether this very identification holds, and is the most Frank-specific thing 
 2007), information processing capacity (Dambre et al. 2012).
 
 ### D017 — Systematic related-work review precedes further building; E1 repositions toward a fixed-count motif dissociation
-**2026-07-14 · Accepted-provisional (needs group endorsement)**
+**2026-07-14 · Accepted** *(the "needs group endorsement" gate is removed — see Decision
+authority in the header. Reposition target itself is refined by D019 and superseded as
+flagship by D021.)*
 A first targeted search shows the individual links we planned to test are largely
 established: readout double descent = random-feature double descent (Belkin 2019);
 density → dimensionality = Litwin-Kumar (2017, feedforward, inverted-U) and Recanatesi
@@ -214,3 +222,63 @@ reasoning — which had produced a confident and wrong mechanistic story.
 `DECISIONS.md` are maintained as the project's narrative and governance memory.
 *Reasoning:* keeps the project self-explaining as it evolves; the unifying rule across
 code/outputs/narrative/rules is **append and date, never silently overwrite reasoning**.
+
+### D018 — Retire the "PR is Frank's x-axis" interpretation test (H5) as a headline claim
+**2026-07-14 · Accepted**
+H5 is demoted from candidate flagship to a supporting/diagnostic measurement.
+*Reasoning:* the RMT literature already establishes that **effective** dimensionality, not
+nominal parameter count, sets the interpolation threshold — the peak occurs where the
+normalized effective degrees of freedom η_κ = (1/n)·Tr[Σ²(Σ+κI)⁻²] → 1 (Bach 2023;
+Hastie et al.; Mei & Montanari). So the abstract claim is taken. Worse, the literature also
+supplies the *principled* metric (edof), which is a different functional of the same
+spectrum than PR (a moment ratio). A PR-vs-edof horse race is therefore a rigged game: if
+PR loses, that is the expected analytic result and not a finding; if PR wins, the natural
+reading is that asymptotic assumptions fail on structured reservoir covariance — a technical
+ML question, not a biological one. *Credit:* PJM's critique — "we'd need to show not only
+that PR is Frank's axis but that other candidates aren't" — is what forced the check.
+
+### D019 — The dissociation is a SCREENING-OFF test on natural scatter, not an engineered manipulation
+**2026-07-14 · Accepted · refines D017**
+Do **not** vary motifs *in order to* move PR. That makes structure and PR coupled by
+construction and collinear as predictors — the same error class as the D014 normalization
+bug (manipulating A through B, then claiming to separate them).
+*Correct design:* exploit the fact that the structure → PR map is **many-to-one** (exactly
+Recanatesi et al.'s finding that PR varies widely at fixed density). Build a library of
+networks spanning many structural axes (density, reciprocity/motifs, E/I, heterogeneity,
+coupling), let PR fall out where it falls, then locate **iso-PR networks with differing
+structure** and **iso-structure networks with differing PR**. The test is conditional
+independence: *given PR, does structure still predict generalization?* Frank's claim H is
+precisely "**dimensionality screens off circuit features**." Natural scatter is the
+instrument; a designed manipulation destroys it. *Credit:* PJM.
+
+### D020 — E7's reference role is scoped as a scaling-and-invariants study
+**2026-07-14 · Accepted · refines E7**
+If the reservoir is to serve as the clean reference the group's messier systems (beehives,
+colonies, boolean networks) are compared against, the deliverable is not a number but
+**what scales and what doesn't**: how PR scales with N, whether the PR→generalization
+relation preserves its shape across scales, and which findings are substrate-specific
+versus portable. *Reasoning:* a reference point that hasn't characterized its own scaling
+behaviour cannot license comparison to a colony. *Credit:* PJM.
+
+### D021 — FLAGSHIP: evolve motif-encoded reservoirs with a genetic algorithm (new stage E9)
+**2026-07-14 · Accepted · supersedes D017's reposition target as the headline**
+The flagship becomes a **genetic algorithm over motif-encoded reservoir genomes**, with the
+linear readout as the scoring mechanism. See `GA_DESIGN.md`.
+*Reasoning:* every mechanism link we planned is already established (see REFERENCES.md
+Positioning), and D018 removes the interpretation test. What the entire neuroscience/ML
+literature we surveyed **lacks is selection** — no heredity, no lineage, no population.
+Frank's claim is evolutionary, and a GA supplies exactly the missing ingredient. It also
+makes his mapping *literal* rather than metaphorical: regulatory connections = genome,
+**selective history = training environments**, selection = the optimizer, **novel
+environments = test data**. No unearned analogy (contrast D003, where a learning optimizer
+stood in for selection).
+*Key structural insight:* in the overparameterized regime every individual interpolates the
+training data, so **the fitness landscape is flat — a neutral network**. Naively this kills
+selection; in fact it lands the population in precisely the regime Frank's argument is
+about (his Gavrilets/neutral-space reframing: what matters is not position on a fitness
+surface but which solution the dynamics find within the connected neutral region). The
+central contrast therefore becomes **below vs. above the interpolation threshold**,
+manipulated via the size of the selective history.
+*Bonus:* the GA generates the D019 screening-off library as a byproduct — an evolved
+population *is* natural scatter over structure and PR.
+*Credit:* PJM's proposal.
