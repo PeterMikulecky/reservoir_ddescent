@@ -175,3 +175,8 @@ E9; (3) build `evolve.py`. See GA_DESIGN.md.
 - type `exp` · stage `AN` · git `g2798ab0` (lab nb update) · status **complete**
 - result: M1/M2/M3 x {test,novel} on T0-tune_operating_point__20260715-053812__exp__gefee6c4__feature-n1000; M2 beta_pr (test): mean=+0.19, inst=-0.50, var=-246.84
 - _interpretation:_ 
+
+## 2026-07-15 07:06 — `AN-analysis__20260715-070650__exp__ged17dc4__feature-check-models`  <!-- auto -->
+- type `exp` · stage `AN` · git `ged17dc4` (lab nb update) · status **complete**
+- result: M1/M2/M3 x {test,novel} on T0-tune_operating_point__20260715-053812__exp__gefee6c4__feature-n1000; M2 beta_pr (test): mean=+0.23, inst=+0.08, var=-0.63
+- _interpretation:_ 
