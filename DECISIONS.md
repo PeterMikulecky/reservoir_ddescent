@@ -963,6 +963,125 @@ the added connections to be **organized** (hierarchy/regulation), not merely num
 question, and part of our answer is **strategic** (Wagner's turf), not scientific. Say so plainly
 rather than dress it up.
 
+### D043 — Friedlander/Alon (2015): bow-ties evolve only under rank-deficient goals + product-rule mutations. Two flaws in our model.
+**2026-07-17 · Accepted**
+Friedlander, Mayo, Tlusty & Alon (2015), *Evolution of bow-tie architectures in biology* (arXiv:1404.7715).
+**Finding:** bow-ties evolve spontaneously iff **(i) the goal is RANK DEFICIENT** (rank = minimal
+number of input features the outputs depend on) **and (ii) mutations follow a PRODUCT rule**
+(mutated element *multiplied* by a random number), not a sum rule. **The waist width EQUALS the
+goal rank.** Full-rank goals → **no bow-tie ever**. Sum-rule mutations → **94–97% of runs fail**
+to reach a waist matching the rank. Robust to ~1% noise; holds in a nonlinear (retina) model
+(75% product vs 45% sum). Population 100, tournament selection, feedforward layered nets.
+
+**FLAW 1 — our mutation operator is wrong.** `evonet.mutate()` adds Gaussian noise = **sum rule**,
+the operator that reliably PREVENTS bow-ties. **Switch to product-rule:** `mag *= N(1, σ)`.
+**FLAW 2 — our task is full-rank.** `tasks.profile_environments` builds E→profile from a random
+(K×d) matrix — generically **full rank** ⇒ **a bow-tie is mathematically impossible**
+(rank(AB) ≤ min(rank A, rank B)). We designed a task that forbids the thing we want to observe.
+
+**Structural problem (dissolved by D044).** Friedlander's waist is a **layer** in a **feedforward**
+net; ours is **recurrent, layerless**, so "where is the waist?" was undefined. See D044.
+
+**The opening.** R&N: selected complexity q ≈ q*. Friedlander: waist = rank r. **These are the same
+result in different clothing** — the system's dimensionality converges on the environment's —
+reached by two independent mechanisms (Occam factor; product-rule mutational bias). Strong
+convergent evidence, and it means our "waist tracks q*" prediction is **already established,
+twice**. **But both STOP THERE.** Neither asks what excess parameters do once the system already
+matches the environment. **That is our question.**
+
+### D044 — The waist is a point in the EVOLUTIONARY TRAJECTORY, not (only) a layer
+**2026-07-17 · Accepted** · *Credit: PJM* · corrects my conflation
+**My error:** I quoted Frank's hourglass ("compress, which regulatory networks then expand") and
+told PJM *"that is exactly your two-level structure, in his words."* **It was not.** Frank and
+Friedlander describe an **anatomical** waist: a narrow layer in a feedforward path — a place in
+the **architecture**. PJM's waist is a **point in the evolutionary trajectory**: a location on the
+parameter axis where the *character of what evolution builds* changes — **encoding before,
+regulation after** — a place in the network's **history**. Different claims; I attributed mine to him.
+
+**PJM's version dissolves D043's structural problem.** A trajectory waist needs **no layers**. It
+needs only the network's *function* to change character as parameters grow. Our recurrent
+substrate can host that. My objection was against my own concept.
+
+**And it gives the interpolation threshold a MECHANISM.** Standard double descent puts the peak
+where parameters ≈ data — an accounting fact with no story. **PJM's version: the peak is where
+ENCODING CAPACITY SATURATES.** The network has enough parameters to capture the environment's
+invariances; further *encoding* parameters can only memorize. Past that, parameters are useful
+only if they do something **else**: regulate. **That is why there is a second descent — the added
+parameters switch function.**
+
+**Trajectory and anatomical waists are the same event from two angles** (PJM, agreed): if the
+transition is "stop improving the encoder, start building the expander," the architecture you end
+up with **is** hourglass-shaped. Friedlander evolved networks that build the encoder and stop;
+**nobody has asked what happens after.**
+
+**Prediction that distinguishes this from standard double descent:** the peak sits where encoding
+saturates — set by **r, the environment's rank** — **not** at parameters ≈ **n**. *Vary r and n
+independently; see which moves the peak.*
+
+### D045 — Convergence is LEVEL-RELATIVE; flat environments forbid the second descent by construction
+**2026-07-17 · Accepted** · *Credit: PJM* · re-diagnoses both rivals; forces a task redesign
+**PJM:** *"at the level of encoding statistical regularities OF ONE TYPE we find convergence, but
+selection pressure means there is benefit to 'leveling up' — evolving regulatory complexity that
+allows the system to learn a more complex, multilayered set of regularities. The higher-level
+regularities were always there; prior to the waist the system wasn't addressing them."*
+**Convergence is within-level; leveling up is across-level.** So Friedlander's r and R&N's q* are
+convergence onto **one type** of regularity. **No conflict with Frank** — the camps are right
+about different things, which is why the literature looked contradictory.
+
+**This re-diagnoses the rivals better than my earlier critique.** I said R&N can't see a second
+descent because q/n ≈ 0.009 — true but shallow. **The real reason: their environments are FLAT.**
+R&N's ground truth is a single map φ*. Friedlander's is a single matrix G. Frank's reservoir: one
+input sequence, one task. **There is no higher-order structure to level up to**, so extra
+parameters could never buy anything. **Their convergence results are forced by their environment
+design, not discovered about evolution.**
+
+**Damning consequence: OUR TASK IS FLAT TOO.** `profile_environments` = a single map
+E → tanh(E·Q·Wc). **We would reproduce R&N exactly** and conclude the second descent doesn't
+exist — having built an environment that forbids it.
+
+**Required redesign — hierarchical environments:**
+- **Level 1:** within a context, environment → response follows a regularity (rank r₁).
+- **Level 2:** *which* regularity applies depends on **context**; contexts themselves have structure.
+- A system encoding only level 1 converges on r₁ and stalls — as well as any single map can do
+  averaged over contexts.
+- **Leveling up requires detecting context and MODULATING the level-1 map = regulation.** Not more
+  encoding. Different function.
+⇒ the second descent becomes **mechanistically necessary**: past the waist, extra *encoding*
+parameters can only memorize, but parameters that **modulate** unlock environmental structure that
+was inaccessible.
+*Lineage note:* Kashtan & Alon's **modularly varying goals** (same lab) established that
+structured/varying goals drive modularity. "Environment structure shapes architecture" is theirs.
+**Not theirs:** that the transition to a higher level **IS** the second descent.
+
+### D046 — The two second-descents may be ONE process, described at two levels
+**2026-07-17 · Accepted** · *Credit: PJM*
+**PJM:** the second-descent-within-a-system and the second-descent-as-emergence-to-a-higher-level
+may be **the same process framed differently**.
+**How they'd be identical.** ML's account: past the threshold many solutions interpolate and
+implicit bias selects a **smooth** one. But a smooth solution is **one that captures the
+generating process rather than the samples** — and capturing the generating process **is**
+addressing the deeper regularity. So "implicit bias finds the simple interpolant" and "the system
+levels up" are **the same event, mechanistic vs functional description**.
+**This is FRAMING.md's H0** (substrate-independent process; realization varies). In a feedforward
+ML net, "capture the deeper regularity" is realized as a weight configuration. **In a dynamical
+network it may be realizable ONLY as regulatory structure** — to make the level-1 map
+context-dependent, something must **modulate** it; weights that merely add drive cannot.
+**⇒ the hierarchy is not a rival theory; it is the only available IMPLEMENTATION of the same
+theory in a substrate with dynamics.** That is D042's plank (parameters are not inert here)
+arriving from the other direction.
+
+**Coincidence is TESTABLE — the experiment requires measuring BOTH curves against the same
+parameter axis:**
+| outcome | reading |
+|---|---|
+| second descent appears **exactly when** regulatory motifs emerge | same process, two descriptions. Contribution: the second descent's **biological mechanism and structural signature**, which the ML account does not predict. |
+| second descent **without** regulation | the ML account is complete; regulation is decoration; **our framing dies cleanly**. |
+| regulation **without** second descent | regulation is doing something else; both accounts need work. |
+
+**Honest caution.** If they are the same, our claim is about **realization**, not a new phenomenon.
+Real — it gives the second descent a mechanism where "just add parameters" cannot work — but
+**smaller** than "we found a new kind of double descent." Say the smaller true thing.
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this

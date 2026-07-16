@@ -1,103 +1,92 @@
 # Queue
 
-Single source of truth for what's next. Updated 2026-07-16 (evening).
-Claims live in `DECISIONS.md`; framing in `FRAMING.md`; narrative in `LAB_NOTEBOOK.md`.
+Updated 2026-07-17. Claims → `DECISIONS.md`; framing → `FRAMING.md`; narrative → `LAB_NOTEBOOK.md`.
 
 ## Where the project stands
 
-**The reservoir is retired (D032).** It froze W, so it could not test a claim about regulatory
-connections being the evolved parameters. It did its job: it clarified the questions and forced
-the reckoning with the literature.
+**The hypothesis is now mechanistic (D044–D046, FRAMING §0):** the waist is a point in the
+**evolutionary trajectory** where encoding saturates and **regulation begins**. The second descent
+is the added parameters **switching function**. Trajectory waist and architectural waist are the
+same event from two angles.
 
-**The model is now an evolvable spiking network** (`ddescent/evonet.py`): **W is the genome**,
-no trained readout, input neurons receive the environment, output neurons' behavior IS the
-phenotype (D036), environments demand **response profiles**, and **density sweeps P = |W| across
-the interpolation threshold** — Frank's Figure 1 x-axis made of regulatory connections.
-Verified: N=100, d=10, n_env=50 → constraints=500; density 0.005→0.5 sweeps P 50→4950
-(0.1x → 9.9x). **Dale's law with evolvable per-neuron identity** (D038): neurons can evolve
-into inhibitory cells; violations 97/100 → 0.
+**Both rivals re-diagnosed (D045):** Friedlander (waist = goal rank r) and R&N (q ≈ q*) find the
+same thing by two mechanisms — but **their environments are FLAT**, so their convergence is forced
+by design, not discovered. **Neither asks what excess parameters do once the system matches the
+environment.** That is our question.
 
-**The question** (`FRAMING.md`): Frank fuses **P** (parameter count) with **D** (effective
-capacity). Three modes of adding capacity — **grow nodes / densify / reorganize** — leave
-different fingerprints on (P, D_max, D). Which mode selection uses should depend on
-environments, tasks, and **cost structure**.
+**Our model currently cannot test it.** Three concrete blockers below.
+
+---
+
+## BLOCKERS — fix before any run (D043/D045)
+
+### B1. Mutation operator is wrong → switch to PRODUCT rule
+`evonet.mutate()` uses **sum-rule** (`mag + N(0,σ)`). Friedlander: sum-rule **fails 94–97%** of the
+time to evolve a waist. **Fix:** `mag *= N(1, σ)`. Two lines. Without this we cannot see the thing
+we are looking for.
+
+### B2. Task is FULL RANK → a bow-tie is mathematically impossible
+`tasks.profile_environments` builds E→profile from a random (K×d) matrix. Full rank ⇒ no waist,
+ever (rank(AB) ≤ min(rank A, rank B)). **Fix:** make the level-1 map **rank-deficient** (rank r₁ ≪
+min(K,d)).
+
+### B3. Task is FLAT → the second descent is forbidden by construction
+A single map E → tanh(E·Q·Wc) has **no higher-order structure to level up to**. We would reproduce
+R&N exactly and wrongly conclude the second descent does not exist. **Fix — hierarchical
+environments:**
+- **Level 1:** within a context, E → response follows a rank-r₁ regularity.
+- **Level 2:** *which* regularity applies depends on **context**; contexts have structure.
+- Encoding-only systems converge on r₁ and stall. **Leveling up requires detecting context and
+  MODULATING the level-1 map = regulation.**
+*(Lineage: Kashtan & Alon's modularly varying goals established that structured goals drive
+modularity. Ours is the claim that the transition **IS** the second descent.)*
 
 ---
 
 ## Critical path
 
-### 1. `ddescent/evolve.py` — the GA  ← START HERE
-Population, selection, generations on the Dale genome (`Genome`, `mutate` already exist in
-`evonet.py`). Fitness = distance between expressed output rates and the demanded profile, minus
-metabolic cost. Spawn-safe, provenanced (D004/D007).
+1. **Fix B1–B3.** Product mutations; rank-deficient level-1 map; hierarchical (context-dependent)
+   environments.
+2. **`ddescent/evolve.py`** — population, product-rule mutation on the Dale genome (D038),
+   tournament selection, spawn-parallel, provenanced.
+3. **GATE A — baseline per density arm** (D030). Can an evolved network beat a trivial baseline?
+   Doubles as the activity check (D037).
+4. **GATE B — does a peak appear at all?** Sweep density (P: 0.1×→9.9× constraints). **Where the
+   project lives or dies.** No peak ⇒ no phenomenon.
+5. **THE EXPERIMENT — measure BOTH curves against the same parameter axis** (D046):
+   generalization error **and** regulatory emergence. Coincidence ⇒ same process, two
+   descriptions. Second descent without regulation ⇒ our framing dies cleanly. Regulation without
+   second descent ⇒ both accounts need work.
+6. **The discriminating prediction (D044):** the peak tracks **r₁** (environment rank), **not n**
+   (number of environments). Vary independently; see which moves it. *This is not double descent
+   as ML understands it.*
 
-### 2. GATE A — baseline, **per density arm** (D030's rule, applied prospectively)
-Can an evolved network beat a trivial baseline? **Per arm**, because density is confounded with
-activity (D037): random genomes give output rate 0.044 at density 0.005 vs 2.124 at 0.5 — the
-sparse end is nearly silent. **Hypothesis: evolution compensates** (W is a genome now; sparse
-nets can evolve bigger weights). If low-density arms cannot compute even after evolution, the
-double-descent sweep **has no left half** and P must be varied another way.
-*NB (D037): low density → low activity → low fitness is **on the causal path**, not a confound.
-D030's lesson is narrower: before interpreting a representational metric like PR, check the
-system computes.*
+## Open
 
-### 3. GATE B — does a double-descent peak appear at all?
-Sweep density; look for a peak in test error near P ≈ constraints (density ≈ 0.05).
-**This is where the project lives or dies.** No peak ⇒ no phenomenon ⇒ the P/D question is
-unaskable and the substrate needs rethinking. Cheap; do it before building anything on top.
-
-### 4. GATE C — can the network reach the fluctuation-driven balanced regime? (D039)
-**`noise_sigma = 0.0` and tonic `bias = 0.4` put us in the tonic regime, where inhibition is
-purely subtractive and gain control is UNAVAILABLE.** Divisive regulation requires fluctuations
-(Chance/Abbott/Reyes; Prescott & De Koninck). With Dale's law a balanced E/I net self-generates
-them — but that must be verified. **Precondition for regulatory motifs to emerge at all.**
-
-### 5. The experiment — three modes × cost structure
-Cost per node discourages growing N; cost per synapse discourages growing N and densifying;
-zero cost frees everything and lets **mutation bias** decide (where Louis's simplicity-bias work
-becomes ours to use). Sweep cost structure; watch which mode evolution takes; measure the
-(P, D_max, D) fingerprint.
-
----
-
-## Open design questions (decide, don't default)
-
-- **N as a gene** — needs a **high cost per node**, as in biology (PJM). Two separable questions:
-  *does growing N produce a second descent?* needs only **fixed-N arms compared across N** (no
-  gene, no muddied waters — tractable now); *would evolution choose to grow N?* needs the gene.
-  **Superposition supplies the currency:** capacity ≤ N (Dambre); if N < features you superpose
-  and pay in interference; pay for nodes to reduce it.
-- **Interference vs abstraction** (PJM) — both lower PR and **PR cannot tell them apart**.
-  Generalization may *emerge from* superposition: a low-dimensional latent shared across
-  instantiations = "snakeness". **The discriminator is novel-but-related environments** (D029):
-  abstraction predicts new instances of the class; interference destroys within-class
-  discriminability.
+- **Regulatory measurement (D040):** potent/null **screen** → functional contribution **filter** →
+  **gain-vs-offset** mechanism criterion. Needs the fluctuation-driven regime (D039: `noise_sigma
+  = 0` and tonic bias put us where gain control is unavailable — **Gate C**).
 - **Is PR the wrong measure?** Superposed features are non-orthogonal; PR measures linear
-  dimensionality. Feature-recovery (sparse coding / SAE) may be the right instrument. Challenges
-  D002/D016 — live, unresolved.
-- **Regulatory measurement (D040)** — implement the three stages: potent/null screen →
-  functional contribution → gain-vs-offset. Needs GATE C first.
-- **Which neurons express the phenotype?** d is a niche property, fixed per arm (D037). But
-  should the network choose *which* cells are outputs? Topology, not capacity. Biologically real
-  (development).
-- **Subtractive vs divisive** — settled for now: **no shunting** (D039). Revisit only if GATE C
-  shows the balanced regime is unreachable.
+  dimensionality. Interference vs abstraction both lower PR and **PR cannot tell them apart**.
+  Feature-recovery (sparse coding) may be the right instrument. Challenges D002/D016.
+- **N as a gene** — needs high per-node cost (PJM). Separable: *does growing N produce a second
+  descent?* needs only fixed-N arms across N (tractable now). *Would evolution grow N?* needs the
+  gene.
+- **Which neurons express the phenotype?** d is a niche property, fixed per arm (D037). Whether the
+  network chooses *which* cells are outputs is topology, and biologically real.
 
 ## Deferred
+Crossed net×task design; Protocol T; systematic related-work review (D017); E7 scaling/invariants;
+H2 restatement as a w0×density interaction; "cells" → "conditions" rename.
 
-Crossed net×task design (seeds aliased); Protocol T; systematic related-work review (D017);
-E7 scaling/invariants; two GA arms (S- vs T-fitness); H2 restatement as a w0×density interaction;
-"cells" → "conditions" rename.
-
-## Standing rules (earned the hard way)
-
-- **Search before building, not after.** Three times a PJM-requested search overturned my
-  reasoning: D014 (normalization), D031 (memory–nonlinearity), D034 (implicit bias) — plus D039
-  (shunting). The pattern is unambiguous.
+## Standing rules (earned)
+- **Search before building.** Five times a PJM-requested search overturned my reasoning: D014,
+  D031, D034, D039, D043.
 - **Prove the system beats a trivial baseline before interpreting any representational metric**
   (D030).
-- **Log-transform heavy-tailed error outcomes**; treat convergence warnings as results (D028).
-- **Don't raise structural alarms from smoke-preset numbers** (D033).
-- **Don't bolt on mechanisms; make the architecture capable and let selection build them** (D038).
-- **Geometry does not imply mechanism** (D040).
+- **Check the environment permits the phenomenon before concluding it is absent** (D045).
+- Log-transform heavy-tailed outcomes; treat convergence warnings as results (D028).
+- Don't raise structural alarms from smoke-preset numbers (D033).
+- Don't bolt on mechanisms; make the architecture capable and let selection build them (D038).
+- Geometry does not imply mechanism (D040).
 - Commit before `reg` runs; PR stays confirmatory, the rest exploratory (D025).

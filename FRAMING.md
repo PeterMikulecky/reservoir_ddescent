@@ -1,36 +1,51 @@
 # Framing: what is Frank's claim, independent of substrate?
 
-> **UPDATED 2026-07-17 (D041/D042).** The question is now defined against a specific rival:
-> **Rappeport & Nitzan (2025)**, who built this framework and found the OPPOSITE of Frank.
-> Read §0 first.
+> **UPDATED 2026-07-17 (D043–D046).** The hypothesis is now mechanistic, and both rivals are
+> re-diagnosed. Read §0.
 
-## 0. The project in one question
+## 0. The project in one hypothesis
 
-Two theories make **opposite predictions** about what selection does with excess parameters:
+**The waist is a point in the EVOLUTIONARY TRAJECTORY** — the parameter value where the character
+of what selection builds changes: **encoding before, regulation after** (D044, PJM). It is not
+(only) a narrow layer.
 
-| | prediction beyond the interpolation threshold | mechanism |
-|---|---|---|
-| **Frank (2026)** | more parameters → **better** generalization (second descent) | implicit bias picks smooth interpolants (via Wilson) |
-| **Rappeport & Nitzan (2025)** | excess complexity **selected against**; ⟨q∞⟩ ≈ q* | the **Occam factor** — complex classes collapse on a new best member each generation |
+> **The interpolation peak is where ENCODING CAPACITY SATURATES.** The network has enough
+> parameters to capture the environment's level-1 invariances; further *encoding* parameters can
+> only memorize. **The second descent is the added parameters switching function — to
+> regulation** — which unlocks a level of environmental structure that was always there but
+> previously unaddressed.
 
-**R&N cannot see a second descent: their q ∈ [1,9] against T = 1000 cues (q/n ≈ 0.009) sits
-three orders of magnitude BELOW the threshold.** Frank's claim lives at q ≈ n and beyond.
+This gives the threshold a **mechanism**. Standard double descent locates the peak where
+parameters ≈ data: an accounting fact with no story.
 
-> **THE QUESTION: does the Occam factor keep penalizing complexity past the interpolation
-> threshold, or does a second descent appear? Nobody has run evolutionary dynamics into the
-> overparameterized regime.**
+**Convergence is LEVEL-RELATIVE (D045).** Both rivals find the system's dimensionality converging
+on the environment's — Friedlander: waist = goal rank *r*; R&N: q ≈ q\*. **Same result, two
+mechanisms** (product-rule mutational bias; the Occam factor). But that is convergence onto **one
+type** of regularity. **Their environments are FLAT** — a single map φ\*, a single matrix G — so
+there is nothing to level up to, and their convergence is **forced by environment design, not
+discovered about evolution**. *(Our `profile_environments` is flat too: we would reproduce R&N
+exactly and wrongly conclude the second descent does not exist.)*
 
-**And both theories share a blind spot** (D042): each was developed where **parameters are
-dynamically inert** — feedforward ML for Frank, 3×3 linear maps and 1-hidden-layer nets for R&N.
-**In a recurrent spiking network parameters are NOT free**: more synapses → more coupling →
-synchrony, saturation, pathology, which can destroy the expressiveness the parameters were meant
-to buy. **Every biological substrate violates their shared assumption.** So a second descent here
-may require the added connections to be **organized** — hierarchy, regulation — not merely
-numerous.
+**The two second-descents may be ONE process (D046).** ML says implicit bias picks the *smooth*
+interpolant — but a smooth solution is one that **captures the generating process rather than the
+samples**, which *is* addressing the deeper regularity. Mechanistic vs functional description of
+one event. **This is H0**: in a feedforward net that is realized as a weight configuration; **in a
+dynamical network it may be realizable ONLY as regulation**, because making the level-1 map
+context-dependent requires something to **modulate** it, and weights that merely add drive cannot.
+*The hierarchy is not a rival theory — it is the only available implementation of the same theory
+in a substrate with dynamics.*
 
-**PJM's framing:** *biology has selected spiking networks; there are competing ideas about how
-parameterization relates to learning; how do those ideas play out in spiking networks?* We
-**adjudicate**, we do not champion.
+**Two predictions that distinguish us:**
+1. **The peak tracks r (the environment's rank), not n (the number of environments).** Vary them
+   independently; see which moves it.
+2. **The second descent coincides with the emergence of regulatory structure.** Requires measuring
+   **both curves against the same parameter axis** — generalization *and* regulatory emergence.
+   All three outcomes inform (see D046).
+
+**Honest scope.** If the two descriptions are one process, our claim is about **realization**, not
+a new phenomenon: it gives the second descent a mechanism in a substrate where "just add
+parameters" cannot work. Smaller than "a new kind of double descent" — and we say the smaller true
+thing.
 
 ---
 
