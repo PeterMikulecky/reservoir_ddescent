@@ -754,6 +754,83 @@ they never resolved.
 **Still open (decide, do not default):** how many output neurons **d**, and is d evolvable? It is
 `M` from the reservoir design in disguise — capacity as a gene.
 
+### D037 — Minimal evolvable model built; density sweeps P as designed; ACTIVITY CONFOUND flagged
+**2026-07-16 · Accepted** (build) · **Open** (the confound)
+`ddescent/evonet.py` + `tasks.profile_environments`. W is the genome; no trained readout;
+input neurons receive the environment; output neurons' behavior is the phenotype; fitness reads
+output **rates** (a design choice per D036, defensible: expression level is the trait); metrics
+read whatever channel we like on the internal state.
+
+**It lands where designed.** N=100, d=10, n_env=50 → **constraints = 500**. Density sweeps
+**P = |W|**: 0.005 → 50 (**0.1x**), 0.05 → 495 (**0.99x — the threshold**), 0.5 → 4950 (**9.9x**).
+**Frank's Figure 1 x-axis made of regulatory connections, with the interpolation threshold in
+the middle of a natural density range.** Cost 1.84 s/genome → pop 50 x 100 gens ≈ 25 min on 6
+workers. Feasible.
+
+**d is a NICHE property, not a gene.** The environment demands a response of a given shape;
+letting the genome set d would let the organism choose what it is asked, and would let evolution
+move its own interpolation threshold (constraints = n_env x d) out from under the measurement.
+Also likely degenerate: more outputs = more constraints, so selection would shrink d to the
+minimum. **Fixed per arm; varied across arms as the second threshold knob.**
+*Genuinely open (topology, not capacity):* should the network choose WHICH neurons express the
+phenotype, with d fixed? That is developmental and biologically real.
+
+**THE CONFOUND (open).** Fixed per-synapse weights mean **density IS coupling** (D014) — so
+sweeping density sweeps **activity** too: output rate 0.044 at density 0.005 vs 2.124 at 0.5.
+At the underparameterized end the network is **nearly silent** and cannot express anything.
+A naive density sweep would confound "parameter count" with "is the network alive" — **the D030
+mistake in a new model**.
+*Plausible resolution, and a real prediction:* **W is now the genome, so evolution can
+compensate** — a sparse network can evolve larger weights to reach viable activity. The confound
+may dissolve under selection in a way it never could with random W. **Hypothesis, not
+assumption.**
+*Consequence — gate order changes:* **baseline gate PER DENSITY ARM comes first**, and doubles
+as the activity check. If low-density arms cannot beat a trivial baseline even after evolution,
+the double-descent sweep has **no left half** and P must be varied some other way.
+
+### D038 — Dale's law with EVOLVABLE per-neuron identity; regulatory motifs must EMERGE, not be bolted on
+**2026-07-16 · Accepted** · *Credit: PJM* · corrects an error of mine about our own code
+**My error, twice over.** I claimed our network "has no regulatory mode" because "every synapse
+is additive — neurons drive each other." **Wrong:** our weights are *signed* — 52% of synapses
+are inhibitory. There is plenty of inhibition. I then proposed bolting on shunting (divisive)
+inhibition as a "regulatory mode." **PJM rejected the framing:** regulatory motifs should
+**emerge under selection**, not be installed by the experimenter. The architecture's job is to
+*permit* them.
+
+**The real limitation, which PJM located precisely: no neuron-level identity.** Measured on our
+own genome: **97/100 neurons had BOTH excitatory and inhibitory outputs** — no Dale's law. A
+cell excites some targets and inhibits others simultaneously, which is biologically impossible
+and, decisively, means **no neuron has a coherent role**. Regulatory motifs — feedforward
+inhibition, disinhibition, gain control — all require a cell whose *identity* is inhibitory.
+The architecture could not host the thing the theory is about. **It was not absence of
+inhibition; it was absence of identity.**
+
+**The fix (PJM's design).** Genome becomes two gene groups:
+- `signs` : (N,) in {+1,-1} — each **neuron** is E or I; **all** its outgoing synapses carry
+  that sign (Dale's law). **Mutable**: a neuron can *evolve into* an inhibitory cell.
+- `mag` : (N,N) >= 0 — per-synapse magnitudes; zeros = absent synapses.
+`mutate()` jitters magnitudes and rarely flips neuron signs (a large phenotypic jump).
+*Verified:* Dale violations **97/100 → 0**; mutation flips identities (4 neurons E→I in one
+round; exc fraction 0.80 → 0.78) with Dale's law intact. Activates `ei_split`, unused since
+`connectivity.py` was written.
+
+**What this buys.** We do NOT install regulation. We make the architecture **capable** of it and
+ask whether selection builds it. **Whether regulatory motifs emerge — and whether their
+emergence coincides with the second descent — becomes the finding, not the assumption.**
+Connects to PJM's framing that "more regulatory dimensionality" means *a greater proportion of
+the network in regulatory roles*, with the remainder doing basic encoding/memorization — and to
+high-cost N expansion as one way to *afford* a regulatory subpopulation.
+
+**Open caveat (flagged, NOT acted on — per PJM's "don't bolt things on").** Our inhibition is
+**subtractive** (`I_syn += w`, w<0); textbook gain control is **divisive** (shunting). The
+strongest form of regulation may thus be unavailable. But subtractive inhibition in a
+fluctuation-driven spiking network **does** modulate effective gain near threshold, so it may
+suffice. **Test after the E/I change; do not add machinery preemptively.**
+
+**Operationalizing "regulatory fraction" (needed before it is a measurement, not an intuition):**
+perturb neuron i, measure whether j's response **offset** shifts (driving/encoding) or its
+**gain** shifts (regulatory). Regulatory fraction falls out without hand-labeling.
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this
