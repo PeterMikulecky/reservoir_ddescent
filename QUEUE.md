@@ -43,7 +43,21 @@ modularity. Ours is the claim that the transition **IS** the second descent.)*
 
 ---
 
-## Critical path
+## Critical path  (full chain: `BRIDGE.md`)
+
+**Hypotheses now stated in model quantities (D047):** **H-A** error vs P peaks at P\*; **H-B** P\*
+set by **r₁ not n** (*what distinguishes us from ML*); **H-C** descent iff modulating structure
+emerges; **H-D** **no fluctuation-driven regime ⇒ no second descent** (**the spiking test — an
+internal ON/OFF switch for the mechanism**).
+
+**New stimulus requirement (D047):** **context must be INFERRED FROM HISTORY, not signalled** —
+otherwise detecting it is a switch, not regulation. ⇒ environments need **two timescales**: fast
+stimuli, slow context drift. *This is where the chain first requires dynamics.*
+
+0. **GATE C moves UP — it is now a prerequisite, not a follow-up.** Without a reachable
+   fluctuation-driven balanced regime, **H-D has no treatment arm and gain-control regulation does
+   not exist in the model at all** (D039/D047). `noise_sigma = 0` + tonic bias currently put us in
+   the regime where inhibition is purely subtractive.
 
 1. **Fix B1–B3.** Product mutations; rank-deficient level-1 map; hierarchical (context-dependent)
    environments.

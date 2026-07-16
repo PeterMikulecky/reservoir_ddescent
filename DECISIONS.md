@@ -1082,6 +1082,58 @@ parameter axis:**
 Real — it gives the second descent a mechanism where "just add parameters" cannot work — but
 **smaller** than "we found a new kind of double descent." Say the smaller true thing.
 
+### D047 — The bridge: abstraction → hypothesis → construction → measurement; and the spiking answer the chain PRODUCES
+**2026-07-17 · Accepted** · spec: `BRIDGE.md` · *prompted by PJM: close the gaps and the "why spiking" answers will fall out*
+Working the chain concretely does two things: it yields **four hypotheses stated in quantities the
+model produces**, and it locates the places where the chain **requires** the substrate — rather
+than asserting that it does.
+
+**The hypotheses (H-A..H-D).**
+- **H-A** error vs **P=|W|** peaks at **P\***.
+- **H-B** **P\* is set by r₁** (rank of the level-1 regularity), **not n**. ← *what distinguishes
+  us from ML, which puts the peak at parameters ≈ data. Vary r₁ and n independently.*
+- **H-C** past P\*, error descends **only if** modulating (not driving) structure emerges.
+- **H-D** **no fluctuation-driven regime ⇒ no second descent.** ← **the spiking test.**
+
+**Stimulus requirement that is new and does the most work: CONTEXT MUST BE INFERRED FROM HISTORY,
+not signalled.** If context arrives as an explicit channel, detecting it is a *switch*, not
+regulation, and the mechanism is bypassed. If it must be inferred from recent input statistics,
+the system must **integrate over time** and then **modulate** the level-1 map. **⇒ the environment
+needs TWO TIMESCALES** (fast stimuli, slow context drift). *This is the first point where the chain
+requires dynamics — and it is exactly why R&N's static φᵢ and Friedlander's feedforward G could not
+have found this even with hierarchical goals.*
+
+**WHY SPIKING — the answer the chain produces (not a defence):**
+- **4a. Regulation-as-gain-control is dynamical, and free only here.** Holt & Koch: shunting is
+  *subtractive* on rates. Divisive gain modulation **requires noise**; tonic conductance is merely
+  subtractive; and it is **circuit-level** (mutual inhibition between subpopulations). So in a
+  **balanced spiking network gain modulation is AVAILABLE FOR SELECTION TO FIND, with no new
+  machinery**. In a deterministic rate model you must **bolt in** multiplicative interactions —
+  violating D038 and making the result an artifact of the experimenter. **⇒ spiking is where "did
+  evolution invent regulation?" is a real question rather than a modelling choice.**
+- **4b. H-D is an ON/OFF SWITCH FOR THE MECHANISM, INSIDE ONE SUBSTRATE — the strongest thing we
+  have.** Same network, same genome, same task; two arms: **tonic** (inhibition subtractive → gain
+  control unavailable → predict **no** second descent) vs **balanced** (fluctuation-driven →
+  divisive gain available → predict second descent). **Nothing changes but the dynamical regime.**
+  A **within-substrate control**, not a cross-substrate comparison. It converts "why spiking?" from
+  positioning into an experimental manipulation. **No feedforward or static-map model has this knob.**
+- **4c. Timescale separation is intrinsic** (τ_m, τ_syn, τ_r, refractoriness): the environment's
+  hierarchy has a native substrate. *Weaker — a rate model with two time constants does much of it.*
+
+**Honest ledger:** 4b strong (internal, decisive); 4a strong but **contingent on Gate C** (is the
+balanced regime reachable?); 4c a difference of degree. **D035's variance channel is now the
+WEAKEST plank, not the argument.**
+
+**Measurement discipline:** all quantities on **one P axis** — P, generalization error, regulatory
+fraction (D040's three stages), **fluctuation index** (*which arm are we actually in?*),
+context-inference accuracy, spectrum (D025). **Everything gated on baseline skill first (D030).**
+**H-C is the two-curve test** (D046): do the second descent and regulatory emergence **coincide**?
+All three outcomes informative — including "descent without regulation ⇒ our framing dies cleanly."
+
+**Build order:** B1 (product mutations) → B2/B3 (hierarchical, rank-deficient, two-timescale
+environments) → **Gate C** (*without a reachable balanced regime, H-D has no treatment arm and
+4a's mechanism does not exist*) → `evolve.py` → Gate A → Gate B → the two-curve experiment.
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this
