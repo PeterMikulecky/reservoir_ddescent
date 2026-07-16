@@ -831,6 +831,74 @@ suffice. **Test after the E/I change; do not add machinery preemptively.**
 perturb neuron i, measure whether j's response **offset** shifts (driving/encoding) or its
 **gain** shifts (regulatory). Regulatory fraction falls out without hand-labeling.
 
+### D039 — Do NOT add shunting inhibition: the literature says it would not do what I claimed
+**2026-07-16 · Accepted** · *prompted by PJM's call for a targeted search before deciding*
+**My claim was backwards.** I said "textbook gain control is divisive (shunting)" and floated
+adding shunting synapses so the network could regulate.
+**Holt & Koch (1997, Neural Comput 9:1001):** *shunting inhibition has a SUBTRACTIVE effect on
+firing rates*, not a divisive one. Averaged over interspike intervals the spiking mechanism
+clamps somatic V well above rest, so current through the shunt is ~independent of firing rate.
+Shunting IS divisive on subthreshold EPSPs — everyone assumed that carried to rates; **it does
+not.** Adding shunting would have installed machinery that does not deliver the mechanism.
+
+**What actually produces divisive gain control: NOISE, and CIRCUITS.**
+- Chance, Abbott & Reyes (2002); Prescott & De Koninck (2003, PNAS 100:2076): divisive
+  modulation of firing rate **requires synaptic noise** to smooth the rate–depolarization
+  relation. Tonic conductance increases are subtractive; **fluctuation-based** conductance
+  increases modulate gain **divisively**. Dendritic saturation enhances it further.
+- Gain modulation is better described as **input-gain control when mutual inhibition between
+  subpopulations** is present — i.e. a **circuit-level** mechanism, not a synapse type.
+
+**Decision: no shunting.** Divisive regulation **emerges** from the fluctuation-driven balanced
+regime plus circuit motifs — exactly what selection can discover with machinery we already have
+(D038's Dale genome). **PJM's "don't bolt things on" was right, and the literature says the
+bolt-on would not have worked.**
+
+**But it yields an actionable precondition.** Our config has **`noise_sigma = 0.0`** and a tonic
+`bias = 0.4` — the *tonic-drive* regime, where inhibition is purely subtractive and gain control
+is **unavailable**. With Dale's law in place, a balanced E/I network **self-generates
+fluctuations** (van Vreeswijk–Sompolinsky balanced state). So this is a **parameter-regime
+question, not an architecture one**: can our network reach a balanced, fluctuation-driven state?
+**That is a precondition for regulation to emerge at all**, and it is testable. Add to gates.
+
+### D040 — Measuring "regulatory": a three-stage scheme (PJM's design + one imported criterion)
+**2026-07-16 · Accepted (design)** · **Open (implementation)**
+**PJM's objection to per-neuron labels:** in real networks regulatoriness is not a per-cell
+property — it shows up in **subspaces of activity** or **phase relationships**. Correct.
+**My proposal and its flaw:** I offered Kaufman et al. (2014) output-potent vs output-null
+subspaces. **PJM: "does your approach simply assume anything output-null must be regulatory?"**
+**It does, and that is wrong.** Null is **geometric** — it says activity does not reach the
+output, not *why*. Null activity may be regulatory, **preparatory/memory** (which is what
+Kaufman's actually IS, in motor cortex), idle, or noise. I reached for a known population-level
+method without checking its criterion matched our concept.
+
+**PJM's fix — null as a SCREEN, not a verdict.** Use potent/null to identify **candidates** and
+the **graded extent** of possible regulatory behavior per neuron; then use **functional
+contribution to task performance** to separate real regulators from idle activity.
+**Why it works: RECURRENCE.** Output-null is null only *instantaneously*; in a recurrent network
+null activity at t feeds back and shapes what is potent at t+1. So "null but functionally
+important" is a coherent, measurable category — impossible in a feedforward net. And
+regulatoriness becomes a **ratio** (a neuron's influence via the null path vs its direct drive)
+— graded, not categorical, which is what biology looks like.
+
+**Remaining conflation, and the third stage.** Null-but-functional could be **memory** (storing
+for later readout — literally Kaufman's finding) or **regulation** (changing how others respond).
+Distinguish them with the criterion the inhibition literature (D039) makes operational:
+**subtractive = shifts the f–I curve (offset) = driving; divisive = changes its slope (gain) =
+regulating.** Perturb along a state-space direction; ask whether the input→output map **shifts**
+or **changes slope**.
+
+**The scheme:**
+1. **potent vs null** → candidates, graded per neuron *(PJM's screen)*
+2. **functional contribution** → active vs idle *(PJM's filter)*
+3. **gain vs offset** → regulation vs memory *(criterion imported from D039's literature)*
+Each stage does one job; none assumes geometry implies mechanism.
+*Ties to D039:* stage 3 needs the fluctuation-driven regime. In the tonic regime stages 1–2
+might find null-functional activity that is **all memory, no regulation** — itself a finding,
+not a failure.
+*Deferred:* phase relationships / coherence between subpopulations — the next layer, after the
+subspace version works.
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this
