@@ -30,6 +30,13 @@ we are looking for.
 ever (rank(AB) ≤ min(rank A, rank B)). **Fix:** make the level-1 map **rank-deficient** (rank r₁ ≪
 min(K,d)).
 
+### B3a. **Context must change stimulus STATISTICS, not the mean** (D048 — sharpest constraint)
+If context shifts the *mean*, the encoder detects it directly and **no regulation is needed** — the
+same collapse as signalling it. Context must be a change in the **distribution** stimuli are drawn
+from (variance, correlation), so that **mean-over-short-window = level 1** and
+**variance-over-long-window = context = level 2**. **The fluctuation channel is then literally
+where the second-level regularity lives.**
+
 ### B3. Task is FLAT → the second descent is forbidden by construction
 A single map E → tanh(E·Q·Wc) has **no higher-order structure to level up to**. We would reproduce
 R&N exactly and wrongly conclude the second descent does not exist. **Fix — hierarchical
@@ -75,8 +82,19 @@ stimuli, slow context drift. *This is where the chain first requires dynamics.*
    (number of environments). Vary independently; see which moves it. *This is not double descent
    as ML understands it.*
 
+## SEARCH BEFORE BUILDING (standing rule; 5 prior hits)
+
+- **Is the H-E feedback loop predictive coding rediscovered?** Higher levels modelling lower
+  levels' statistics and feeding back = **Rao & Ballard / Friston**. The *architecture* is theirs.
+  **Ours would be:** it **emerges under selection at a specific parameter count**, and its
+  emergence **IS** the second descent. **Check before building** (D048 problem 1).
+
 ## Open
 
+- **H-E's two readings (D048 problem 2):** (a) variance *rises* from encoding overflow then is
+  exploited; (b) variance *always* carried context and regulation **unlocks** it. D033 hints at (a)
+  but came from the retired reservoir **with no context structure**, so it cannot bear on this.
+  **Predict (b); measure whether (a) adds.**
 - **Regulatory measurement (D040):** potent/null **screen** → functional contribution **filter** →
   **gain-vs-offset** mechanism criterion. Needs the fluctuation-driven regime (D039: `noise_sigma
   = 0` and tonic bias put us where gain control is unavailable — **Gate C**).

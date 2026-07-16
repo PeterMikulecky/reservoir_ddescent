@@ -41,6 +41,14 @@ Three requirements, each forced by a hypothesis (and each a fix to a current blo
 Forced by H-B: P\* is *defined* by r₁, so r₁ must exist and be tunable. Also forced by D043: a
 full-rank goal makes a waist mathematically impossible. *(Current blocker B2.)*
 
+**(ii-a) CONTEXT MUST CHANGE STIMULUS *STATISTICS*, NOT THE MEAN (D048 — the sharpest constraint).**
+If context is a change in the *distribution* stimuli are drawn from (variance, correlation), then:
+**mean over a short window = the instantaneous stimulus = level 1**; **variance/higher moments over
+a longer window = the distribution = context = level 2**. The mean **cannot** carry context —
+context is not in any single stimulus, it is in their spread. **So the fluctuation channel is
+literally where the second-level regularity lives.** If context shifted the *mean*, the encoder
+would detect it directly and no regulation would be needed — the same collapse as signalling it.
+
 **(ii) The environment must be HIERARCHICAL: context selects the level-1 map.**
 Within context *c*: response = f_c(E), with f_c of rank r₁. Across contexts: *which* f_c applies
 varies, and the contexts themselves have structure. Forced by H-C: with a flat environment there
@@ -120,10 +128,34 @@ hierarchy of timescales that selection can exploit or ignore. In a static map th
 a rate model, timescales must be chosen by the experimenter. **The environment's hierarchy has a
 native substrate to be mapped onto.**
 
-**Honest ledger.** 4b is the strong claim: an internal, decisive manipulation. 4a is strong but
-depends on gain control actually being reachable (Gate C). 4c is real but a difference of degree —
-a rate model with two time constants would do much of it. **D035's variance channel remains, but
-it is now the *weakest* plank, not the argument.**
+### 4d. The variance channel is not a plank — it is a HYPOTHESIS (H-E, D048)
+
+Variance coding in spiking populations is **decades-old background**. It is not evidence for our
+substrate; it is something we must **commit to a falsifiable claim about**:
+
+> **H-E.** Approaching the waist, encoding saturates and information increasingly rides the
+> **variance**. Past the waist, regulation emerges and **the variance becomes the medium through
+> which regulation operates** — its *role* changes (abruptness is a separate empirical question).
+> Because regulation is **recurrently coupled** to the encoder, the higher-order statistics it
+> learns **feed back** to modulate encoding.
+> *Order parameter:* **encoding-variance** (stimulus info in `X_var`) vs **regulatory-variance**
+> (fluctuation that modulates others' *gain*, D040 stage-3).
+> *Non-obvious prediction:* the **encoding share** of variance may **FALL** past the waist even as
+> total fluctuation rises — fluctuations get conscripted into gain control.
+
+**This unifies H-D and H-E:** tonic arm → no fluctuations → **no medium for gain modulation** → no
+regulation → no second descent. One story, one switch.
+
+**And it means we are NOT building an hourglass.** Friedlander's bow-tie is strictly feedforward.
+Ours has the regulatory level reading the encoder's fluctuation statistics **and modulating back
+into it** — **a LOOP**. Loops exist only in a recurrent substrate.
+
+**Honest ledger.** **4b** is the strong claim: an internal, decisive manipulation. **4a** is strong
+but contingent on Gate C. **4c** is a difference of degree. **4d/H-E is a hypothesis that can be
+wrong — which is its value.** *Unresolved:* is the feedback loop **predictive coding rediscovered**
+(Rao & Ballard / Friston)? The architecture is theirs; ours would be that it **emerges under
+selection at a specific parameter count** and that its emergence **IS** the second descent.
+**Search before building.**
 
 ## LEVEL 5 — Measurements
 

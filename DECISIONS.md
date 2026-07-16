@@ -1134,6 +1134,68 @@ All three outcomes informative — including "descent without regulation ⇒ our
 environments) → **Gate C** (*without a reachable balanced regime, H-D has no treatment arm and
 4a's mechanism does not exist*) → `evolve.py` → Gate A → Gate B → the two-curve experiment.
 
+### D048 — H-E: variance is where the SECOND-LEVEL regularity lives; the regulatory layer learns it and feeds back
+**2026-07-17 · Accepted (hypothesis + design principle)** · *Credit: PJM* · supersedes the "variance channel" plank of D035
+**PJM's correction first.** Variance coding in spiking populations is **decades-old background,
+not our contribution**. D028/D033 ("variance expands while mean compresses") is a *rediscovery* in
+a retired model. Using it as a **justification** for the substrate was dressing prior art as an
+asset. **The responsible move is to commit to a falsifiable hypothesis about it** — which converts
+a weak plank into something that can be wrong.
+
+**PJM's framing (H-E).** Before the waist the network learns to encode statistical regularities and
+**saturates**; it increasingly stores/processes information via **variance**; it transitions
+(possibly gradually) through the waist; **regulatory structure emerges**; **and then the increased
+variance serves as a NEW "environment" with its own statistical regularities, which the regulatory
+layer learns.** Because regulation is **recurrently connected** to the encoder, those higher-order
+statistics **feed back** to influence encoding — improving its efficiency/expressiveness in driving
+the output.
+
+**THE MOVE THAT DOES THE WORK — and it dictates the stimulus design.**
+If context is defined as **a change in stimulus STATISTICS** rather than in individual stimuli:
+- **mean over a short window** → the instantaneous stimulus → **level 1**
+- **variance / higher moments over a longer window** → the *distribution* stimuli are drawn from →
+  **the context** → **level 2**
+**The mean CANNOT carry context, because context is not in any single stimulus — it is in their
+spread.** So the fluctuation channel is not a metaphorical "new environment": **it is literally
+where the second-level regularity lives**, and reading it *is* the history-integration the
+plant/seasons case demands (D047 Level 2(iii)).
+
+> **DESIGN PRINCIPLE (promoted — it changes what we build): context must change stimulus
+> STATISTICS (variance, correlation), NOT the stimulus mean.** If context shifted the mean, the
+> encoder could detect it directly and no regulation would be needed — the same collapse as
+> signalling it. Sharper than "make it hierarchical".
+
+**Structural consequence: we are not building an hourglass.** Friedlander's bow-tie is strictly
+feedforward (in → waist → out). PJM's architecture has the regulatory layer reading the encoder's
+fluctuation statistics **and modulating back into it** — **a LOOP, not a bow-tie.** Loops exist
+only in a recurrent substrate. **Our architecture is a two-level recurrent system in which the
+second level reads the first's fluctuation statistics and controls its gain.**
+
+**It also becomes the mechanism UNDER H-D**, unifying them: tonic arm → no fluctuations → no
+variance channel → **no medium for gain modulation** → no regulation → no second descent. H-D and
+H-E stop being separate claims and become one story with a switch.
+
+**Refinement of "phase transition" (PJM: avoid the cargo).** The claim is the **role change**, not
+the sharpness. Predict the role change; **measure** whether it is abrupt or a smooth crossover.
+*Non-obvious prediction:* the **encoding share** of variance may **FALL** past the waist even as
+total fluctuation rises — because fluctuations get conscripted into gain control. Same physical
+quantity, different job.
+**Order parameter:** ratio of **encoding-variance** (stimulus information carried by `X_var`) to
+**regulatory-variance** (fluctuation that modulates other neurons' *gain* — D040 stage-3
+gain-vs-offset). Both already specified.
+
+**TWO HONEST PROBLEMS (flagged, not resolved).**
+1. **Is this predictive coding rediscovered?** Higher levels modelling lower levels' statistics and
+   feeding back is **Rao & Ballard / Friston hierarchies**. The *architecture* is theirs. **Ours
+   would be:** that it **emerges under selection at a specific parameter count**, and that its
+   emergence **IS the second descent**. **MUST SEARCH BEFORE BUILDING** — the standing rule has
+   caught me five times (D014, D031, D034, D039, D043).
+2. **"Overflow" may be the wrong story.** Two distinguishable claims: **(a)** variance *rises*
+   because encoding saturates, then is exploited; **(b)** variance *always* carried context and
+   regulation merely **unlocks** it. D033's PR_var↑/PR_mean↓ hints at (a) — but that was the
+   retired reservoir **with no context structure at all**, so it cannot bear on this. **Predict
+   (b); measure whether (a) adds to it.**
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this
