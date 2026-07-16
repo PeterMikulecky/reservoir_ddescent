@@ -206,9 +206,113 @@ instead of discarding it). Without any one of them, the variance channel would s
 *Next:* fix `tasks.anisotropic_regression` -> re-run feature check -> finalize fitness feature ->
 E9. See QUEUE.md.
 
-<!-- Future run stubs will be auto-appended below this line. -->
+## 2026-07-16 — The session the project changed: the reservoir loses to raw input, and the question turns out to be a different one
 
-## 2026-07-15 18:57 — `T0-tune_operating_point__20260715-184541__exp__gc50dabe__coarse-w0-skill`  <!-- auto -->
-- type `exp` · stage `T0` · git `gc50dabe` (D030: baseline gate - reservoir loses to raw input at T0's operating point; T0 rev3 gates on skill; D029 task fix) · status **complete**
-- result: skill_med=1.45 (baseline 0.217); 79/135 conditions beat baseline; chosen bias=0.6 gain=10.0; PR_mean=7.4 PR_var=27.0
-- _interpretation:_ 
+Started intending to fix the novel-environment task (D029). Fixing it required checking the
+errors were sane — and they weren't, **in-distribution either**. Pulling that thread took the
+project apart and rebuilt it.
+
+**D030 — the reservoir loses to a linear readout on the raw input.** Baseline raw-input test
+NMSE 0.217; at T0's chosen operating point (gain 0.1) the reservoir scored **0.880 — four times
+worse than having no reservoir at all.** No ridge value rescued it. It first beat baseline at
+gain=10, **100x** the gain T0 selected. **Root cause: T0 scored operating points on PR
+responsiveness alone and never asked whether the state encodes the input.** Those objectives are
+in *opposition* — low gain lets recurrence dominate, which makes PR beautifully responsive to
+connectivity AND makes the state nearly independent of the input. **We optimized into a network
+that ignores what we feed it, then measured the dimensionality of its daydreams.**
+*The check we never ran, for the entire project life: does the reservoir beat a trivial
+baseline?* Deeper than D014's normalization bug — that one made us measure a real thing in a
+dead regime; this one meant we were not measuring computation at all.
+
+**D031 — the literature had it mapped since 2012.** PJM called for a search. Our gain tension IS
+**Dambre's memory–nonlinearity tradeoff**, mediated by input scaling, task-dependent optimum
+across ~100x. We were rediscovering a known curve. Two more findings landed harder: **total
+capacity is bounded by N and equals it under fading memory** (so connectivity *wastes* capacity,
+never creates it), and **total IPC correlates POORLY with task-specific performance** (Hülser) —
+a strong prior against H1 as we had operationalized it.
+
+**D033 — the baseline-gated re-tune: tension dissolved, and a finding that outlives the model.**
+At gain=10: **skill 1.448 AND pr_rel 49%** — computing *and* a live PR axis. My "the useful
+regime may have no PR axis" alarm came from a **smoke** run and was wrong. But: at a validated
+operating point, with K=20 inputs, **PR_mean ≈ 7.4 — the mean channel COMPRESSES 20 dimensions
+into 7 — while PR_var ≈ 27 EXPANDS.** A reservoir's whole job is to expand. Ours compresses, in
+the channel we had been reading. Independent corroboration of D028 from a new direction, and a
+retroactive explanation of why PR_mean anti-predicted generalization: **we were measuring the
+dimensionality of a lossy compression.**
+
+**D032 — the reframe.** PJM: *"if we were to start from scratch, would we still pick a
+reservoir?"* No. A reservoir **freezes W** — but Frank says *"regulatory connections are
+parameters, selective history is training data, selection is the learning optimizer."* Our
+recurrent synapses were architecture, not parameters. The only trained parameters were readout
+weights, which are not regulatory connections. And our genome was **five numbers** — the far
+left of Figure 1, with no capacity to overfit. **Genome-level double descent was impossible by
+construction.** Every hard-won lesson (D014, D026, D030) was spiking-reservoir plumbing, not
+Frank's question. *The instrument had been saying "I am not built for this" for two sessions.*
+
+**PJM's governing insight, which reorganized everything:** *Frank is thinking more abstractly
+than his words let on; substrate terminology leads us astray; the default hypothesis is that the
+process is substrate-independent and the challenge is OURS — to find the mapping.* That became
+`FRAMING.md`.
+
+**The question, restated:** Frank's "more parameters → more dimensionality → better
+generalization" **fuses P (parameter count) with D (effective capacity)**. ML networks confound
+them by construction. A recurrent network separates them ~100:1. **That ambiguity, made
+measurable, is the project.** *(D035: the separation is a property of RECURRENCE, not spiking —
+I overclaimed. Spiking's real justification is our own finding: **D is channel-dependent**, and
+the channel flips the sign of the relationship to generalization. Frank's framework has no
+notion of a channel.)*
+
+**D034 — a killed hypothesis.** I proposed that Frank never checks whether *selection* has the
+implicit bias the second descent depends on. PJM: test it against the literature first. **The
+Louis group built both ends of the bridge**: GP maps are biased toward simple outputs
+(P(x) ≲ 2^-aK(x)), *and* deep learning generalizes because the parameter-function map has the
+same bias. Frank's Wilson citation IS that volume argument. **His assumption is supported, not
+unexamined.** Killed — and it found our intellectual home.
+
+**D036 — PJM's ontology correction.** I spent three exchanges asking "which summary is the
+phenotype — mean rate? rate vector?" **Malformed.** The phenotype is the **behavior**; rate and
+variance and PR are *measurements of* it. Splitting phenotype / fitness / metrics **dissolved the
+entire D026–D028 channel tangle**: those were two questions (what does fitness read? what
+predicts generalization?) wearing one label.
+
+**D037–D038 — the new model.** `evonet.py`: **W is the genome**, no readout, phenotype = output
+behavior, environments demand **profiles**. N=100, d=10, n_env=50 → constraints 500; density
+sweeps P from 50 to 4950 (0.1x → 9.9x). **Frank's Figure 1 x-axis made of regulatory
+connections.** Then PJM caught that I was wrong about our own code: I said "no regulatory mode,
+neurons only drive each other" — but 52% of our synapses were inhibitory. The real gap was
+**no neuron-level identity**: 97/100 neurons excited some targets and inhibited others. **Dale's
+law with evolvable per-neuron sign** fixed it (violations → 0). PJM's principle: *don't bolt on
+a regulatory mode — make the architecture capable and let selection build it.*
+
+**D039 — the search vindicated "don't bolt on," and killed my mechanism.** I'd claimed textbook
+gain control is divisive (shunting). **Holt & Koch (1997): shunting is SUBTRACTIVE on firing
+rates.** Divisive gain control needs **noise** (fluctuation-driven regime) plus **circuit
+motifs** — not a synapse type. Adding shunting would have installed machinery that doesn't work.
+*But it left a live problem:* `noise_sigma = 0` and tonic bias put us where gain control is
+**unavailable**. Now Gate C.
+
+**D040 — PJM's three-stage regulatory measure.** My Kaufman potent/null proposal assumed
+**geometry implies mechanism** — PJM: *"does your approach simply assume anything output-null
+must be regulatory?"* It did. Fix: null is a **screen** (candidates, graded), functional
+contribution is the **filter** (real vs idle), gain-vs-offset is the **mechanism criterion**.
+Works because of **recurrence**: null is null only instantaneously.
+
+**Where the project stands.** It began as "can a reservoir show double descent." It is now:
+**what does overparameterization mean in an evolving system — and which quantity is Frank's
+x-axis?** Three modes of adding capacity (grow nodes / densify / reorganize) leave different
+fingerprints on (P, D_max, D); which mode selection uses should depend on environments, tasks,
+and **cost structure**. The reservoir did its job: it clarified the question and forced the
+reckoning with the literature. It just wasn't the instrument to answer it.
+
+**The pattern that should govern from here.** Four times this session a PJM-requested literature
+search overturned something I was confident about: D014 (normalization), D031
+(memory–nonlinearity), D034 (implicit bias), D039 (shunting). Plus three conceptual corrections
+that were his and not mine: the reservoir question (D032), phenotype-is-behavior (D036),
+null-as-screen (D040). **Search before building. And when the model keeps surprising you, suspect
+the frame, not the parameters.**
+
+*Next:* `evolve.py` → Gate A (baseline per density arm) → **Gate B (does a peak appear at all —
+where this lives or dies)** → Gate C (balanced regime) → three modes × cost structure.
+See QUEUE.md.
+
+<!-- Future run stubs will be auto-appended below this line. -->
