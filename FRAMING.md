@@ -1,5 +1,40 @@
 # Framing: what is Frank's claim, independent of substrate?
 
+> **UPDATED 2026-07-17 (D041/D042).** The question is now defined against a specific rival:
+> **Rappeport & Nitzan (2025)**, who built this framework and found the OPPOSITE of Frank.
+> Read §0 first.
+
+## 0. The project in one question
+
+Two theories make **opposite predictions** about what selection does with excess parameters:
+
+| | prediction beyond the interpolation threshold | mechanism |
+|---|---|---|
+| **Frank (2026)** | more parameters → **better** generalization (second descent) | implicit bias picks smooth interpolants (via Wilson) |
+| **Rappeport & Nitzan (2025)** | excess complexity **selected against**; ⟨q∞⟩ ≈ q* | the **Occam factor** — complex classes collapse on a new best member each generation |
+
+**R&N cannot see a second descent: their q ∈ [1,9] against T = 1000 cues (q/n ≈ 0.009) sits
+three orders of magnitude BELOW the threshold.** Frank's claim lives at q ≈ n and beyond.
+
+> **THE QUESTION: does the Occam factor keep penalizing complexity past the interpolation
+> threshold, or does a second descent appear? Nobody has run evolutionary dynamics into the
+> overparameterized regime.**
+
+**And both theories share a blind spot** (D042): each was developed where **parameters are
+dynamically inert** — feedforward ML for Frank, 3×3 linear maps and 1-hidden-layer nets for R&N.
+**In a recurrent spiking network parameters are NOT free**: more synapses → more coupling →
+synchrony, saturation, pathology, which can destroy the expressiveness the parameters were meant
+to buy. **Every biological substrate violates their shared assumption.** So a second descent here
+may require the added connections to be **organized** — hierarchy, regulation — not merely
+numerous.
+
+**PJM's framing:** *biology has selected spiking networks; there are competing ideas about how
+parameterization relates to learning; how do those ideas play out in spiking networks?* We
+**adjudicate**, we do not champion.
+
+---
+
+
 Per PJM (2026-07-16). The governing insight: **Frank is almost certainly thinking more
 abstractly than his chosen words let on.** His vocabulary is borrowed from ML and from gene
 regulation, and when we map that vocabulary onto a different substrate, *the terminology

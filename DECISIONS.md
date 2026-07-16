@@ -899,6 +899,70 @@ not a failure.
 *Deferred:* phase relationships / coherence between subpopulations — the next layer, after the
 subspace version works.
 
+### D041 — Rappeport & Nitzan (2025) built our framework, threaten Frank, and leave exactly our gap
+**2026-07-17 · Accepted** · *found by PJM's "read it before building"*
+**They built our design.** Genotypes = **input–output maps** (cues → phenotypes); fitness =
+distance to a ground-truth map; **complexity q = tunable parameters in the environment–phenotype
+map**; environmental complexity q* = complexity of φ*. Frank's mapping, made formal.
+
+**Their result threatens Frank directly.** **Implicit regularization emerges from the replicator
+equation itself** — no external cost — and **selected complexity converges to environmental
+complexity** (⟨q∞⟩ ≈ q*). Mechanism: the **Occam factor** — complex classes have the highest
+per-timestep fitness but collapse onto a *different* best member each generation, so their class
+growth rate is suboptimal ("**overfitness**"). **Excess complexity is selected against.** If this
+generalises, **evolution never enters the overparameterized regime and Frank's second descent is
+biologically irrelevant.**
+
+**THE GAP.** Their q ∈ [1,9] against T = 1000 cues → **q/n ≈ 0.009**: three orders of magnitude
+**below** the interpolation threshold, wholly inside the classical regime. **Frank's claim lives
+at q ≈ n and beyond; they never go there.** Not evidence against double descent — evidence from
+where it is undefined. **And no mutation** (explicit; forced by the isomorphism, which breaks
+under mutation — yet mutation is where evolution's implicit bias would come from).
+
+**The project, sharply stated:**
+> **Does the Occam factor keep penalizing complexity PAST the interpolation threshold, or does a
+> second descent appear?** R&N-extended ⇒ Frank is wrong, evolution halts at q*. Frank ⇒ beyond
+> q ≈ n generalization recovers. **Nobody has looked: nobody has run evolutionary dynamics into
+> the overparameterized regime.**
+Our density knob sweeps P from 0.1× to 9.9× the constraint count — **exactly their blind spot**
+(D037).
+**Risks:** we are in their slipstream (same framework, adjacent question, possibly running it);
+and their NN appendix shows the trend, so **none of this requires spiking** — see D042.
+**Also recorded:** Kouvaris et al. (2017) already did "learning theory → evolvability", so
+**Frank's real novelty is double descent specifically** — narrower than his framing suggests, and
+exactly what we test.
+
+### D042 — "Why spiking", reframed: adjudicating competing theories in a substrate where parameters are NOT free
+**2026-07-17 · Accepted** · *Credit: PJM* · strengthens D035
+**PJM's framing:** *"Biology has selected spiking networks. There are competing ideas for how
+parameterization relates to learning. How do these ideas play out in spiking networks?"*
+**Why it helps:** it reframes us from **championing** Frank to **adjudicating** between Frank and
+R&N — two theories making **opposite** predictions in the overparameterized regime. It makes the
+substrate a **scope condition**, not a gimmick, and claims no theoretical privilege for spikes.
+
+**And it yields a third, better plank — from PJM's earlier insight.** *Both competing theories were
+developed on substrates where **parameters are dynamically inert**.* Frank's double descent comes
+from feedforward ML (adding width destabilises nothing). R&N's Occam factor comes from **3×3 linear
+maps and 1-hidden-layer feedforward nets** (a parameter is just another free knob). **In a
+recurrent spiking network, parameters are NOT free**: more synapses → more coupling → synchrony,
+saturation, pathology — which can destroy the expressiveness the parameters were meant to buy.
+**That is a scope condition both theories are silent about, and every biological substrate
+violates it.**
+> **Frank: excess parameters buy generalization via implicit bias. R&N: excess parameters are
+> penalized via the Occam factor. Both assume parameters are dynamically inert. Does either
+> survive where they are not?**
+*This plank is better than D035's because it applies to GRNs too* — spiking merely makes the
+dynamics measurable. It also revives PJM's earlier hypothesis: a second descent here may require
+the added connections to be **organized** (hierarchy/regulation), not merely numerous.
+
+**The honest ledger (three planks, not four):**
+1. **Parameters are dynamically inert in both theories' substrates; not in ours.** (strongest)
+2. **D is channel-dependent** — the variance channel (D035). Ours, novel, spiking-specific.
+3. Frank explicitly names **"neural wiring"**; his rattlesnake/snakeness example is neural.
+*Weak:* Frank's PRIMARY substrate is the GRN. "Then test it in a GRN" is a fair reviewer
+question, and part of our answer is **strategic** (Wagner's turf), not scientific. Say so plainly
+rather than dress it up.
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this

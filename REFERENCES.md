@@ -188,6 +188,58 @@ heterogeneity promotes robust learning. *Nat. Commun.* 12, 5791.
 **Gast, R., et al.** Spike-threshold heterogeneity increases dimensionality of neural
 dynamics (via the E/I paper above). — Not yet located precisely. **To find.**
 
+## The nearest neighbour — and the gap that is our project (found 2026-07-17)
+
+**Rappeport, H. & Nitzan, M. (2025).** Fitness and Overfitness: Implicit Regularization in
+Evolutionary Dynamics. arXiv:2508.03187 [q-bio.PE].
+— 🔴🔴 **They built our framework.** Genotypes code for **input–output maps** φᵢ (environmental
+cues → phenotypes); fitness decreases with distance to a ground-truth map φ*; **complexity q =
+number of tunable parameters in the environment–phenotype map**; environmental complexity
+q* = complexity of φ*. That is our design, and it is Frank's mapping made formal.
+
+**Their result is a direct threat to Frank.** **Implicit regularization emerges from the
+replicator equation itself** — no external complexity cost required — and **selected complexity
+converges to environmental complexity**, ⟨q∞⟩ ≈ q*. Mechanism: the **Occam factor**. Complex
+classes attain the highest per-timestep fitness but collapse onto a *different* best member each
+generation, so their class growth rate is suboptimal. They name this **overfitness**. Excess
+complexity is **selected against**. Also: rapidly changing environments select for **lower**
+complexity; simple classes enjoy a transient early advantage. Tested on linear maps,
+polynomials, and 1-hidden-layer neural networks.
+*If this generalises, evolution never enters the overparameterized regime and Frank's second
+descent is irrelevant to biology.*
+
+**THE GAP — and it is large.** Their linear maps are 3×3, so **q ∈ [1,9]**, against **T = 1000**
+environmental cues → **q/n ≈ 0.009**. They sit **three orders of magnitude BELOW the
+interpolation threshold**, entirely inside the classical regime. **Frank's claim lives at q ≈ n
+and beyond. They never go there.** Their finding is not evidence against double descent; it is
+evidence from a regime where double descent is not defined.
+**And they have no mutation** — stated explicitly (variability is assumed preexisting). Forced,
+because the replicator–Bayes isomorphism *requires* it: the analogy holds only for pure selection
+in infinite populations and **breaks when mutation is introduced**. But mutation is where
+evolution's implicit bias would come from.
+
+**Positioning.** Our density knob sweeps P from 0.1× to 9.9× the constraint count — **exactly the
+range R&N could not reach**. See D041.
+*Risk:* we are in their slipstream (same framework, adjacent question, possibly running now).
+*Note:* their NN appendix shows the same trend — **none of this requires spiking** (see D042 for
+the honest case).
+
+**Czégel, D., Zachar, I., Szathmáry, E. (2019).** Multilevel selection as Bayesian inference,
+major transitions in individuality as structure learning. *R. Soc. Open Sci.* 6, 190202.
+— Multilevel selection ≅ hierarchical Bayesian inference (**isomorphic**); evolutionary
+transitions in individuality = **learning the structure** of the belief network. 🟢 Our
+regulatory-hierarchy question, already formalised.
+
+**Kouvaris, K., Clune, J., Kounios, L., Brede, M., Watson, R. A. (2017).** How evolution learns
+to generalise. *PLOS Comput Biol* 13, e1005358.
+— 🔴 **Already did "learning theory → evolvability" in 2017**: conditions that alleviate
+overfitting predict which biological conditions enhance evolvability. **So Frank's novelty is
+narrower than his framing implies — it is DOUBLE DESCENT specifically**, the overparameterized
+regime, which Kouvaris et al. never entered.
+
+**Harper, M. (2010).** The Replicator Equation as an Inference Dynamic. arXiv:0911.1763.
+— The isomorphism everything above rests on.
+
 ## Algorithmic simplicity bias — THE ML↔evolution bridge (searched 2026-07-16). Likely our intellectual home.
 
 **Dingle, K., Camargo, C. Q., Louis, A. A. (2018).** Input–output maps are strongly biased
