@@ -1630,6 +1630,64 @@ error" needs a convention — **best individual** (right for Gate B0: interpolat
 genome can fit exactly) vs **population mean** (right for R&N's Occam factor, a **class-level**
 effect). **Record both.**
 
+### D060 — `evolve.py`: four design decisions that each silently determine an outcome
+**2026-07-17 · Accepted** · *PJM: "evolve.py can enable or hamper or reveal or obscure everything — be careful"*
+
+**1. SELECTION SCHEME IS AN ARM (PJM agreed), not a default.**
+R&N's Occam factor is a **replicator-dynamics** effect: complex classes attain the highest
+per-timestep fitness but collapse onto a **different best member each generation**, so their
+**class growth rate** suffers. That requires **fitness-proportional** selection over a
+distribution of types. **Tournament is RANK-based — it has NO Occam factor.** Defaulting to
+tournament would **delete one of the two mechanisms we are adjudicating**, invisibly.
+**And the tell: Friedlander used TOURNAMENT; R&N used REPLICATOR.** The two prior works we sit
+between differ on exactly this — **which may partly explain their opposite answers.** ⇒ a dial in
+the D052 graded series.
+
+**2. DENSITY FIXED vs EVOLVABLE — this splits the study in two (and I had been conflating them).**
+The Occam factor is **between-class competition**. With density fixed, every individual has the
+same |W| — **one complexity class, no competition, the mechanism is silent by construction.**
+| mode | question |
+|---|---|
+| **`fixed`** (swept across arms) | **does the curve have a peak and a second descent?** (Gate B — Frank's curve) |
+| **`evolvable`** (structural add/remove) | **where does evolution LAND on that curve?** (R&N's question) |
+**`evolvable` is the money experiment; `fixed` is the curve it lands on.** Does evolution park at
+the peak (R&N: q ≈ q*) or drift past it (Frank)?
+
+**3. CROSSOVER OFF by default.** Two networks can compute the same function with **permuted
+neurons** (competing conventions); swapping rows/columns destroys both. NEAT solves this with
+historical markings; we have direct encoding. **Mutation-only (evolution-strategy) is the safe
+default.** A dial.
+
+**4. THE RISK WE CANNOT DESIGN AWAY.** Can a GA optimise thousands of parameters with a population
+of ~50? **Gate B0 IS that test.** Population size, generations and mutation σ are **load-bearing**.
+
+**SCALE — I had it backwards, PJM caught it.** I implied larger N could ease the optimisation risk.
+**Parameters scale as N²: larger N makes it WORSE.** N=100/density 0.3 → ~3,000 genes; N=200 →
+~12,000. **The lever is SMALLER N** — but |W| must still span the threshold at n_env × d:
+| N | max \|W\| | constraints | span |
+|---|---|---|---|
+| 100 | ~10,000 | 500 (50×10) | 0.1×–20× ✓ but ~3,000 genes at threshold |
+| **50 (chosen)** | ~2,450 | **250 (50×5)** | 0.05×–**10×** ✓ and ~**250** genes at threshold |
+| 30 | ~870 | 250 | too little headroom above |
+**⇒ production scale: N=50, d=5.** Halves per-eval cost *and* shrinks the search dimension.
+*The binding constraint is ARM COUNT, not one run:* selection (2) × density (6) × noise (2) ×
+learnable_frac (3) = **72 arms** ≈ 1 h each on 6 workers ⇒ **~72 h**.
+
+**IMPLEMENTED & VERIFIED.** Both selection schemes; both density modes (`evolvable` produces real
+|W| variance ⇒ complexity classes exist ⇒ Occam factor can operate); product-rule mutation (D043);
+Arm-1 genome only (D059); **`noise_sigma` is NOT a gene**; population evaluation **parallelised**
+(spawn-safe, D007). Records **both** best-individual and population-mean training error (D059).
+*Note on the affine alignment in `evaluate()`:* the network's rate units are arbitrary w.r.t. the
+demanded profile, so we fit a **per-output gain+offset** — d scalars, **not a mixing matrix**. It
+cannot mix neurons, so it is **not a trained readout** (D032 intact).
+
+**FIRST SIGNAL — a warning, not a verdict.** N=50, d=5, |W|=735 vs **250 constraints = 2.94×
+over threshold**; task headroom 0.443 (memoryless 0.791, oracle 0.348). But over 6 generations at
+pop 12: **best_train 0.943 → 0.937** — NMSE ≈ 0.94 is *barely better than predicting the mean*.
+Six generations at pop 12 is nothing, so this is not a result — **but it is the first hint that
+Gate B0 is the binding risk (D049), exactly as predicted.** *If the GA cannot drive training error
+toward 0, there is no interpolation threshold, no peak, and the design fails at the root.*
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this
