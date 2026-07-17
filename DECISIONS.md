@@ -1688,6 +1688,47 @@ Six generations at pop 12 is nothing, so this is not a result — **but it is th
 Gate B0 is the binding risk (D049), exactly as predicted.** *If the GA cannot drive training error
 toward 0, there is no interpolation threshold, no peak, and the design fails at the root.*
 
+### D061 — POSITIVE CONTROL PASSES: textbook double descent on our own network. The apparatus is sane.
+**2026-07-17 · Accepted** · *Credit: PJM (the bolt-on control was his suggestion)* · `scripts/run_GateB0_interpolation.py --control`
+Random network + linear readout of varying width = a **random-features model**, so textbook double
+descent is *expected*. **It appears, exactly:**
+| M/n | train | test |
+|---|---|---|
+| 0.10 | 0.848 | 1.279 |
+| 0.70 | 0.238 | 3.050 |
+| **1.00** | **0.000** | **50.417** ← peak, precisely at the threshold |
+| 1.10 | 0.000 | 9.476 |
+| 3.00 | 0.000 | 2.337 |
+| 8.00 | 0.000 | 1.709 |
+**First descent, interpolation spike at M/n = 1.00, second descent (50.4 → 1.7 over 8× parameters)**
+— on **our** network, with **our** hierarchical environments.
+
+**Why this matters more than it looks.** If Gate B later returns a null, **we can attribute it to
+the evolutionary setting rather than to broken plumbing.** That is precisely what a positive control
+is for (D052: the bookend where the phenomenon is guaranteed).
+
+**And it sharpens what Gate B0 actually asks.** Note WHERE the double descent lives: in the
+**readout weights**, fit by **least squares**, where interpolation is **guaranteed by linear
+algebra** (M ≥ n ⇒ an exact fit exists). **Gate B0 asks whether a GA on W can reach the same
+place** — and D060's first signal (best_train 0.943 → 0.937) says that is genuinely uncertain.
+**The two bookends are now concrete: least-squares on readout weights → perfect double descent;
+selection on W → unknown. The gap between them IS the study** (D052's graded map).
+
+### D062 — Gate B0 built; the honest failure protocol is written into it
+**2026-07-17 · Accepted** · `scripts/run_GateB0_interpolation.py`
+Evolves at **high |W|** (deep in the overparameterized regime) across GA settings — `pop_size`,
+`n_generations`, `mag_sigma` are **load-bearing, not tuning** (D060) — and asks: **does best_train
+approach 0?** Threshold: `best_train < 0.05` counts as interpolating. Records best-individual
+(interpolation asks whether **any** genome fits exactly, D059).
+**The protocol on failure is written into the script's own output**, because this is the most
+likely way we fool ourselves:
+> *"Do NOT interpret this as 'double descent is absent from spiking substrates'. It is a DESIGN
+> failure until ruled out: try --preset hard, larger populations, an evolution strategy (CMA-ES),
+> or fewer constraints (smaller n_env or d)."*
+*Rationale:* Nakkiran defines **effective model complexity via the training procedure** precisely
+because parameter counting fails for nonlinear models. **No interpolation ⇒ no threshold ⇒ no peak,
+by construction** — a design failure that would masquerade as a finding about biology.
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this
