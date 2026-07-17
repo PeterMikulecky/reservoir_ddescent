@@ -58,17 +58,27 @@ def positive_control(net_cfg: EvoNetConfig, task, widths, seed=0) -> pd.DataFram
     net = EvoNet(g, net_cfg)
     Xtr = net.behave(task.E_train)["state"]        # (n, N) internal states = the features
     Xte = net.behave(task.E_test)["state"]
-    rng = np.random.default_rng(seed)
+
+    # BASELINE (D030's rule, made permanent): a linear readout on the RAW INPUT.
+    # If the reservoir states cannot beat this, the network is DESTROYING information, and any
+    # curve we draw is a curve over a bad feature set. Always print it beside the sweep.
+    from ddescent.baseline import best_nmse
+    base = best_nmse(task.E_train, task.Y_train, task.E_test, task.Y_test, standardize=False)[0]
+
     rows = []
     for M in widths:
-        # M random features (random projections of the state — lets M exceed N)
+        # PER-M SEEDING (D063): the projections must NOT depend on how many draws came before.
+        # Sequential draws from one RNG made every M's features change when the width LIST
+        # changed — the peak moved 50.4 -> 25.6 at the same nominal seed. Non-reproducible.
+        rng = np.random.default_rng(seed * 100_003 + M)
         Proj = rng.standard_normal((Xtr.shape[1], M)) / np.sqrt(Xtr.shape[1])
         A, B = np.tanh(Xtr @ Proj), np.tanh(Xte @ Proj)
         r = LinearReadout(alpha=0.0).fit(A, task.Y_train)    # min-norm: the DD regime
         rows.append(dict(M=M, n_train=len(task.E_train),
                          ratio=M / len(task.E_train),
                          train=nmse(task.Y_train, r.predict(A)),
-                         test=min(nmse(task.Y_test, r.predict(B)), 1e6)))
+                         test=min(nmse(task.Y_test, r.predict(B)), 1e6),
+                         baseline_raw=base))
     return pd.DataFrame(rows)
 
 
@@ -128,18 +138,46 @@ def main():
         print("\n=== (B) POSITIVE CONTROL: random network + linear readout (random features) ===")
         print("    textbook double descent EXPECTED, peak at M ~ n_train. If absent -> apparatus broken.")
         n = len(task.E_train)
-        widths = [5, 10, 20, 35, n - 5, n, n + 5, 80, 150, 400]
+        r1 = task_kw["r1"]
+        # Widths must start BELOW the classical optimum or the FIRST DESCENT is off the left
+        # edge of the sweep (D063 — my earlier table showed only the peak and second descent,
+        # and I mislabelled it as showing all three). With K=10 inputs and a rank-r1 level-1
+        # map, the intrinsic dimensionality of what is learnable at level 1 is ~r1, so the
+        # classical optimum may sit at M ~ r1. **H-B predicts the OPTIMUM tracks r1 while the
+        # PEAK tracks n — two different quantities, in two different places.**
+        widths = sorted(set([1, 2, 3, 4, 5, 8, 12, 20, 35, n - 5, n, n + 5, 80, 150, 400]))
         pc = positive_control(net_cfg, task, widths, seed=args.seed)
         pc.to_parquet(run.table_path("positive_control"))
-        print(f"{'M':>5} {'M/n':>6} {'train':>9} {'test':>10}")
+        base = float(pc.baseline_raw.iloc[0])
+        print(f"    BASELINE — linear readout on the RAW INPUT: test NMSE = {base:.3f}")
+        print(f"    (the reservoir states must BEAT this or the network destroys information — D030)\n")
+        print(f"{'M':>5} {'M/n':>6} {'train':>9} {'test':>10}  {'vs base':>8}")
         for _, r in pc.iterrows():
             mark = "  <- threshold" if abs(r.ratio - 1.0) < 0.11 else ""
-            print(f"{int(r.M):>5} {r.ratio:>6.2f} {r.train:>9.3f} {r.test:>10.3f}{mark}")
+            vs = "BEATS" if r.test < base else "worse"
+            print(f"{int(r.M):>5} {r.ratio:>6.2f} {r.train:>9.3f} {r.test:>10.3f}  {vs:>8}{mark}")
         peak_i = int(pc.test.idxmax())
-        print(f"\n  peak test error at M={int(pc.M[peak_i])} (M/n={pc.ratio[peak_i]:.2f}); "
-              f"final test at M={int(pc.M.iloc[-1])}: {pc.test.iloc[-1]:.3f}")
+        opt_i = int(pc.loc[pc.M <= n // 2, "test"].idxmin())   # classical optimum, pre-peak
+        print(f"\n  classical OPTIMUM (pre-peak) at M={int(pc.M[opt_i])}  "
+              f"[r1={r1}: H-B predicts the optimum tracks r1]")
+        print(f"  PEAK test error at M={int(pc.M[peak_i])} (M/n={pc.ratio[peak_i]:.2f})  "
+              f"[classical DD predicts the peak tracks n]")
+        print(f"  final test at M={int(pc.M.iloc[-1])}: {pc.test.iloc[-1]:.3f}")
+        first = bool(pc.test[opt_i] < pc.test.iloc[0])          # did error FALL before rising?
         dd = bool(abs(pc.ratio[peak_i] - 1.0) < 0.5 and pc.test.iloc[-1] < pc.test[peak_i])
-        print(f"  double descent present: {'YES — apparatus sane' if dd else 'NO — INVESTIGATE'}")
+        print(f"  FIRST descent present:  {'YES' if first else 'NO — optimum is at the smallest M'}")
+        print(f"  peak + SECOND descent:  {'YES — apparatus sane' if dd else 'NO — INVESTIGATE'}")
+        if not first:
+            print("    (if the optimum sits at the smallest M, the first descent is off the left")
+            print("     edge — or M~r1 already exceeds what level-1 structure requires.)")
+        beats = bool(pc.test.min() < base)
+        print(f"  reservoir states beat the raw-input baseline: "
+              f"{'YES' if beats else 'NO — the network DESTROYS information (D030)'}")
+        if not beats:
+            print(f"    best state-based test = {pc.test.min():.3f} vs raw-input {base:.3f}.")
+            print("    The DD curve is then a curve over a BAD feature set: the peak and second")
+            print("    descent are real, but the whole curve sits above 'no network at all'.")
+            print("    This is Gate A's question, and it is unresolved for the evolved case.")
         if args.control:
             run.finalize(status="complete", notebook_note=f"positive control only; DD={dd}")
             return

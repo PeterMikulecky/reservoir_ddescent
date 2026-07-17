@@ -1729,6 +1729,43 @@ likely way we fool ourselves:
 because parameter counting fails for nonlinear models. **No interpolation ⇒ no threshold ⇒ no peak,
 by construction** — a design failure that would masquerade as a finding about biology.
 
+### D063 — Control corrected: I mislabelled the curve, and the network never beats "no network"
+**2026-07-17 · Accepted** · *both caught by PJM ("where was the first descent?")*
+**Error 1 — there was no first descent, and I claimed one.** My table (D061) showed test error
+rising **monotonically** 1.279 → 3.050 before the peak. I wrote "first descent, interpolation
+spike, second descent" when **only the last two were visible**. The sweep started at M/n = 0.10,
+**past the classical optimum** — the underparameterized descent was off the left edge.
+**Fix:** widths now start at M = 1.
+**With the full curve:** the first descent **exists but is trivial** — 1.101 → **1.029** at M=2,
+then up. **A 7% improvement.** Technically a descent; barely a phenomenon.
+
+**Error 2 — a reproducibility bug.** Random projections were drawn **sequentially from one RNG**,
+so **changing the width LIST changed the features for every M**. Same nominal seed, peak moved
+50.4 → 25.6 between runs. **Fix:** per-M seeding (`seed*100003 + M`). **With it the peak lands at
+M/n = 1.00 exactly** (test 14,229 — a violent spike), second descent to 2.19. Reproducible.
+
+**THE FINDING THAT MATTERS — the network never beats "no network".**
+Raw-input linear readout: **0.791**. Best state-based readout at ANY width: **1.029**.
+**Every width is worse than having no network at all.** *(The task's memoryless floor is 0.79 —
+the raw-input baseline reaches it; the network's states do not.)*
+**⇒ the baseline is now printed permanently beside the sweep** (D030's rule made structural).
+*Not fatal, and the distinction matters:* **this is a RANDOM network.** Poor states are exactly
+what one expects — and **E9's entire premise is that selection shapes W.** So the control does its
+job (the apparatus CAN produce an interpolation spike and benign overfitting) while showing that
+**the double descent it produces lives entirely in the READOUT over random features** — Belkin's
+setting, reproduced. **It says nothing yet about the network.**
+
+**⇒ three distinct questions, only the first now answered:**
+| | question | status |
+|---|---|---|
+| **control** | is double descent EXPRESSIBLE in this apparatus? | ✅ **yes** — peak at M/n = 1.00, second descent |
+| **Gate A** | does EVOLUTION make the network beat the raw-input baseline? | **open** |
+| **Gate B** | does double descent appear in the EVOLVED W? | **open** |
+
+**Suggestive but not leanable:** the classical optimum sits at **M = 2–5** with **r₁ = 3**, while
+the **peak** sits at **M/n ≈ 1**. **Two different quantities in two different places — as H-B
+predicts** (optimum tracks r₁; peak tracks n). *With a 7% first descent, not evidence yet.*
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this
