@@ -1796,6 +1796,38 @@ never fires). **Harmless** — `archive_runs.py` only moves `complete` runs, so 
 permanently. `positive_control.parquet` was written (it runs in seconds), so there is a little real
 data. Delete for tidiness or keep as an honest record that a run was started and abandoned.
 
+### D065 — The parallelism was NEVER running. Every GA run was silently serial.
+**2026-07-17 · Accepted** · *Credit: PJM — "only 1 Python process at about 12% CPU"*
+**The bug, in `run_evolution`:**
+```python
+eval_fn = eval_fn or (lambda g: evaluate(g, task, net_cfg))   # eval_fn is now NEVER None
+...
+if n_workers > 1 and eval_fn is None:                          # ALWAYS FALSE
+    pool = mp.get_context("spawn").Pool(...)                   # NEVER CREATED
+```
+**The pool was never created.** `n_workers=6` did nothing. Every GA run — including D060's
+timing measurements and the abandoned Gate B0 run — was **single-process**. One core of eight ≈
+**12% CPU**, exactly what Task Manager showed.
+**Fix:** decide `use_pool` **before** overwriting `eval_fn`.
+
+**This retroactively explains the sandbox timing failures.** D060 reported "141 s for 72 evals on
+6 workers" and I read the poor speedup as spawn/pickling overhead — which is why I added the
+worker initializer (D064). **The initializer is still correct, but it was not the problem.** The
+problem was that no workers existed. *I diagnosed an overhead issue in code that was not running
+in parallel at all.*
+
+**Measured after the fix:** **~3.4 s per evaluation, serial.** So:
+| | serial | 6 workers (est.) |
+|---|---|---|
+| `quick` (3,000 evals) | ~2.8 h | **~28 min** |
+| `default` (18,000 evals) | ~17 h | ~2.8 h |
+*The abandoned run at 7 minutes had completed roughly 120 of 3,000 evaluations — ~4%.*
+
+**Lesson:** **watch the process count, not just the wall clock.** A silently-serial pool looks
+exactly like slow code. Three separate timing estimates (D060, D064, and my "~15 min for quick")
+were all built on measurements of code that was never parallel. *PJM caught in one glance at Task
+Manager what three of my sandbox benchmarks had missed.*
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this

@@ -175,13 +175,18 @@ def run_evolution(task, net_cfg: EvoNetConfig, cfg: EvolveConfig,
     **class-level** effect.
     """
     rng = np.random.default_rng(cfg.seed)
+    # BUG FIX (D065): decide about the pool BEFORE overwriting eval_fn.
+    # The old order set `eval_fn` to a lambda first, then tested `eval_fn is None` — which was
+    # therefore ALWAYS FALSE, so the pool was NEVER created and every run was silently SERIAL
+    # (one process, ~1 core). Caught by PJM watching Task Manager: "only 1 Python process at 12%".
+    use_pool = (n_workers > 1) and (eval_fn is None)
     eval_fn = eval_fn or (lambda g: evaluate(g, task, net_cfg))
 
     pop = [random_genome(net_cfg, cfg.density, w0=cfg.w0, ei_split=cfg.ei_split,
                          seed=cfg.seed + i) for i in range(cfg.pop_size)]
     history = []
     pool = None
-    if n_workers > 1 and eval_fn is None:
+    if use_pool:
         import multiprocessing as mp
         pool = mp.get_context("spawn").Pool(n_workers, initializer=_init_worker,
                                             initargs=(task, net_cfg))
