@@ -2,6 +2,37 @@
 
 Updated 2026-07-17. Claims → `DECISIONS.md`; framing → `FRAMING.md`; narrative → `LAB_NOTEBOOK.md`.
 
+## THE FRAME (D056 — read FRAMING.md §0)
+
+**Not** "test Frank in a spiking network." **Map a REPERTOIRE of learning behaviours in spiking
+networks under varying constraints and stimuli.** The brain is not a deep network; a brain is
+neither an organism nor a population. Some architectures may show classical double descent
+(cerebellum); some classical encoding (primary sensory); much of the brain is multi-specific and
+flexible — **and whether it shows these patterns is OPEN; nobody has looked in association cortex.**
+**Frank's insight — the parameter axis is where to look — is our INSTRUMENT. Double descent is the
+DIAGNOSTIC, not the phenomenon.**
+
+**Three coordinates determine position in the repertoire** (= our three axes): **environment
+structure** (learnable fraction) · **cost** (`c_syn`; 0 = Frank's assumed regime) · **dynamical
+regime** (tonic vs balanced).
+
+**The distinction everything rests on (D055): REGULARIZATION ≠ REGULATION.** Regularization =
+machinery that prevents overfitting (abundant literature). Regulation = a level that **modulates
+another level** (**origin unexplained**). **The constructive question: why did regulatory hierarchy
+evolve? Candidate answer: because encoding saturates.**
+
+**The tension nobody has noticed (D054):** Frank needs biology to be **unregularized** ("biology
+tends not to penalize complexity... likely to experience the full consequences of the double descent
+learning curve"). **Contradicted on both timescales** — brains regularize heavily (Hoel, priors,
+homeostasis); **selection itself regularizes** (R&N's Occam factor). **Prevent overfitting and you
+prevent the peak, definitionally.** *Is Frank's regime even reachable? The `c_syn` sweep asks.*
+
+**KNOWN RISK (D053):** **Wang & Pope (2025, ICAART)** looked for double descent in SNNs — *"did not
+show a clear pattern"* (feedforward, gradient, width sweep, MNIST/CIFAR — differs from ours on every
+axis, and "no clear pattern" ≠ null). **But spiking physics may itself regularize** (bounded rates,
+thresholds, sparsity). **If so Frank's import fails at the level of the neuron** — which would be a
+finding, not a failure.
+
 ## Where the project stands
 
 **The hypothesis is now mechanistic (D044–D046, FRAMING §0):** the waist is a point in the

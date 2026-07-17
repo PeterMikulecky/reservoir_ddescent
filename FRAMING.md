@@ -1,99 +1,81 @@
-# Framing: what is Frank's claim, independent of substrate?
+# Framing
 
-> **UPDATED 2026-07-17 (D043–D046).** The hypothesis is now mechanistic, and both rivals are
-> re-diagnosed. Read §0.
+> **UPDATED 2026-07-17 (D056).** The frame below supersedes all earlier ones. Prior versions were
+> **adversarial** (test Frank / beat R&N / avoid Wagner). This one is **constructive**: nobody has
+> to be wrong.
 
-## 0. The project in one hypothesis
+## 0. The frame
 
-**The waist is a point in the EVOLUTIONARY TRAJECTORY** — the parameter value where the character
-of what selection builds changes: **encoding before, regulation after** (D044, PJM). It is not
-(only) a narrow layer.
+Classical ML, neuroAI and evolutionary theory have converged on the idea that **algorithmic
+learning unites them**, and that **double descent** — first described in ML — is expected to pervade
+complex adaptive systems. Neuronal networks look like an obvious participant.
 
-> **The interpolation peak is where ENCODING CAPACITY SATURATES.** The network has enough
-> parameters to capture the environment's level-1 invariances; further *encoding* parameters can
-> only memorize. **The second descent is the added parameters switching function — to
-> regulation** — which unlocks a level of environmental structure that was always there but
-> previously unaddressed.
+**But the brain is not a deep network. And while organisms have brains, a brain is neither an
+organism nor a population** conforming to classical evolutionary patterns. Brain ensembles "learn",
+but the **kinds** of learning are varied, supported by varying architectures and processes. Some
+architectures may show classical overfitting and double descent (**cerebellum** — a feedforward
+random-expansion machine, ≈ a random-feature kernel regressor). Some may show classical encoding of
+environmental regularities (**primary sensory areas**). Much of the brain is characterised instead
+by **multi-specificity and extreme flexibility** — and **whether it shows these patterns is OPEN,
+not settled: nobody has looked for double descent in association cortex.**
 
-This gives the threshold a **mechanism**. Standard double descent locates the peak where
-parameters ≈ data: an accounting fact with no story.
+> **How does learning among the brain's networks relate to learning as described by the grand
+> framework?**
+> **This study maps a REPERTOIRE of learning behaviours displayed by spiking networks under varying
+> constraints and stimuli.**
 
-**Convergence is LEVEL-RELATIVE (D045).** Both rivals find the system's dimensionality converging
-on the environment's — Friedlander: waist = goal rank *r*; R&N: q ≈ q\*. **Same result, two
-mechanisms** (product-rule mutational bias; the Occam factor). But that is convergence onto **one
-type** of regularity. **Their environments are FLAT** — a single map φ\*, a single matrix G — so
-there is nothing to level up to, and their convergence is **forced by environment design, not
-discovered about evolution**. *(Our `profile_environments` is flat too: we would reproduce R&N
-exactly and wrongly conclude the second descent does not exist.)*
+**Frank's insight stays intact and becomes our instrument:** *the parameter axis is where to look.*
+**Double descent is not the phenomenon — it is the DIAGNOSTIC** that reveals transitions between
+kinds of learning.
 
-**The two second-descents may be ONE process (D046).** ML says implicit bias picks the *smooth*
-interpolant — but a smooth solution is one that **captures the generating process rather than the
-samples**, which *is* addressing the deeper regularity. Mechanistic vs functional description of
-one event. **This is H0**: in a feedforward net that is realized as a weight configuration; **in a
-dynamical network it may be realizable ONLY as regulation**, because making the level-1 map
-context-dependent requires something to **modulate** it, and weights that merely add drive cannot.
-*The hierarchy is not a rival theory — it is the only available implementation of the same theory
-in a substrate with dynamics.*
+## 0a. The repertoire is not arbitrary — three coordinates
 
-**Two predictions that distinguish us:**
-1. **The peak tracks r (the environment's rank), not n (the number of environments).** Vary them
-   independently; see which moves it.
-2. **The second descent coincides with the emergence of regulatory structure.** Requires measuring
-   **both curves against the same parameter axis** — generalization *and* regulatory emergence.
-   All three outcomes inform (see D046).
+A map without coordinates is a catalogue. **Three factors determine which learning behaviour
+obtains**, and they are our three experimental axes:
 
-**Honest scope.** If the two descriptions are one process, our claim is about **realization**, not
-a new phenomenon: it gives the second descent a mechanism in a substrate where "just add
-parameters" cannot work. Smaller than "a new kind of double descent" — and we say the smaller true
-thing.
-
----
-
-
-Per PJM (2026-07-16). The governing insight: **Frank is almost certainly thinking more
-abstractly than his chosen words let on.** His vocabulary is borrowed from ML and from gene
-regulation, and when we map that vocabulary onto a different substrate, *the terminology
-leads us astray*. Our job is not to check whether his words apply to spiking networks — it is
-to work out how a spiking substrate instantiates the **abstract process**, and to expect that
-we will have to reconceive terms like "parameter" as we go.
-
-- **H0 (default):** the process Frank describes is **substrate-independent**. The challenge is
-  ours: learn the correct mapping.
-- **H1 (alternative):** the mapping fails — something about spiking substrates genuinely does
-  not instantiate the process.
-
-H1 is only reachable *after* a serious attempt at H0. Declaring H1 early would just be
-mistaking our own mapping errors for a property of nature. (We have already done this once:
-see D030, where we concluded the model was broken when we had merely tuned it into a regime
-where it ignored its input.)
-
----
-
-## 1. The claim, stated without genes, synapses, or spikes
-
-> A system has **adjustable degrees of freedom**. An **optimizer** tunes them against a
-> **finite sample of challenges**. When DOF ≈ sample size, the system fits the sample exactly
-> with no slack — brittle, memorizing, maximally aliased. When DOF ≫ sample size, many
-> equivalent fits exist and the optimizer's **implicit bias** selects smooth ones. Therefore
-> **more DOF → better generalization, past a threshold.**
-
-Nothing here mentions a substrate. **This is the thing to test.**
-
-## 2. The conflation at the heart of it
-
-Frank's chain is: *more parameters → more dimensionality → better generalization*.
-
-That silently fuses **two quantities the ML literature carefully separates**:
-
-| | symbol | what it is |
+| coordinate | question | axis |
 |---|---|---|
-| **Parameter count** | **P** | number of adjustable degrees of freedom. The x-axis of double descent in ML. |
-| **Effective capacity** | **D** | dimensionality of what the system can actually express. Dambre's bound; the RMT `edof` that sets threshold location (D018). |
+| **environment structure** | is there **exploitable higher-order structure**, or only noise? | D045/D051 — the *learnable fraction* of unexplained variance |
+| **cost** | is complexity **penalized**? | `c_syn` sweep (0 = **Frank's assumed regime**) |
+| **dynamical regime** | does the substrate **permit gain modulation**? | H-D — tonic vs balanced (fluctuation-driven) |
 
-**Frank treats these as one thing. They are not.**
+**Vary these and you can predict — and produce — each regime.**
 
-In a typical ML network, P and D both scale with width, so they move together and you cannot
-tell which one double descent is *about*. **They are confounded by construction.**
+## 0b. The distinction everything rests on (D055)
+
+| | what it is | its job |
+|---|---|---|
+| **Regularization** | machinery that prevents overfitting — homeostasis, priors, dreams, weight decay, the Occam factor | **not fitting noise** |
+| **Regulation** | a functional level that **modulates another level** — context-dependent gain control | **exploiting structure the encoder cannot reach** |
+
+**There is an abundant literature on the first. The ORIGIN of the second is unexplained.**
+*"The brain regularizes" says nothing about whether regulatory hierarchy emerges, or why.*
+
+**The constructive question:** **why did regulatory hierarchy evolve?** Candidate answer:
+**because encoding saturates** — past that point additional *encoding* capacity buys nothing, and
+**modulating what you have is the only remaining move.**
+
+## 0c. The tension the field has not noticed (D054)
+
+**Frank's load-bearing premise**, in his words: *"biology tends not to penalize complexity as
+strongly... Evolutionary dynamics is therefore likely to experience the full consequences of the
+double descent learning curve."* **He claims the CURVE, not merely the benefit** — and you can have
+the benefit without the peak (regularize → monotonic decrease; Nakkiran; **Frank's own 2025a LASSO
+result**).
+
+**That premise is contradicted on both timescales, by literatures that have not noticed each other:**
+- **Lifetime:** the brain regularizes heavily — evolved priors (neonate chicks), homeostasis, E/I
+  balance, **Hoel's Overfitted Brain Hypothesis** (dreams evolved to prevent overfitting).
+- **Evolutionary:** **R&N** — implicit regularization emerges from the replicator equation itself
+  (the Occam factor), **no external cost needed. Selection IS a regularizer.**
+
+**Prevent overfitting and you prevent the peak — definitionally.** So: **is Frank's assumed regime
+biologically reachable at all?** *That is what the `c_syn` sweep asks.*
+*Also reframes **Wang & Pope (2025)**, who found SNNs "did not show a clear pattern" for double
+descent: **the substrate may already be regularized** — bounded rates, thresholds, temporal sparsity.
+If so, Frank's import fails **at the level of the neuron**.*
+
+---
 
 ## 2b. Ontology: phenotype, fitness, metrics (PJM, 2026-07-16 — corrects a confusion of mine)
 

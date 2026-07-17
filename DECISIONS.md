@@ -1348,6 +1348,134 @@ X" IS the answer.*
 5. **All-noise arm** — Bartlett's expectation, graded.
 6. **All-structure + cost arm** — Ali's expectation, graded.
 
+### D053 — CORRECTION: double descent in SNNs HAS been studied (Wang & Pope 2025); and the topology dial is a THIRD axis we lack
+**2026-07-17 · Accepted** · *both caught by PJM via an external document + direct challenge*
+**I was wrong.** I said nobody had looked for double descent in SNNs. **Wang, H. & Pope, J. (2025),
+ICAART 351–359**, *Double Descent Phenomenon in Liquid Time-Constant Networks, Quantized Neural
+Networks and Spiking Neural Networks*: LTCs show a **subtle** form, QNNs a **pronounced** one on
+CIFAR-10, **"the SNN models did not show a clear pattern."** (Also surfacing: *Deep Spiking Double
+Descent*.)
+**Their setup differs from ours on every axis:** **feedforward** SNNs (2 and 4 layers), **gradient**
+training (Adam/SGD), sweeping **hidden-layer width**, on MNIST/FashionMNIST/CIFAR-10. Ours:
+**recurrent**, **evolutionary**, sweeping **|W|**, hierarchical environment. And *"no clear pattern"*
+is weaker than a null — they report the **learning-rate scheduler, label noise, and epochs all
+significantly affect** whether double descent appears.
+**But it raises real risk to Gate B**, and gives a mechanistic hypothesis worth taking seriously:
+**spiking physics may itself regularize** — refractory periods bound rates, thresholds discard
+sub-threshold noise (implicit L0), temporal sparsity filters. *If so, **Frank's import fails at the
+level of the neuron.***
+
+**The topology dial (my overclaim).** I said the external document's
+**feedforward-random → recurrent-unstructured → recurrent-clustered** series was "essentially our
+graded control series." **It is not.** Ours (D052) is an **optimizer/model-class** dial (selection →
+gradient → linear readout): *what kind of fitting process is required?* Theirs is a **topology**
+dial: *what kind of architecture is required?* **Orthogonal axes.** Only the *logic* is shared
+(start where the phenomenon is guaranteed, walk toward the biological case). Real overlap: their
+**SNN-1** (feedforward random + linear readout) ≈ **our bolt-on positive control** — it *is* a
+random-features model; their SNN-2 ≈ our retired reservoir. **Topology is a THIRD dial we do not
+have** — our design fixes topology and varies only parameter count. Worth noting, not assimilating.
+*Assessment of the source document:* one checkable factual claim (Wang & Pope) — **correct**, which
+earns credit. Most of the rest is confident assertion: the cerebellum/V1/PFC verdicts cite nothing;
+*"empirically we don't see this"* for PFC is **absence of evidence where nobody has looked**; the
+evolution-walks-the-swamp story is elegant and speculative.
+
+### D054 — Frank's load-bearing premise is that BIOLOGY DOESN'T REGULARIZE — contradicted on both timescales
+**2026-07-17 · Accepted** · *Credit: PJM's push ("can you have double descent without the overfitting phase?")*
+**PJM's question:** if the brain tends away from overfitting, doesn't that prevent double descent?
+**Answer: yes — definitionally.** The peak **IS** the overfitting; prevent overfitting and you
+prevent the peak. **But you can keep the BENEFIT of overparameterization without the peak:**
+regularize and the curve becomes **monotonically decreasing** (Nakkiran: optimal regularization
+mitigates double descent; **Frank himself shows it in 2025a** — LASSO uses 7 of 20 nodes, no penalty
+uses all 20).
+
+**So: does Frank claim the curve or the benefit? He claims the CURVE, explicitly:**
+> *"Classical statistics penalizes complexity to avoid overfitting, **effectively smoothing out the
+> interpolation spike**. By contrast, **biology tends not to penalize complexity as strongly**.
+> Evolutionary dynamics is therefore likely to **experience the full consequences of the double
+> descent learning curve**."*
+
+**That is a specific, falsifiable premise — and it is contradicted on BOTH timescales, by two
+independent literatures that have not noticed because they use different vocabulary:**
+- **Lifetime:** the brain regularizes **heavily** — evolved priors (**Wang et al. 2024**: neonate
+  chicks generalize via spontaneous biases, inconsistent with an unbiased model), homeostatic
+  plasticity, E/I balance, and **Hoel's Overfitted Brain Hypothesis** (*Patterns* 2021): **dreams
+  evolved to prevent overfitting** by supplying "a sparse, corrupted, or randomized set of sensory
+  inputs... to expand and regularize the limited and biased training set of the organism." *(Hoel's
+  own reasoning — "any organism that implemented dropout during daily learning would face serious
+  survival issues" — is the population-can-suffer/individual-cannot argument, from a real source.)*
+- **Evolutionary:** **R&N** show **implicit regularization emerges from the replicator equation
+  itself** (the Occam factor), **no external cost required**. **Selection IS a regularizer.**
+
+**⇒ Frank needs biology to be unregularized, and everything we know says it isn't.**
+**Our `c_syn` sweep is exactly this test:** `c_syn = 0` **IS** Frank's assumed regime; `c_syn > 0`
+is the regularized one. We are asking whether **Frank's assumed regime is biologically reachable at
+all.** *And it reframes Wang & Pope: SNNs may show no clear double descent **because the substrate
+is already regularized**.*
+*Caveat recorded:* the document's claim that **sparse coding** acts as a beneficial regularizer is
+**contested** — *"Generalization is important to current brain models but is weak under sparse
+coding"*; its advantages carry trade-offs, "with the lower capacity for generalization being
+especially problematic."
+
+### D055 — REGULARIZATION ≠ REGULATION. The distinction that rescues the project.
+**2026-07-17 · Accepted** · *Credit: PJM* · *my sloppiness, exposed*
+PJM: the story was collapsing into *"Frank overclaimed that biology doesn't regularize, and here is
+a suite of models showing how it can"* — which is (1) already an abundant literature, and (2)
+compatible with Frank being right about **populations** while we merely carve out the brain.
+**The flaw is real, and the fix is a distinction I had been blurring because the words share a root:**
+
+| | what it is | its job | literature |
+|---|---|---|---|
+| **Regularization** | machinery that prevents overfitting | **not fitting noise** | abundant: homeostasis, priors, dreams, weight decay, Occam factor |
+| **Regulation** | a functional level that **modulates another level** | **exploiting structure the encoder cannot reach** | **the origin of it is unexplained** |
+
+**The abundant literature is entirely about the first. Our hypothesis is entirely about the second.**
+*"The brain regularizes"* says **nothing** about whether regulatory hierarchy emerges, or why.
+
+### D056 — THE FRAME (PJM's): a repertoire of learning behaviours in spiking networks, and what determines position in it
+**2026-07-17 · Accepted** · *Credit: PJM* · supersedes all prior framings
+> Classical ML, neuroAI and evolutionary theory have converged on the idea that **algorithmic
+> learning unites them**, and that **double descent** — first described in ML — is expected to
+> pervade complex adaptive systems. Neuronal networks look like an obvious participant. **But the
+> brain is not a deep network; and while organisms have brains, a brain is neither an organism nor a
+> population** conforming to classical evolutionary patterns. Brain ensembles "learn", but the
+> **kinds** of learning are varied and supported by varying architectures and processes. Some
+> architectures may show classical overfitting/double descent (**cerebellum**); some may show
+> classical encoding of environmental regularities (**primary sensory areas**); much of the brain is
+> characterised instead by **multi-specificity and extreme flexibility**. **How does learning among
+> the brain's networks relate to learning as described by the grand framework?** *This study maps a
+> **repertoire of learning behaviours** displayed by spiking networks under varying constraints and
+> stimuli.*
+
+**Why it succeeds where every prior frame failed.** All previous frames were **adversarial** —
+testing Frank, beating R&N, out-Franking Wagner. **This is constructive:** the convergence is real,
+the brain is a hard case, and *how* it is hard is worth knowing. **Nobody has to be wrong.** Frank's
+insight — **the parameter axis is where to look** — stays intact and becomes our **instrument**.
+**It makes the design the point:** we built a 2×2 with graded controls — **a map**. The frame says we
+are making a map. Wang & Pope's null becomes a data point; the cerebellum an expected positive; the
+tautological cells the map's **calibrated corners**. **Nothing must be explained away.**
+**It survives all four objections that killed earlier frames:** not out-Franking (his axis, our
+object); not redundant with the regularization literature (**D055**); does not require Frank wrong
+about populations; and **"why spiking" dissolves — the brain IS the case in question**, not a proxy.
+
+**THE REQUIRED ADDITION (or it is merely a taxonomy).** A repertoire alone is a catalogue. The frame
+needs a **predictive claim about what determines position in it** — and we have one:
+> **The repertoire is not arbitrary. Three factors determine which learning behaviour obtains:**
+> **(i)** whether the environment has **exploitable higher-order structure** (D045);
+> **(ii)** whether there is a **metabolic cost** (`c_syn`);
+> **(iii)** whether the **dynamical regime permits gain modulation** (H-D, tonic vs balanced).
+> **Vary those and you can predict — and produce — each regime.**
+*That converts "here is a map" into "here are the coordinates."* And they are exactly our three axes.
+
+**One claim to soften.** *"Most of the brain displays no such patterns"* — the **mixed-selectivity**
+part is well supported (Rigotti/Fusi); the **"displays no such patterns"** part comes from the AI
+document, is **unsourced**, and is **absence of evidence — nobody has looked for double descent in
+association cortex.** State as **open**, not established: the hallmarks have been sought in some
+architectures and not others.
+
+**The constructive question underneath (D055):** *why did regulatory hierarchy evolve?* Candidate
+answer: **because encoding saturates.** **Double descent is not the phenomenon — it is the
+diagnostic that reveals the transition.**
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this
