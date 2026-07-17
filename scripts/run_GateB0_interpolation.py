@@ -84,10 +84,18 @@ def positive_control(net_cfg: EvoNetConfig, task, widths, seed=0) -> pd.DataFram
 
 # ---------------------------------------------------------------- (A) the gate
 def _arm(pl: dict) -> dict:
+    """One GA setting. **Parallelism is nested INWARD (D064):** workers go to the POPULATION,
+    arms run serially.
+
+    The previous nesting parallelised across ARMS with `n_workers=1` inside — so with 4 arms on
+    6 workers, two workers idled and **wall clock was set by the SLOWEST SINGLE ARM** (~3.3 h for
+    pop 60 x 100 gens). Inward nesting puts all 6 workers on one arm at a time and makes the
+    total the SUM of arms, each ~6x faster.
+    """
     task = T.hierarchical_environments(**pl["task_kw"])
     net = EvoNetConfig(**pl["net_kw"])
     cfg = EvolveConfig(**pl["ga_kw"])
-    hist, _ = run_evolution(task, net, cfg, n_workers=1, verbose=False)
+    hist, _ = run_evolution(task, net, cfg, n_workers=pl.get("workers", 1), verbose=False)
     h0, hN = hist[0], hist[-1]
     best = min(h["best_train"] for h in hist)
     return dict(pop_size=cfg.pop_size, n_generations=cfg.n_generations,
@@ -101,7 +109,12 @@ def _arm(pl: dict) -> dict:
 
 
 PRESETS = {
-    "default": dict(pops=(30, 60), gens=(100,), sigmas=(0.2, 0.5), densities=(0.5,)),
+    # Gate B0 is a YES/NO question — does training error move AT ALL? D060's signal
+    # (0.943 -> 0.937 over 6 generations) suggests we may learn the answer in minutes.
+    # **Run `quick` FIRST.** If train is still ~0.94 after 100 generations, that is the
+    # important thing, learned without spending hours confirming it four ways.
+    "quick":   dict(pops=(30,), gens=(100,), sigmas=(0.3,), densities=(0.5,)),      # 1 arm ~15 min
+    "default": dict(pops=(30, 60), gens=(100,), sigmas=(0.2, 0.5), densities=(0.5,)),  # 4 arms
     "hard":    dict(pops=(60, 120), gens=(300,), sigmas=(0.1, 0.3, 0.8), densities=(0.5, 0.9)),
 }
 
@@ -186,19 +199,23 @@ def main():
         import itertools
         g = PRESETS[args.preset]
         payloads = [dict(task_kw=task_kw, net_kw=net_kw,
+                         workers=args.workers,
                          ga_kw=dict(pop_size=p, n_generations=gn, mag_sigma=s, density=dn,
                                     selection="replicator", seed=args.seed))
                     for p, gn, s, dn in itertools.product(g["pops"], g["gens"], g["sigmas"],
                                                           g["densities"])]
         print(f"\n=== (A) THE GATE: {len(payloads)} GA settings, deep in the overparameterized regime ===")
+        # arms SERIAL; workers go to the population inside each arm (D064)
+        est = sum(pl["ga_kw"]["pop_size"] * pl["ga_kw"]["n_generations"] for pl in payloads)
+        print(f"    {est:,} total evaluations ~ {est*2/max(args.workers,1)/60:.0f} min "
+              f"at ~2 s/eval on {args.workers} workers\n")
         rows = []
-        if args.workers <= 1:
-            rows = [_arm(pl) for pl in payloads]
-        else:
-            import multiprocessing as mp
-            with mp.get_context("spawn").Pool(args.workers) as pool:
-                for i, r in enumerate(pool.imap_unordered(_arm, payloads)):
-                    rows.append(r); print(f"  [{i+1}/{len(payloads)}]")
+        for i, pl in enumerate(payloads):
+            t0 = __import__("time").time()
+            rows.append(_arm(pl))
+            print(f"  [{i+1}/{len(payloads)}] pop={pl['ga_kw']['pop_size']} "
+                  f"gens={pl['ga_kw']['n_generations']} sigma={pl['ga_kw']['mag_sigma']} "
+                  f"-> best_train={rows[-1]['train_best']:.3f}  ({__import__('time').time()-t0:.0f}s)")
         df = pd.DataFrame(rows)
         df.to_parquet(run.table_path("gateB0"))
 

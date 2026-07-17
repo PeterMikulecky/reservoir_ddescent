@@ -1766,6 +1766,36 @@ setting, reproduced. **It says nothing yet about the network.**
 the **peak** sits at **M/n ≈ 1**. **Two different quantities in two different places — as H-B
 predicts** (optimum tracks r₁; peak tracks n). *With a 7% first descent, not evidence yet.*
 
+### D064 — Gate B0 runtime: parallelism was nested the wrong way; `quick` preset added
+**2026-07-17 · Accepted** · *PJM: "how long do we expect the GATE simulations to take?" — a question I should have answered before handing over the run command*
+**My error.** I gave a run command without estimating its cost. Worse, **the parallelism was nested
+outward:** `_arm()` called `run_evolution(..., n_workers=1)` while an outer pool parallelised across
+ARMS. With 4 arms on 6 workers, **two workers idled and wall-clock was set by the SLOWEST SINGLE
+ARM** (~3.3 h for pop 60 × 100 gens; ~10 h for the `default` preset; the `hard` preset's largest arm
+is ~20 h **on its own**).
+**Fixes:**
+1. **Parallelism nested INWARD** — workers go to the **population**; arms run **serially**. All 6
+   workers on one arm at a time; total = **sum** of arms, each ~6× faster.
+2. **Worker initializer** — `pool.map` was re-pickling the **task (E/Y arrays + W_ctx) and net_cfg
+   for every individual, every generation.** Now set **once per worker** via `initializer=`; only
+   the genome is shipped.
+3. **`quick` preset (RUN THIS FIRST):** pop 30 × 100 gens, one sigma, one density = **1 arm**.
+   *Gate B0 is a **yes/no** question — does training error move **at all**? D060's signal
+   (0.943 → 0.937 over 6 generations) suggests the answer may arrive in minutes.* **If train is
+   still ~0.94 after 100 generations, that is the important thing — learned without spending 10 h
+   confirming it four ways.**
+4. The script now **prints an evaluation-count and time estimate** before starting, and per-arm
+   timings as it goes.
+
+**Honest caveat:** my ~15 min estimate for `quick` is **unverified** — the sandbox timing test
+itself timed out, which suggests the parallel speedup is well short of 6×. **Time the `quick` run;
+that measurement beats my arithmetic.**
+
+**On the abandoned partial run:** Ctrl-C leaves the run directory with `status: "running"` (finalize
+never fires). **Harmless** — `archive_runs.py` only moves `complete` runs, so it is ignored
+permanently. `positive_control.parquet` was written (it runs in seconds), so there is a little real
+data. Delete for tidiness or keep as an honest record that a run was started and abandoned.
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this

@@ -146,9 +146,22 @@ def evaluate(genome: Genome, task, net_cfg: EvoNetConfig) -> dict:
                 exc_frac=genome.exc_fraction(), state=B_tr["state"], state_var=B_tr["state_var"])
 
 
-def _eval_payload(pl):
-    """TOP-LEVEL, picklable — Windows spawn (D007). One individual."""
-    r = evaluate(pl["genome"], pl["task"], pl["net_cfg"])
+_WORKER = {}
+
+
+def _init_worker(task, net_cfg):
+    """Set the task/net_cfg ONCE per worker (D064).
+
+    Without this, `pool.map` re-pickles the task (E/Y arrays + W_ctx) and net_cfg for **every
+    individual, every generation** — real overhead that ate most of the parallel speedup.
+    """
+    _WORKER["task"] = task
+    _WORKER["net_cfg"] = net_cfg
+
+
+def _eval_payload(genome):
+    """TOP-LEVEL, picklable — Windows spawn (D007). One individual; task comes from the worker."""
+    r = evaluate(genome, _WORKER["task"], _WORKER["net_cfg"])
     r.pop("state", None); r.pop("state_var", None)   # do not ship big arrays back
     return r
 
@@ -170,12 +183,12 @@ def run_evolution(task, net_cfg: EvoNetConfig, cfg: EvolveConfig,
     pool = None
     if n_workers > 1 and eval_fn is None:
         import multiprocessing as mp
-        pool = mp.get_context("spawn").Pool(n_workers)
+        pool = mp.get_context("spawn").Pool(n_workers, initializer=_init_worker,
+                                            initargs=(task, net_cfg))
     try:
       for gen in range(cfg.n_generations):
           if pool is not None:
-            payloads = [dict(genome=g, task=task, net_cfg=net_cfg) for g in pop]
-            res = pool.map(_eval_payload, payloads)
+            res = pool.map(_eval_payload, pop)      # only the genome is shipped
           else:
             res = [eval_fn(g) for g in pop]
           errs = np.array([r["train_err"] for r in res])
