@@ -1828,6 +1828,72 @@ exactly like slow code. Three separate timing estimates (D060, D064, and my "~15
 were all built on measurements of code that was never parallel. *PJM caught in one glance at Task
 Manager what three of my sandbox benchmarks had missed.*
 
+### D066 — The run was unobservable: `verbose=False` meant zero output for hours
+**2026-07-17 · Accepted** · *PJM: "is there a way to assess its progress?" — there was not, and that was my bug*
+`_arm()` called `run_evolution(..., verbose=False)`. With `quick` being a **single arm**, that meant
+**no output at all** until the entire run finished — no progress, no ETA, no way to tell a working
+run from a hung one. **A long-running scientific job that prints nothing is unobservable, and I
+shipped three of them.**
+**Fixes:**
+1. `verbose=True` by default in `_arm`.
+2. **Progress every 10 generations with elapsed + ETA**, `flush=True`.
+3. **The pool announces itself**: `[PARALLEL: 6 workers]` vs `[SERIAL (1 process)]`, with a
+   per-generation time expectation. **D065's bug hid for three sessions because a silently-serial
+   pool looks exactly like slow code — now it cannot hide.**
+
+**The diagnostic PJM needed (process count) should have been in the output, not in Task Manager:**
+| processes | meaning | `quick` ETA |
+|---|---|---|
+| ~6 | parallel working | ~28 min |
+| 1 | still serial | ~2.8 h |
+
+**Standing rule:** *any run longer than a few minutes must print progress, an ETA, and its own
+parallelism state.* Three separate sessions of timing confusion (D060, D064, D065) trace to runs
+that could not report on themselves.
+
+### D067 — GATE B0 FAILS. The GA never approaches interpolation — and the diagnosis is ARITHMETIC, not biology.
+**2026-07-17 · Accepted** · **THE MOST CONSEQUENTIAL RESULT SO FAR** · lands exactly on the risk D049 flagged
+**Result (`--preset quick`, real run, 6 workers, 5,193 s):**
+`best_train` **0.936 → 0.882** over 100 generations. Never near interpolation (threshold 0.05).
+**Worse than the memoryless floor (0.834)** — after 100 generations of selection the evolved network
+is **worse than having no network at all**.
+
+**THE DIAGNOSIS — we are 40× short of the evaluations required.**
+|W| = **1,221** parameters, optimized with **3,000** evaluations. The standard rule of thumb for
+evolution strategies is **~100 × n_params** evaluations to converge ⇒ **~122,000 needed**.
+**The GA did not fail. It barely started.**
+
+**THE WALL.** Measured **~1.7 s/eval on 6 workers** (my 3.4 s/eval sandbox estimate was optimistic;
+6 processes ≠ 6× speedup — each generation is a `pool.map` **barrier** waiting on its slowest
+member, and Brian2 **rebuilds a network per evaluation**). So 122,000 evals ≈ **58 h for ONE arm**;
+the 72-arm map ≈ **4,000 h**. **Evaluation cost is now a first-class design constraint, not a
+detail.**
+
+**THE LEVER IS PARAMETER COUNT, AND IT IS QUADRATIC (|W| ~ density·N²) — not the optimizer:**
+| N | \|W\| @ density 0.5 | evals needed (~100n) | est. per arm |
+|---|---|---|---|
+| 50 (current) | 1,221 | 122,000 | **58 h** ✗ |
+| 30 | ~435 | 43,500 | ~8 h |
+| **20 (proposed)** | **~190** | **19,000** | **~1.5 h** ✓ |
+**And N=20 has a precedent I had forgotten: Frank's own 2025a example is a 20-node network** —
+*"a sparsely and randomly connected network with 20 nodes stores an imperfect and dimensionally
+reduced memory of past inputs."* **We would be at his scale, not an artificially tiny one.**
+Proposed: **N=20, d=3, n_env=20 → 60 constraints, |W|/constraints ≈ 3.2** — still comfortably
+overparameterized, and each eval far cheaper (fewer synapses AND fewer patterns).
+**Other levers to price:** `present_ms` 150 → 50 (~3× faster, less settling time); fewer
+environments (also lowers the constraint count, moving the threshold **toward** us).
+
+**THE HONEST STATEMENT.** The script's built-in warning (D062) was right: **this is a DESIGN
+failure, not a finding about biology.** But it is a serious one — it says **the study as scoped may
+be computationally infeasible**, and the fix (N=20) shrinks the networks to where *"spiking
+network"* is a generous description. **That is a real trade to weigh, not a parameter tweak.**
+
+**Positive control, same run (baseline 0.834):** peak at **M/n = 1.00** exactly (test 202), second
+descent to 2.50, **first descent now present** (1.037 → **1.034** at M=2 — still trivial, 0.3%).
+**Optimum at M=2 vs r₁=3; peak at M/n=1.00** — two quantities, two places, as H-B predicts.
+**But the reservoir states STILL never beat raw input** (best 1.034 vs 0.834) — that is a RANDOM
+network, and Gate A (does *evolution* fix it?) is now **unanswerable until Gate B0 passes.**
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this

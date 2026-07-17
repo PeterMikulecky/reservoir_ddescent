@@ -315,19 +315,59 @@ the frame, not the parameters.**
 where this lives or dies)** → Gate C (balanced regime) → three modes × cost structure.
 See QUEUE.md.
 
+## 2026-07-17 — The frame arrives; the model is built; Gate B0 fails on arithmetic
+
+**The frame (D056, PJM's).** Every earlier framing was **adversarial** (test Frank / beat R&N /
+avoid Wagner) and each broke on a different objection. PJM's is **constructive**: ML, neuroAI and
+evolutionary theory have converged on algorithmic learning, and double descent is expected to
+pervade complex adaptive systems — **but the brain is not a deep network, and a brain is neither an
+organism nor a population.** So: **map a REPERTOIRE of learning behaviours in spiking networks under
+varying constraints and stimuli.** Frank's insight — *the parameter axis is where to look* — becomes
+our **instrument**; **double descent becomes the DIAGNOSTIC, not the phenomenon.** Nobody has to be
+wrong. Wang & Pope's SNN null becomes a data point; the tautological cells become **calibrated
+corners** of the map.
+
+**The distinction that rescued it (D055, PJM).** The story was collapsing into "Frank overclaimed
+that biology doesn't regularize, here's a model showing how it can" — which is (1) an abundant
+literature and (2) compatible with Frank being right about populations. **Fix: REGULARIZATION ≠
+REGULATION.** Regularization prevents overfitting (well studied). **Regulation is a level that
+modulates another level — its origin is unexplained.** The constructive question: **why did
+regulatory hierarchy evolve? Because encoding saturates.**
+
+**The tension nobody noticed (D054).** Frank claims the **curve**, explicitly: *"biology tends not to
+penalize complexity... likely to experience the full consequences of the double descent learning
+curve."* **Prevent overfitting and you prevent the peak — definitionally** (PJM's push). And his
+premise is contradicted **on both timescales**: brains regularize heavily (Hoel's dreams-as-
+regularization, evolved priors, homeostasis) and **selection itself regularizes** (R&N's Occam
+factor). Two literatures, no contact, different vocabulary. **Our `c_syn` sweep asks whether Frank's
+assumed regime is reachable at all.**
+
+**Built and validated.** `evonet.py` (W as genome; Dale's law with evolvable identity; **inh_gain**
+for E/I balance); `hierarchical_environments` (**context in the covariance, never the mean** —
+PJM's sharpest constraint; rank-r₁ maps; **headroom 0.62** verified); `evolve.py` (**selection scheme
+and density mode as ARMS** — *Friedlander used tournament, R&N replicator; the rivals differ on
+exactly this*). **Gate C PASSED** — 31/36 fluctuation-driven, CV to 1.07, after two real bugs
+(E/I unbalanced 24:1; fluctuations too slow vs τ_m). **H-D now has both arms via one knob.**
+**Positive control PASSED** — peak at M/n = 1.00 exactly, second descent 202 → 2.50.
+
+**GATE B0 FAILED (D067) — and the diagnosis is arithmetic.** best_train **0.936 → 0.882** over 100
+generations; **worse than the memoryless floor (0.834)**. |W| = 1,221 params, **3,000 evaluations**
+— evolution strategies need **~100n ⇒ 122,000. We are 40× short.** At 1.7 s/eval on 6 workers that
+is **58 h per arm**, ~4,000 h for the map. **Evaluation cost is now a first-class design
+constraint.** The lever is **quadratic**: N=20 → |W| ≈ 190 → ~1.5 h/arm. **And N=20 is Frank's own
+scale** (2025a: "a sparsely and randomly connected network with 20 nodes"). **The honest trade:**
+this is a **design failure, not a finding about biology** (as the script's own warning says) — but a
+serious one, because the fix shrinks networks to where "spiking network" is generous.
+
+**My errors this session, all caught by PJM.** Claimed a first descent that wasn't there (sweep
+started past the optimum). A reproducibility bug (projections drawn sequentially — same seed, peak
+moved 50→25). **The parallel pool was NEVER created** (`eval_fn` set before the `is None` test) — so
+three sessions of timing estimates measured serial code, and I diagnosed a pickling-overhead problem
+in code that wasn't parallel. **PJM found it in one glance at Task Manager.** And I shipped three
+long jobs that printed **nothing** — a silently-serial pool looks exactly like slow code.
+
+*Next:* **decide N before writing any more code.** N=20/d=3/n_env=20 → 60 constraints,
+|W|/constraints ≈ 3.2. Alternatives: CMA-ES, cheaper fitness, fewer arms, or reconsider the
+substrate. See QUEUE.md.
+
 <!-- Future run stubs will be auto-appended below this line. -->
-
-## 2026-07-17 20:51 — `T0-tune_operating_point__20260717-205132__exp__g1265f63__gateb0-interpolation`  <!-- auto -->
-- type `exp` · stage `T0` · git `g1265f63` (D063: control corrected - no first descent claimed falsely, per-M seeding fixed, raw-input baseline now permanent) · status **complete**
-- result: positive control only; DD=True
-- _interpretation:_ 
-
-## 2026-07-17 21:35 — `T0-tune_operating_point__20260717-211216__exp__gdd19cd0__gateb0-interpolation`  <!-- auto -->
-- type `exp` · stage `T0` · git `gdd19cd0` (D064: nest parallelism inward, worker initializer, quick preset; runtime estimates) · status **failed**
-- result: (no result note passed to finalize)
-- _interpretation:_ 
-
-## 2026-07-17 23:04 — `T0-tune_operating_point__20260717-213756__exp__g91f2891__gateb0-interpolation`  <!-- auto -->
-- type `exp` · stage `T0` · git `g91f2891` (D065: pool was never created - eval_fn set before the is-None test; every GA run was silently serial) · status **complete**
-- result: GateB0: 0/1 interpolate; best_train=0.882; control DD=True
-- _interpretation:_ 

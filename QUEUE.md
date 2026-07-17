@@ -1,229 +1,135 @@
 # Queue
 
-Updated 2026-07-17. Claims → `DECISIONS.md`; framing → `FRAMING.md`; narrative → `LAB_NOTEBOOK.md`.
+Updated 2026-07-17 (end of session). Claims → `DECISIONS.md` · framing → `FRAMING.md` ·
+chain → `BRIDGE.md` · narrative → `LAB_NOTEBOOK.md`.
 
-## THE FRAME (D056 — read FRAMING.md §0)
+---
 
-**Not** "test Frank in a spiking network." **Map a REPERTOIRE of learning behaviours in spiking
-networks under varying constraints and stimuli.** The brain is not a deep network; a brain is
-neither an organism nor a population. Some architectures may show classical double descent
-(cerebellum); some classical encoding (primary sensory); much of the brain is multi-specific and
-flexible — **and whether it shows these patterns is OPEN; nobody has looked in association cortex.**
-**Frank's insight — the parameter axis is where to look — is our INSTRUMENT. Double descent is the
-DIAGNOSTIC, not the phenomenon.**
+# ⛔ THE BLOCKING RESULT: GATE B0 FAILED (D067)
 
-**Three coordinates determine position in the repertoire** (= our three axes): **environment
-structure** (learnable fraction) · **cost** (`c_syn`; 0 = Frank's assumed regime) · **dynamical
-regime** (tonic vs balanced).
+**`best_train` 0.936 → 0.882 over 100 generations. Never near interpolation. Worse than the
+memoryless floor (0.834)** — after 100 generations of selection the evolved network is worse than
+having no network at all.
 
-**The distinction everything rests on (D055): REGULARIZATION ≠ REGULATION.** Regularization =
-machinery that prevents overfitting (abundant literature). Regulation = a level that **modulates
-another level** (**origin unexplained**). **The constructive question: why did regulatory hierarchy
-evolve? Candidate answer: because encoding saturates.**
+**The diagnosis is ARITHMETIC, not biology.** |W| = 1,221 params optimized with 3,000 evaluations.
+Evolution strategies need **~100 × n_params ⇒ ~122,000**. **We are 40× short. The GA did not fail —
+it barely started.**
 
-**The tension nobody has noticed (D054):** Frank needs biology to be **unregularized** ("biology
-tends not to penalize complexity... likely to experience the full consequences of the double descent
-learning curve"). **Contradicted on both timescales** — brains regularize heavily (Hoel, priors,
-homeostasis); **selection itself regularizes** (R&N's Occam factor). **Prevent overfitting and you
-prevent the peak, definitionally.** *Is Frank's regime even reachable? The `c_syn` sweep asks.*
+**The wall:** ~1.7 s/eval on 6 workers ⇒ 122,000 evals ≈ **58 h for ONE arm**; the 72-arm map ≈
+**4,000 h.** *Evaluation cost is now a first-class design constraint.*
 
-**KNOWN RISK (D053):** **Wang & Pope (2025, ICAART)** looked for double descent in SNNs — *"did not
-show a clear pattern"* (feedforward, gradient, width sweep, MNIST/CIFAR — differs from ours on every
-axis, and "no clear pattern" ≠ null). **But spiking physics may itself regularize** (bounded rates,
-thresholds, sparsity). **If so Frank's import fails at the level of the neuron** — which would be a
-finding, not a failure.
+**⇒ THE DECISION THAT MUST BE MADE FIRST, BEFORE ANY MORE CODE:**
+
+| N | \|W\| @ dens 0.5 | evals (~100n) | per arm | verdict |
+|---|---|---|---|---|
+| 50 (current) | 1,221 | 122,000 | **58 h** | ✗ infeasible |
+| 30 | ~435 | 43,500 | ~8 h | marginal |
+| **20 (proposed)** | **~190** | **19,000** | **~1.5 h** | ✓ feasible |
+
+**N=20 is Frank's own scale** — 2025a: *"a sparsely and randomly connected network with 20 nodes
+stores an imperfect and dimensionally reduced memory of past inputs."*
+Proposed: **N=20, d=3, n_env=20 → 60 constraints, |W|/constraints ≈ 3.2** (still overparameterized).
+Other levers to price: `present_ms` 150→50 (~3× faster); fewer environments (also lowers the
+constraint count, moving the threshold *toward* us).
+
+**THE HONEST TRADE (weigh deliberately — not a parameter tweak):** the script's own warning (D062)
+was right — **this is a DESIGN failure, not a finding about biology.** But it says **the study as
+scoped may be computationally infeasible**, and the fix shrinks networks to where *"spiking network"*
+is a generous description.
+
+**Alternatives if N=20 is unacceptable:** CMA-ES or a stronger ES · surrogate/cheaper fitness ·
+fewer constraints · accept ~58 h/arm and run far fewer arms · reconsider the substrate.
+
+---
 
 ## Where the project stands
 
-**The hypothesis is now mechanistic (D044–D046, FRAMING §0):** the waist is a point in the
-**evolutionary trajectory** where encoding saturates and **regulation begins**. The second descent
-is the added parameters **switching function**. Trajectory waist and architectural waist are the
-same event from two angles.
+**THE FRAME (D056 — `FRAMING.md` §0).** Not "test Frank in a spiking network." **Map a REPERTOIRE
+of learning behaviours in spiking networks under varying constraints and stimuli.** The brain is not
+a deep network; a brain is neither an organism nor a population. **Frank's insight — the parameter
+axis is where to look — is our INSTRUMENT. Double descent is the DIAGNOSTIC, not the phenomenon.**
+Three coordinates (= our three axes): **environment structure** (learnable fraction) · **cost**
+(`c_syn`; 0 = Frank's assumed regime) · **dynamical regime** (tonic vs balanced).
+**REGULARIZATION ≠ REGULATION (D055).** Regularization = machinery that prevents overfitting
+(abundant literature). Regulation = a level that **modulates another level** (**origin
+unexplained**). **The constructive question: why did regulatory hierarchy evolve? Candidate answer:
+because encoding saturates.**
 
-**Both rivals re-diagnosed (D045):** Friedlander (waist = goal rank r) and R&N (q ≈ q*) find the
-same thing by two mechanisms — but **their environments are FLAT**, so their convergence is forced
-by design, not discovered. **Neither asks what excess parameters do once the system matches the
-environment.** That is our question.
+**What is BUILT and VALIDATED:**
+- `evonet.py` — W is the genome; Dale's law with **evolvable per-neuron identity** (D038);
+  **inh_gain** for E/I balance (D058); no trained readout; phenotype = behaviour (D036).
+- `tasks.hierarchical_environments` — **context in the COVARIANCE, never the mean** (D048/D057);
+  rank-r₁ level-1 maps (B2); **headroom 0.62** verified (memoryless 0.819 vs oracle 0.197);
+  `learnable_frac` = the D051 axis. **`headroom()` is a required pre-run check.**
+- `evolve.py` — **selection scheme is an ARM** (replicator has the Occam factor; tournament does
+  not — *Friedlander used tournament, R&N used replicator*); **density mode is an ARM** (fixed =
+  "does the curve have a peak?"; evolvable = "where does evolution LAND?"); product-rule mutation
+  (D043); crossover OFF (competing conventions); parallel + progress/ETA (D064–D066).
+- ✅ **GATE C PASSED (D058)** — 31/36 fluctuation-driven, CV_ISI to 1.07. **H-D has both arms via
+  ONE knob:** noise 0.2 → CV≈0.5 (tonic, gain control unavailable) vs noise 1.0 → CV≈1.0 (balanced,
+  divisive gain available). Operating point: bias 0.6, gain 1.0, w0 0.6, density 0.3.
+- ✅ **POSITIVE CONTROL PASSES (D061/D063/D067)** — peak at **M/n = 1.00 exactly**, second descent
+  202 → 2.50. **The apparatus can express double descent** ⇒ a later null is attributable to the
+  evolutionary setting, not broken plumbing. *But the DD lives entirely in the **readout over random
+  features** (Belkin's setting) — it says nothing about the network.*
 
-**Our model currently cannot test it.** Three concrete blockers below.
+**Suggestive, not leanable:** the classical **optimum sits at M=2** (r₁=3) while the **peak sits at
+M/n=1.00** — two quantities, two places, **as H-B predicts**. First descent is trivial (0.3%).
 
----
+**Unresolved and now unanswerable until B0 passes:** **Gate A** — the reservoir states **never beat
+the raw-input baseline** (best 1.034 vs 0.834). That is a RANDOM network; **E9's premise is that
+selection fixes it.**
 
-## BLOCKERS — B1/B2/B3/B3a now FIXED & VALIDATED (D057). Kept for the record.
+## The hypotheses (D047, `BRIDGE.md`)
+- **H-A** error vs **P=|W|** peaks at **P\***.
+- **H-B** **P\* is set by r₁, NOT n** ← *what distinguishes us from ML*. Vary r₁ and n independently.
+- **H-C** past P\*, error descends **only if** modulating (not driving) structure emerges.
+- **H-D** **no fluctuation-driven regime ⇒ no second descent** ← **the spiking test; an INTERNAL
+  on/off switch for the mechanism** (Gate C proved both arms reachable).
+- **H-E (D048)** variance is where the **second-level regularity lives**; past the waist its **role
+  changes** from encoding-overflow to the **medium of regulation**. *Not an hourglass — a **LOOP**:
+  the regulator reads the encoder's fluctuation statistics and modulates back into it.*
 
-**Status:** product-rule mutation is default; `tasks.hierarchical_environments` validated —
-context in covariance not mean (means ≈0 across contexts), rank-3 level-1 maps, **headroom 0.62**
-(memoryless 0.819 vs oracle 0.197). **`headroom()` is a required pre-run check** — if ≈0 the task
-cannot pay for regulation.
-
-### (original blockers)
-
-### B1. Mutation operator is wrong → switch to PRODUCT rule
-`evonet.mutate()` uses **sum-rule** (`mag + N(0,σ)`). Friedlander: sum-rule **fails 94–97%** of the
-time to evolve a waist. **Fix:** `mag *= N(1, σ)`. Two lines. Without this we cannot see the thing
-we are looking for.
-
-### B2. Task is FULL RANK → a bow-tie is mathematically impossible
-`tasks.profile_environments` builds E→profile from a random (K×d) matrix. Full rank ⇒ no waist,
-ever (rank(AB) ≤ min(rank A, rank B)). **Fix:** make the level-1 map **rank-deficient** (rank r₁ ≪
-min(K,d)).
-
-### B3a. **Context must change stimulus STATISTICS, not the mean** (D048 — sharpest constraint)
-If context shifts the *mean*, the encoder detects it directly and **no regulation is needed** — the
-same collapse as signalling it. Context must be a change in the **distribution** stimuli are drawn
-from (variance, correlation), so that **mean-over-short-window = level 1** and
-**variance-over-long-window = context = level 2**. **The fluctuation channel is then literally
-where the second-level regularity lives.**
-
-### B3. Task is FLAT → the second descent is forbidden by construction
-A single map E → tanh(E·Q·Wc) has **no higher-order structure to level up to**. We would reproduce
-R&N exactly and wrongly conclude the second descent does not exist. **Fix — hierarchical
-environments:**
-- **Level 1:** within a context, E → response follows a rank-r₁ regularity.
-- **Level 2:** *which* regularity applies depends on **context**; contexts have structure.
-- Encoding-only systems converge on r₁ and stall. **Leveling up requires detecting context and
-  MODULATING the level-1 map = regulation.**
-*(Lineage: Kashtan & Alon's modularly varying goals established that structured goals drive
-modularity. Ours is the claim that the transition **IS** the second descent.)*
-
----
-
-## Critical path  (full chain: `BRIDGE.md`)
-
-**Hypotheses now stated in model quantities (D047):** **H-A** error vs P peaks at P\*; **H-B** P\*
-set by **r₁ not n** (*what distinguishes us from ML*); **H-C** descent iff modulating structure
-emerges; **H-D** **no fluctuation-driven regime ⇒ no second descent** (**the spiking test — an
-internal ON/OFF switch for the mechanism**).
-
-**New stimulus requirement (D047):** **context must be INFERRED FROM HISTORY, not signalled** —
-otherwise detecting it is a switch, not regulation. ⇒ environments need **two timescales**: fast
-stimuli, slow context drift. *This is where the chain first requires dynamics.*
-
-0. ✅ **GATE C PASSED (D058)** — 31/36 fluctuation-driven, CV_ISI up to 1.07. Required TWO fixes:
-   **inhibitory gain** (`inh_gain = ei_split/(1-ei_split) = 4`, Brunel balance — E/I was 24:1) and
-   **`noise_sigma > 0`** (recurrent fluctuations were too slow vs τ_m; noise is a *condition* real
-   neurons have, not a bolted-on mechanism). **H-D now has both arms via ONE knob:** noise 0.2 →
-   CV≈0.5 (tonic, gain control unavailable) vs noise 1.0 → CV≈1.0 (balanced, divisive gain
-   available). Operating point: bias 0.6, gain 1.0, w0 0.6, density 0.3.
-
-0b. ~~**GATE C moves UP** — it is now a prerequisite, not a follow-up.** Without a reachable
-   fluctuation-driven balanced regime, **H-D has no treatment arm and gain-control regulation does
-   not exist in the model at all** (D039/D047). `noise_sigma = 0` + tonic bias currently put us in
-   the regime where inhibition is purely subtractive.
-
-1. **Fix B1–B3.** Product mutations; rank-deficient level-1 map; hierarchical (context-dependent)
-   environments.
-2. **`ddescent/evolve.py`** — population, product-rule mutation on the Dale genome (D038),
-   tournament selection, spawn-parallel, provenanced.
-2b. **GATE B0 — does training error reach ~0 at high |W|?** (D049) **Before Gate B.** Classical
-    double descent needs the optimizer to **reach interpolation** — guaranteed for least-squares
-    readouts, achieved by SGD in deep nets, **unknown for a GA on a nonlinear spiking network**. No
-    interpolation ⇒ **no threshold ⇒ no peak, by construction** — and we would misread a design
-    failure as a finding about biology. *(A fourth null-guarantee alongside B1–B3.)*
-    **Positive control (PJM):** bolt a linear readout onto the evolved net and sweep its width —
-    textbook double descent should appear. If not, the apparatus is broken, not the hypothesis.
-
-3. **GATE A — baseline per density arm** (D030). Can an evolved network beat a trivial baseline?
-   Doubles as the activity check (D037).
-4. **GATE B — does a peak appear at all?** Sweep density (P: 0.1×→9.9× constraints). **Where the
-   project lives or dies.** No peak ⇒ no phenomenon.
-5. **THE EXPERIMENT — THREE curves on one axis** (D046/D050): generalization error ·
-   **regulatory emergence** · **sloppiness** (eigenvalues of local fitness curvature).
-   **Sloppiness is Bartlett's condition, and it is a RIVAL mechanism with independent support** —
-   biological networks are famously sloppy (Gutenkunst), so noise-hiding may be *better* satisfied
-   in biology than in ML, predicting a second descent **with no regulation**. More parsimonious
-   than ours. Include it or the fight is not fair. *(Frank cites Gutenkunst AND benign overfitting
-   and never connects them.)*
-
-5b. **THE DISCRIMINATING SWEEP (D051):** vary the **fraction of unexplained variance that is
-   LEARNABLE** — not the noise level. *All true noise* → noise-hiding only, plateaus at the noise
-   floor. *All level-2 structure* → PC only, descent continues. **Mixed → both routes available;
-   which does selection take?** The corner cells are tautological (PJM); **the contested cell —
-   hierarchical + zero cost — is the experiment**. And: **does adding cost CAUSE the switch from
-   hiding to reading?**
-   *Prediction against the ML taxonomy:* **"tempered overfitting" is what noise-hiding looks like
-   when the noise is secretly structured** — stuck at the context-average. **PC breaks the temper.** Coincidence ⇒ same process, two
-   descriptions. Second descent without regulation ⇒ our framing dies cleanly. Regulation without
-   second descent ⇒ both accounts need work.
-6. **The discriminating prediction (D044):** the peak tracks **r₁** (environment rank), **not n**
-   (number of environments). Vary independently; see which moves it. *This is not double descent
-   as ML understands it.*
-
-## SEARCH BEFORE BUILDING (standing rule; 5 prior hits)
-
-- **Is the H-E feedback loop predictive coding rediscovered?** Higher levels modelling lower
-  levels' statistics and feeding back = **Rao & Ballard / Friston**. The *architecture* is theirs.
-  **Ours would be:** it **emerges under selection at a specific parameter count**, and its
-  emergence **IS** the second descent. **Check before building** (D048 problem 1).
-
-## CONTROLS ARE GRADED SERIES (D052) — the study is a MAP, not a test
-
-Each control is a **dial toward the conditions where the phenomenon is guaranteed**, not a pass/fail
-gate. If the native SNN + selection fails to show the effect, **make it more control-ly**: add
-gradient training → bolt on a linear readout → the published setup. **Where the phenomenon first
-appears names its precondition.** "Optimizer was binding" vs "model class was binding" is the
-question under everything we have argued about — **this answers it empirically instead of by
-argument.** *Cannot produce a null we must explain away: "it needed X" IS the answer.*
-
-**Six controls, each killing a specific alternative:** bolt-on readout (apparatus) · no-selection
-drift (D021) · **Gate B0** (interpolation reached?) · **Gate A** (beats baseline?) · **all-noise
-arm** (Bartlett's expectation, graded) · **all-structure + cost arm** (Ali's expectation, graded).
-
-**The 2×2 (D050/D051):** all-noise+no-cost and all-structure+cost are **literature replications
-serving as positive controls**; **mixed+no-cost is THE EXPERIMENT** (both routes available, nothing
-in the design decides); mixed+cost asks **does cost cause the switch from hiding to reading?**
-
-## GENOME (D059) — the genome is an INSTRUMENT, not a model of a genome
-
-**Criterion for inclusion is NOT biological realism but: does this gene offer an ALTERNATIVE ROUTE to
-the phenomenon we attribute to regulation?** *Minimal genome = maximum attribution.*
-
-**Arm 1 (BUILD FIRST): `mag` + `signs` only.** Regulation is the ONLY route to context. Does it emerge?
-**Arm 2 (later): + τ_m / v_thresh.** Regulation now COMPETES with timescale/threshold tuning — which
-does selection take? *Signature: a bimodal τ_m distribution at the waist = a timescale hierarchy
-instead of a regulatory one.*
-**NEVER a gene: `noise_sigma`** — it IS H-D's treatment variable; if evolution controls it the
-population picks its own arm and the contrast collapses.
-**Out of scope:** N (next study, needs high per-node cost), d (niche property, D037).
-**Free capability, not a route:** fixed-but-**heterogeneous** per-neuron τ_m (drawn, not evolved) —
-decorrelates neurons, may reduce reliance on injected noise. Cheap to test in Gate C's harness.
-
-**Definitions of record.** **W** = recurrent matrix, `W[i,j]` = synapse j→i, built as
-`mag × signs[presynaptic]`; **P = |W|**; **no input weight matrix** (environment drives the first
-`n_in` neurons directly); **W is purely recurrent and IS the genome**. **"Training" = the GA**;
-training error = encountered environments, test error = held-out. **Record BOTH best-individual
-(Gate B0: can ANY genome interpolate?) and population-mean (R&N's Occam factor is class-level).**
+## After B0 is unblocked
+1. **Gate A** — does evolution beat the raw-input baseline? (per density arm; D030)
+2. **Gate B** — does a peak appear at all? *Where the project lives or dies.*
+3. **The map** — three curves on one axis (D046/D050): error · **regulatory emergence** (D040's
+   three stages) · **sloppiness** (Bartlett's condition — a **rival mechanism with independent
+   support**; Frank cites Gutenkunst AND benign overfitting and never connects them).
+4. **The discriminating sweep (D051):** vary the **learnable fraction** of unexplained variance —
+   not the noise level. Corners are **literature-replication controls** (Bartlett; Ali et al.);
+   **mixed + no cost is THE EXPERIMENT.**
+5. **Graded controls (D052):** each control is a **dial**, not pass/fail — native SNN+selection →
+   +gradient → +linear readout. **Wherever the phenomenon first appears names its precondition**
+   ("optimizer was binding" vs "model class was binding").
 
 ## Open
+- **Is the H-E loop predictive coding rediscovered?** Rao & Ballard / Friston. **Emergence is
+  already shown** — Ali et al. (energy efficiency, RNNs) and a 2025 multi-compartment **SNN** paper.
+  **Ours would be:** it emerges **under selection**, and its emergence **IS the second descent**
+  (search found **zero** hits linking DD to PC). *`c_syn` is our energy cost — the same lever.*
+- **Is PR the wrong measure?** Superposed features are non-orthogonal. **Interference vs abstraction
+  both lower PR and PR cannot tell them apart.** Feature-recovery (sparse coding) may be right.
+- **r₂** — contexts are currently drawn independently, so level 2 has **no rank structure**. If the
+  hierarchy is real, **r₂ should be a knob** — and the natural place to look for a *second* waist.
+- **Arm 2 genome (D059):** + τ_m / v_thresh — regulation then **competes** with timescale tuning.
+  *Signature: a bimodal τ_m distribution at the waist = a timescale hierarchy, not a regulatory one.*
+- **Fixed-but-heterogeneous τ_m** — a **capability, not a route**; may reduce reliance on injected
+  noise. Cheap to test in Gate C's harness.
+- **N as a gene** — next study; needs high per-node cost.
 
-- **H-E's two readings (D048 problem 2):** (a) variance *rises* from encoding overflow then is
-  exploited; (b) variance *always* carried context and regulation **unlocks** it. D033 hints at (a)
-  but came from the retired reservoir **with no context structure**, so it cannot bear on this.
-  **Predict (b); measure whether (a) adds.**
-- **Regulatory measurement (D040):** potent/null **screen** → functional contribution **filter** →
-  **gain-vs-offset** mechanism criterion. Needs the fluctuation-driven regime (D039: `noise_sigma
-  = 0` and tonic bias put us where gain control is unavailable — **Gate C**).
-- **Is PR the wrong measure?** Superposed features are non-orthogonal; PR measures linear
-  dimensionality. Interference vs abstraction both lower PR and **PR cannot tell them apart**.
-  Feature-recovery (sparse coding) may be the right instrument. Challenges D002/D016.
-- **N as a gene** — needs high per-node cost (PJM). Separable: *does growing N produce a second
-  descent?* needs only fixed-N arms across N (tractable now). *Would evolution grow N?* needs the
-  gene.
-- **Which neurons express the phenotype?** d is a niche property, fixed per arm (D037). Whether the
-  network chooses *which* cells are outputs is topology, and biologically real.
-
-## Deferred
-Crossed net×task design; Protocol T; systematic related-work review (D017); E7 scaling/invariants;
-H2 restatement as a w0×density interaction; "cells" → "conditions" rename.
-
-## Standing rules (earned)
-- **Search before building.** Five times a PJM-requested search overturned my reasoning: D014,
-  D031, D034, D039, D043.
+## Standing rules (earned the hard way)
+- **Search before building.** Six times a PJM-requested search overturned my reasoning: D014, D031,
+  D034, D039, D043, D053.
+- **Watch the process count, not just the wall clock** (D065) — a silently-serial pool looks exactly
+  like slow code. **Any run > a few minutes must print progress, an ETA, and its parallelism state**
+  (D066).
 - **Prove the system beats a trivial baseline before interpreting any representational metric**
-  (D030).
-- **Check the environment permits the phenomenon before concluding it is absent** (D045).
-- Log-transform heavy-tailed outcomes; treat convergence warnings as results (D028).
-- Don't raise structural alarms from smoke-preset numbers (D033).
-- Don't bolt on mechanisms; make the architecture capable and let selection build them (D038).
-- Geometry does not imply mechanism (D040).
-- Commit before `reg` runs; PR stays confirmatory, the rest exploratory (D025).
+  (D030). **Check the environment PERMITS the phenomenon before concluding it is absent** (D045).
+  **`headroom()` before any run** (D057).
+- **Log-transform heavy-tailed outcomes; treat convergence warnings as results** (D028).
+- **Don't raise structural alarms from smoke-preset numbers** (D033).
+- **Don't bolt on mechanisms; make the architecture capable and let selection build them** (D038).
+- **Geometry does not imply mechanism** (D040).
+- **Minimal genome = maximum attribution** (D059). **`noise_sigma` is NEVER a gene** — it is H-D's
+  treatment variable.
