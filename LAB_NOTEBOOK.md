@@ -321,3 +321,8 @@ See QUEUE.md.
 - type `exp` · stage `T0` · git `g1265f63` (D063: control corrected - no first descent claimed falsely, per-M seeding fixed, raw-input baseline now permanent) · status **complete**
 - result: positive control only; DD=True
 - _interpretation:_ 
+
+## 2026-07-17 21:35 — `T0-tune_operating_point__20260717-211216__exp__gdd19cd0__gateb0-interpolation`  <!-- auto -->
+- type `exp` · stage `T0` · git `gdd19cd0` (D064: nest parallelism inward, worker initializer, quick preset; runtime estimates) · status **failed**
+- result: (no result note passed to finalize)
+- _interpretation:_ 
