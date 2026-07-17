@@ -127,16 +127,33 @@ def random_genome(cfg: EvoNetConfig, density: float, w0: float = 1.5,
 
 
 def mutate(g: Genome, mag_sigma: float = 0.2, sign_flip_p: float = 0.01,
-           rng=None) -> Genome:
-    """Gaussian jitter on magnitudes; rare per-neuron sign flips.
+           rule: str = "product", rng=None) -> Genome:
+    """Mutate magnitudes; rarely flip per-neuron signs.
 
-    A sign flip converts a neuron between excitatory and inhibitory — the mutation that lets
-    a regulatory subpopulation evolve. Kept rare: it is a large phenotypic jump.
+    **PRODUCT RULE is the default and it is load-bearing (D043, B1).** Friedlander, Mayo,
+    Tlusty & Alon (2015): bow-tie architectures evolve only when mutations follow a **product
+    rule** (element *multiplied* by a random number) — with **sum-rule** mutations
+    **94-97% of runs FAIL** to evolve a waist matching the goal rank. Product-rule is also the
+    more biologically realistic of the two. Our previous operator was sum-rule: i.e. the one
+    that reliably PREVENTS the thing we are looking for.
+
+    * `product` : mag *= N(1, sigma), clipped at 0. Multiplicative — scale-free, and can drive
+      a weight toward extinction gradually.
+    * `sum`     : mag += N(0, sigma). Retained ONLY as an experimental contrast (it is a dial
+      in the D052 graded series: does the waist require product-rule mutation?).
+
+    A sign flip converts a neuron between excitatory and inhibitory — the mutation that lets a
+    regulatory subpopulation evolve (D038). Kept rare: it is a large phenotypic jump.
     """
     rng = rng or np.random.default_rng()
     mag = g.mag.copy()
     nz = mag != 0
-    mag[nz] = np.abs(mag[nz] + rng.normal(0, mag_sigma, nz.sum()))
+    if rule == "product":
+        mag[nz] = np.maximum(mag[nz] * rng.normal(1.0, mag_sigma, nz.sum()), 0.0)
+    elif rule == "sum":
+        mag[nz] = np.abs(mag[nz] + rng.normal(0, mag_sigma, nz.sum()))
+    else:
+        raise ValueError(f"unknown mutation rule {rule!r}")
     signs = g.signs.copy()
     flip = rng.random(len(signs)) < sign_flip_p
     signs[flip] *= -1

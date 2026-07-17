@@ -1476,6 +1476,41 @@ architectures and not others.
 answer: **because encoding saturates.** **Double descent is not the phenomenon — it is the
 diagnostic that reveals the transition.**
 
+### D057 — B1/B2/B3/B3a fixed and VALIDATED; `headroom()` is now a required pre-run check
+**2026-07-17 · Accepted**
+**B1 — product-rule mutation is now the default** (`evonet.mutate(rule="product")`): `mag *= N(1,σ)`.
+Friedlander (D043): sum-rule mutations **fail 94–97%** of the time to evolve a waist; product-rule
+is also more biologically realistic. Sum-rule retained **only** as an experimental contrast — it is
+a dial in the D052 graded series (*does the waist require product-rule mutation?*).
+
+**B2/B3/B3a — `tasks.hierarchical_environments`.** Two-level environment; **context (slow) selects a
+rank-r₁ map (fast)**. Validated against its own design principles:
+- **[B3a] context is in the COVARIANCE, never the mean** — measured stimulus means |max| = 0.10–0.19
+  (≈0) for every context, while covariance **structure** differs. *Total variance is also nearly
+  equal across contexts (trace 3.9–4.25), which is stricter than intended: context cannot be read
+  off overall variance, only off WHICH axes co-vary.* ⇒ the mean cannot carry context; reading it
+  requires integrating history. **Regulation is forced, not invited.**
+- **[B2] level-1 maps are rank-3, not rank-10** (built as A(K×r₁)·B(r₁×d)). A waist is now
+  mathematically possible.
+- **[B3] hierarchy verified by HEADROOM** (below).
+- **[D051] `learnable_frac`** — the swept axis: fraction of unexplained variance that is
+  context-driven (learnable) vs true noise. 1 → PC route only; 0 → noise-hiding only;
+  **between → both available → THE EXPERIMENT.**
+
+**`headroom()` — a required check, and it caught a fatal bug in my own validation.**
+Two bounds: **memoryless floor** (best NMSE without context) and **oracle ceiling** (best NMSE with
+context, **fitted as a SEPARATE MAP PER CONTEXT**). *headroom = floor − ceiling. If ≈ 0 the task has
+no room for regulation to pay and the design is dead.*
+**The bug:** my first oracle handed context as a **one-hot input** — memoryless 0.788 vs oracle 0.790,
+**no benefit**, which looked like a dead task. Cause: a linear model can use an additive one-hot only
+to **SHIFT** the output; it cannot change the **E→Y map**. **That is the offset-vs-gain distinction
+(D040) biting my own test code** — and it is precisely why *context must select the map* and why
+**regulation, not drive, is required.** *(My analytic floor was also wrong: tanh(E·mean(W)) ≠
+mean(tanh(E·W)) — Jensen. Replaced with an empirical estimate.)*
+**Validated result:** K=10, d=10, r₁=3, 4 contexts → **memoryless 0.819, oracle 0.197, headroom
+0.62** — a memoryless encoder forfeits ~80% of the explainable variance. **Headroom scales with
+context count** (2 ctx → 0.26; 4 → 0.62): *more contexts ⇒ more reason to level up.* A knob.
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this

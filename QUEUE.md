@@ -49,7 +49,14 @@ environment.** That is our question.
 
 ---
 
-## BLOCKERS — fix before any run (D043/D045)
+## BLOCKERS — B1/B2/B3/B3a now FIXED & VALIDATED (D057). Kept for the record.
+
+**Status:** product-rule mutation is default; `tasks.hierarchical_environments` validated —
+context in covariance not mean (means ≈0 across contexts), rank-3 level-1 maps, **headroom 0.62**
+(memoryless 0.819 vs oracle 0.197). **`headroom()` is a required pre-run check** — if ≈0 the task
+cannot pay for regulation.
+
+### (original blockers)
 
 ### B1. Mutation operator is wrong → switch to PRODUCT rule
 `evonet.mutate()` uses **sum-rule** (`mag + N(0,σ)`). Friedlander: sum-rule **fails 94–97%** of the
