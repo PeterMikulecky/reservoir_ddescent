@@ -316,3 +316,8 @@ where this lives or dies)** → Gate C (balanced regime) → three modes × cost
 See QUEUE.md.
 
 <!-- Future run stubs will be auto-appended below this line. -->
+
+## 2026-07-17 20:51 — `T0-tune_operating_point__20260717-205132__exp__g1265f63__gateb0-interpolation`  <!-- auto -->
+- type `exp` · stage `T0` · git `g1265f63` (D063: control corrected - no first descent claimed falsely, per-M seeding fixed, raw-input baseline now permanent) · status **complete**
+- result: positive control only; DD=True
+- _interpretation:_ 
