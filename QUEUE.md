@@ -70,12 +70,34 @@ stimuli, slow context drift. *This is where the chain first requires dynamics.*
    environments.
 2. **`ddescent/evolve.py`** — population, product-rule mutation on the Dale genome (D038),
    tournament selection, spawn-parallel, provenanced.
+2b. **GATE B0 — does training error reach ~0 at high |W|?** (D049) **Before Gate B.** Classical
+    double descent needs the optimizer to **reach interpolation** — guaranteed for least-squares
+    readouts, achieved by SGD in deep nets, **unknown for a GA on a nonlinear spiking network**. No
+    interpolation ⇒ **no threshold ⇒ no peak, by construction** — and we would misread a design
+    failure as a finding about biology. *(A fourth null-guarantee alongside B1–B3.)*
+    **Positive control (PJM):** bolt a linear readout onto the evolved net and sweep its width —
+    textbook double descent should appear. If not, the apparatus is broken, not the hypothesis.
+
 3. **GATE A — baseline per density arm** (D030). Can an evolved network beat a trivial baseline?
    Doubles as the activity check (D037).
 4. **GATE B — does a peak appear at all?** Sweep density (P: 0.1×→9.9× constraints). **Where the
    project lives or dies.** No peak ⇒ no phenomenon.
-5. **THE EXPERIMENT — measure BOTH curves against the same parameter axis** (D046):
-   generalization error **and** regulatory emergence. Coincidence ⇒ same process, two
+5. **THE EXPERIMENT — THREE curves on one axis** (D046/D050): generalization error ·
+   **regulatory emergence** · **sloppiness** (eigenvalues of local fitness curvature).
+   **Sloppiness is Bartlett's condition, and it is a RIVAL mechanism with independent support** —
+   biological networks are famously sloppy (Gutenkunst), so noise-hiding may be *better* satisfied
+   in biology than in ML, predicting a second descent **with no regulation**. More parsimonious
+   than ours. Include it or the fight is not fair. *(Frank cites Gutenkunst AND benign overfitting
+   and never connects them.)*
+
+5b. **THE DISCRIMINATING SWEEP (D051):** vary the **fraction of unexplained variance that is
+   LEARNABLE** — not the noise level. *All true noise* → noise-hiding only, plateaus at the noise
+   floor. *All level-2 structure* → PC only, descent continues. **Mixed → both routes available;
+   which does selection take?** The corner cells are tautological (PJM); **the contested cell —
+   hierarchical + zero cost — is the experiment**. And: **does adding cost CAUSE the switch from
+   hiding to reading?**
+   *Prediction against the ML taxonomy:* **"tempered overfitting" is what noise-hiding looks like
+   when the noise is secretly structured** — stuck at the context-average. **PC breaks the temper.** Coincidence ⇒ same process, two
    descriptions. Second descent without regulation ⇒ our framing dies cleanly. Regulation without
    second descent ⇒ both accounts need work.
 6. **The discriminating prediction (D044):** the peak tracks **r₁** (environment rank), **not n**
@@ -88,6 +110,23 @@ stimuli, slow context drift. *This is where the chain first requires dynamics.*
   levels' statistics and feeding back = **Rao & Ballard / Friston**. The *architecture* is theirs.
   **Ours would be:** it **emerges under selection at a specific parameter count**, and its
   emergence **IS** the second descent. **Check before building** (D048 problem 1).
+
+## CONTROLS ARE GRADED SERIES (D052) — the study is a MAP, not a test
+
+Each control is a **dial toward the conditions where the phenomenon is guaranteed**, not a pass/fail
+gate. If the native SNN + selection fails to show the effect, **make it more control-ly**: add
+gradient training → bolt on a linear readout → the published setup. **Where the phenomenon first
+appears names its precondition.** "Optimizer was binding" vs "model class was binding" is the
+question under everything we have argued about — **this answers it empirically instead of by
+argument.** *Cannot produce a null we must explain away: "it needed X" IS the answer.*
+
+**Six controls, each killing a specific alternative:** bolt-on readout (apparatus) · no-selection
+drift (D021) · **Gate B0** (interpolation reached?) · **Gate A** (beats baseline?) · **all-noise
+arm** (Bartlett's expectation, graded) · **all-structure + cost arm** (Ali's expectation, graded).
+
+**The 2×2 (D050/D051):** all-noise+no-cost and all-structure+cost are **literature replications
+serving as positive controls**; **mixed+no-cost is THE EXPERIMENT** (both routes available, nothing
+in the design decides); mixed+cost asks **does cost cause the switch from hiding to reading?**
 
 ## Open
 

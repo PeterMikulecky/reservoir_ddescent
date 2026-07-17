@@ -1196,6 +1196,158 @@ gain-vs-offset). Both already specified.
    retired reservoir **with no context structure at all**, so it cannot bear on this. **Predict
    (b); measure whether (a) adds to it.**
 
+### D049 — Corrections: what "no double descent in SNNs" does and does not mean; nonlinearity is not the issue
+**2026-07-17 · Accepted** · *several errors of mine, caught by PJM*
+- **"Nobody has shown double descent in SNNs" — must be stated precisely.** Double descent in a
+  **reservoir readout** is expected and covered: a readout is a **random-features model** (linear
+  in the swept parameters), peak at M ≈ n; the spiking is **incidental**. What is unexamined:
+  double descent where **the spiking network's own W is the parameter axis**, with no trained
+  readout.
+- **"Untrained" was my word and it was wrong.** Our model is **not untrained** — **W is optimized
+  by selection**. No trained *readout* ≠ nothing trained. **Selection is the feedback loop**
+  (error → fitness → reproduction → W). The parallel is exact: classical DD sweeps weights under
+  SGD; reservoir DD sweeps readout weights under least squares; **we sweep W under selection**.
+- **"The mechanism relies on linearity" — WRONG.** Deep nets are wildly nonlinear in their
+  parameters and show double descent (Nakkiran: ResNets, CNNs, Transformers). Linearity makes the
+  **theory** tractable; it is not a precondition for the **phenomenon**. *(And "linear readout" =
+  "linear in the swept parameters" — a reservoir's features are ferociously nonlinear, but with W
+  frozen the model is linear in w, so the feature generator's nonlinearity is irrelevant.)*
+- **The real condition is REACHING INTERPOLATION.** SGD reaches zero training error in deep nets —
+  that is *why* there is a threshold to peak at. Nakkiran defines **effective model complexity via
+  the training procedure** precisely because parameter counting fails for nonlinear models.
+  **Whether a GA on a nonlinear spiking network reaches ~0 training error is unknown.**
+
+**⇒ GATE B0 (before Gate B): does training error reach ~0 at high |W|?** Sweep P, plot **training**
+error. If it plateaus above zero everywhere, **there is no interpolation threshold, hence no peak,
+by construction** — and we would misread a design failure as a finding about biology. *(A fourth
+way to guarantee a null, alongside B1–B3.)*
+*Note:* **R&N sidestep this entirely** — pure selection over pre-existing variants, no optimizer to
+fail.
+**Positive control (PJM):** bolt a linear readout onto the evolved network and sweep its width.
+Textbook double descent should appear. If it does not, the apparatus is broken, not the hypothesis.
+
+### D050 — What separates noise-hiding from regulatory-PC: the SAME VARIANCE, TWO FATES
+**2026-07-17 · Accepted** · *Credit: PJM's synthesis question* · the sharpest framing the project has
+**The puzzle PJM posed:** SNNs are expected to reach a second descent via **Bartlett's noise-hiding**
+(no regulation needed); SNNs are **known** to evolve regulation/PC (Ali et al., energy objective);
+and PC is postulated as the source of the second descent. **What separates the two?**
+
+**Answer — their PRECONDITIONS differ:**
+- **Bartlett noise-hiding** needs **label noise** + many **low-variance parameter directions** to
+  bury it in. **No cost required. Works in a FLAT environment.**
+- **Ali PC** needs an **energy cost** + **predictive environments** (structure worth predicting).
+**⇒ the environment and the cost decide which mechanism operates.**
+
+**The deep version.** To a **level-1 encoder, context-driven variation LOOKS EXACTLY LIKE NOISE** —
+the same stimulus yields different correct responses, which is the signature of noise from inside a
+memoryless map. **But it is not noise. It is unexplained higher-order structure.**
+> **Two fates for the same variance:** **hide it** (bury in sloppy directions — cheap, no new
+> function, **caps out at the context-average**) or **read it** (infer context, modulate —
+> expensive, but **explains** rather than absorbs).
+**This is D048 from the other side:** the fluctuation channel is where the second-level regularity
+lives; **whether the network hides it or reads it is the fork.**
+**Discriminating prediction — different ASYMPTOTES, not just different structure:** noise-hiding's
+descent **plateaus** at the context-averaged solution; PC's **keeps improving** toward the
+generating process.
+**Why biology has regulation:** biological environments *have* exploitable higher-order structure,
+and activity is metabolically expensive. **Both of Ali's conditions are facts about biology.** In a
+flat noisy world noise-hiding would suffice — and Bartlett says it would work fine.
+
+**SLOPPINESS — the connection Frank misses.** Bartlett needs many low-variance parameter directions.
+That **is sloppiness** (Gutenkunst et al., *Universally sloppy parameter sensitivities*). **Frank
+cites Gutenkunst AND the benign-overfitting literature and never connects them.** The implication
+runs **against us**: biological networks are famously sloppy, so **Bartlett's condition may be
+BETTER satisfied in biology than in ML** — predicting a second descent via sloppiness-enabled
+noise-hiding with **no regulation required**. More parsimonious than our story, with independent
+support. **Measurable:** the sloppiness spectrum (eigenvalues of local fitness curvature) vs |W|.
+**⇒ THREE curves on one axis, not two: error · regulatory emergence · sloppiness.** A fair fight.
+
+### D051 — The experimental axis: fraction of unexplained variance that is LEARNABLE (not "noise level")
+**2026-07-17 · Accepted** · *Credit: PJM ("record it, then search it")*
+**Search result:** no hit on noise-hiding vs structure-learning as competing fates. But the ML
+literature has a taxonomy — **benign / tempered / harmful** overfitting — discriminated by **SNR**
+(high SNR → benign; low SNR → harmful), and benign overfitting arises *because of* noise in the
+features acting as **implicit regularization**.
+**The gap: in every one of those papers the noise IS noise** (label corruption by construction).
+**Nobody asks whether the "noise" is learnable structure at another level.**
+
+**⇒ the axis to sweep is not noise level but the FRACTION OF UNEXPLAINED VARIANCE THAT IS ACTUALLY
+LEARNABLE.** Not signal-to-noise — **signal-to-*structured*-noise.**
+
+| unexplained variance is… | viable route | prediction |
+|---|---|---|
+| **all true noise** | noise-hiding only | benign overfitting; **plateaus at the noise floor** |
+| **all level-2 structure** | PC only | descent **continues** toward the generating process |
+| **mixed** | **both available** | **which does selection take?** ← **the experiment** |
+
+**PJM's deflation, and why the design survives it:** *"give the network noise and a place to hide it
+and it hides noise; give it structure and an efficiency incentive and it learns structure."*
+**Correct — the corner cells are tautological.** The science is in the **contested cells**, above
+all **hierarchical environment + zero cost**: structure is present *and* sloppy directions exist.
+**Nothing in the design decides which wins.** And: **does adding cost CAUSE the switch from hiding
+to reading?** That is the mechanism claim.
+**Prediction against the ML taxonomy:** **"tempered overfitting"** — non-optimal but non-trivial,
+degrading with noise level — **is what noise-hiding looks like when the noise is secretly
+structured.** A system stuck at the context-average would look exactly tempered. **PC breaks the
+temper.**
+
+### D052 — Controls are GRADED SERIES, not pass/fail: bookends and the map between them
+**2026-07-17 · Accepted** · *Credit: PJM* · restructures the study
+**PJM's two corrections, in order.**
+
+**(1) The "tautological" cells are CONTROLS, and controls are not weaknesses.** *"Give the network
+noise and a place to hide it and it hides noise"* is not a flaw — it is an **expected result
+established in prior literature**, and for us it is a **control condition**. If the all-noise arm
+fails to produce noise-hiding, the apparatus is broken and we learn that **before** misreading the
+contested cell. **The tautological cells are how we earn the right to interpret the mixed cell.**
+I had mislabelled the controls as filler. *(A study whose controls are literature replications is
+in unusually good shape: they validate the port AND calibrate the contested cells.)*
+
+| arm | expected | source | function |
+|---|---|---|---|
+| all true noise, no cost | noise-hiding descent, plateaus at noise floor | **Bartlett** | positive control — apparatus works |
+| all level-2 structure, cost | PC emerges, descent continues | **Ali et al.** | positive control — mechanism available |
+| **mixed, no cost** | **?** | **nobody** | **THE EXPERIMENT** |
+| mixed, cost | ? | nobody | the mechanism claim: **does cost cause the switch?** |
+
+**(2) Controls are GRADED, not binary — and that is the real methodology.** I worried the controls
+are not guaranteed to pass (Bartlett is proved for *linear* models under *gradient*; Ali's PC
+emerged under *gradient* with an *explicit energy objective*; **ours is selection on a spiking
+network in both arms**). PJM: that is not a risk, it is a **dial**. If the native spiking network
+fails to hide noise under noise-hiding conditions, **make it more control-ly** — add gradient-like
+training, then bolt on a linear model — and see where the phenomenon appears. **We are learning
+where the bookends sit for our network.**
+
+**⇒ each control becomes an instrument for locating a BOUNDARY, and every outcome is a result:**
+
+| noise-hiding first appears at… | reading |
+|---|---|
+| native SNN + selection | Bartlett's mechanism is **substrate- and optimizer-general** |
+| SNN + gradient (not selection) | **THE OPTIMIZER was binding** — selection lacks what SGD has |
+| SNN + linear readout only | **THE MODEL CLASS was binding** — nonlinearity in parameters blocks it |
+| nowhere | Bartlett's mechanism **does not reach spiking substrates** |
+
+**"Optimizer was binding" vs "model class was binding" is precisely the question underneath
+everything we have argued about** — Frank's selection≈learning equivalence, R&N's Occam factor,
+whether gradient-with-energy-objective just *is* selection (D047/D049). **The graded control answers
+it empirically instead of by argument.**
+
+**Same series for the PC control:** native SNN + selection → + gradient → + explicit energy
+objective → **Ali's exact setup**. **Wherever PC first appears names its precondition.**
+
+**Two bookends per control; the study becomes a MAP, not a test.** One end: our model. Other end:
+the published setup where the result is established. **The gap between them is exactly what we are
+trying to characterize.** *And it cannot produce a null we would have to explain away — "it needed
+X" IS the answer.*
+
+**Control inventory (six; each kills a specific alternative):**
+1. **Bolt-on linear readout, sweep width** (PJM) — textbook DD should appear; if not, apparatus broken.
+2. **No-selection drift** (D021) — did mutation bias / GP-map do it without selection?
+3. **Gate B0** (D049) — does training error reach ~0? No interpolation ⇒ no threshold ⇒ no peak.
+4. **Gate A** (D030) — does it beat a trivial baseline?
+5. **All-noise arm** — Bartlett's expectation, graded.
+6. **All-structure + cost arm** — Ali's expectation, graded.
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this
