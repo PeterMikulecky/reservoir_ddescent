@@ -99,7 +99,14 @@ internal ON/OFF switch for the mechanism**).
 otherwise detecting it is a switch, not regulation. ⇒ environments need **two timescales**: fast
 stimuli, slow context drift. *This is where the chain first requires dynamics.*
 
-0. **GATE C moves UP — it is now a prerequisite, not a follow-up.** Without a reachable
+0. ✅ **GATE C PASSED (D058)** — 31/36 fluctuation-driven, CV_ISI up to 1.07. Required TWO fixes:
+   **inhibitory gain** (`inh_gain = ei_split/(1-ei_split) = 4`, Brunel balance — E/I was 24:1) and
+   **`noise_sigma > 0`** (recurrent fluctuations were too slow vs τ_m; noise is a *condition* real
+   neurons have, not a bolted-on mechanism). **H-D now has both arms via ONE knob:** noise 0.2 →
+   CV≈0.5 (tonic, gain control unavailable) vs noise 1.0 → CV≈1.0 (balanced, divisive gain
+   available). Operating point: bias 0.6, gain 1.0, w0 0.6, density 0.3.
+
+0b. ~~**GATE C moves UP** — it is now a prerequisite, not a follow-up.** Without a reachable
    fluctuation-driven balanced regime, **H-D has no treatment arm and gain-control regulation does
    not exist in the model at all** (D039/D047). `noise_sigma = 0` + tonic bias currently put us in
    the regime where inhibition is purely subtractive.

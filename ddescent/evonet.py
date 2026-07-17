@@ -111,18 +111,34 @@ class Genome:
 
 
 def random_genome(cfg: EvoNetConfig, density: float, w0: float = 1.5,
-                  ei_split: float = 0.8, seed: int | None = None) -> Genome:
-    """Initial population member. Dale-compliant.
+                  ei_split: float = 0.8, inh_gain: float | None = None,
+                  seed: int | None = None) -> Genome:
+    """Initial population member. Dale-compliant AND E/I-BALANCED.
 
     Fixed per-synapse scale, NO renormalization (D014): adding synapses genuinely increases
     recurrent coupling, which is what makes density a live variable.
     `ei_split` is only the STARTING excitatory fraction — signs are genes and evolve.
+
+    **`inh_gain` (D058, the Gate C fix).** With `ei_split=0.8`, excitatory neurons outnumber
+    inhibitory 4:1. If every synapse is drawn from the same magnitude distribution, **excitation
+    swamps inhibition ~4:1** — measured E/I current ratios up to **24:1**, firing became purely
+    mean-driven (CV_ISI <= 0.44) and **Gate C failed 0/36**: no fluctuation-driven regime, hence
+    no divisive gain control, hence no possible regulation (D039).
+    The classic balanced-network condition (Brunel 2000; van Vreeswijk & Sompolinsky 1996) scales
+    inhibitory weights up to compensate the count asymmetry: **J_I = -g * J_E** with
+    **g ≈ ei_split / (1 - ei_split)** (= 4 at ei_split=0.8). `inh_gain=None` uses exactly that.
+    *This is a STARTING condition, not a constraint: magnitudes are genes and evolution may
+    unbalance the network if that pays.*
     """
     rng = np.random.default_rng(seed)
+    if inh_gain is None:
+        inh_gain = ei_split / max(1.0 - ei_split, 1e-6)      # balance the count asymmetry
     mag = np.abs(rng.standard_normal((cfg.N, cfg.N))) * w0
     mask = rng.random((cfg.N, cfg.N)) < density
     np.fill_diagonal(mask, False)
     signs = np.where(rng.random(cfg.N) < ei_split, 1.0, -1.0)
+    # scale the OUTGOING magnitudes of inhibitory neurons (column j = presynaptic)
+    mag = mag * np.where(signs < 0, inh_gain, 1.0)[np.newaxis, :]
     return Genome(signs=signs, mag=mag * mask)
 
 

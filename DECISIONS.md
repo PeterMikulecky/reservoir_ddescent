@@ -1511,6 +1511,47 @@ mean(tanh(E·W)) — Jensen. Replaced with an empirical estimate.)*
 0.62** — a memoryless encoder forfeits ~80% of the explainable variance. **Headroom scales with
 context count** (2 ctx → 0.26; 4 → 0.62): *more contexts ⇒ more reason to level up.* A knob.
 
+### D058 — GATE C: passed, but only after two real bugs it exposed
+**2026-07-17 · Accepted** · `scripts/run_GateC_regime.py`
+**Why Gate C is a prerequisite (D039/D047):** divisive gain modulation **requires** fluctuations
+(Chance/Abbott/Reyes; Prescott & De Koninck); tonic conductance changes are merely subtractive. **No
+reachable fluctuation-driven regime ⇒ no gain control ⇒ no regulation ⇒ H-D has no treatment arm.**
+Operational definition: **mean-driven** = mean V above threshold, regular firing, CV_ISI ≪ 1;
+**fluctuation-driven** = mean V below threshold, spikes caused by fluctuations crossing it, CV ≈ 1.
+
+**FIRST RUN: FAILED 0/36, CV_ISI ≤ 0.44.** The diagnostic named the cause: **E/I current ratio up to
+23.9** — excitation swamping inhibition ~24:1.
+**Bug 1 — no E/I balance.** `ei_split=0.8` makes E outnumber I 4:1, but `random_genome` drew **all
+magnitudes from one distribution**, so excitation dominates by the count ratio. The classic balanced
+condition (Brunel 2000; van Vreeswijk & Sompolinsky 1996) scales inhibition to compensate:
+**J_I = −g·J_E, g ≈ ei_split/(1−ei_split) = 4**. **Fix:** `random_genome(inh_gain=...)`, defaulting
+to exactly that. *A starting condition, not a constraint — magnitudes are genes; evolution may
+unbalance the network if that pays.* **Result: E/I currents 24:1 → ~0.5–0.9. Balanced.**
+
+**SECOND RUN: still 0/36, CV ≤ 0.47** despite balance. Diagnostic again: **V_std ≈ 9.6 against
+v_thresh = 1.0** — fluctuations ~10× threshold, so neurons fire at the **refractory limit**:
+regular, low CV. And at the gentle end (w0=0.3, V_std 0.30 vs 0.42 to threshold) CV was still 0.16.
+**Bug 2 — the fluctuations were too SLOW.** With τ_syn = 5 ms and τ_m = 20 ms, recurrent
+fluctuations are smooth on the membrane timescale, so threshold crossings are regular. **Irregular
+firing requires fluctuations FAST relative to τ_m.**
+**Fix: `noise_sigma > 0`** — white, uncorrelated. *Not a bolted-on mechanism (contra D038) but a
+CONDITION real neurons have anyway: channel noise, synaptic failure, background bombardment. Our
+`noise_sigma = 0.0` default was the unphysical choice.*
+
+**THIRD RUN: PASSED 31/36.** CV_ISI **0.50–1.07** (target ~1); rates **4–51 Hz** (physiological);
+E/I currents **0.43–0.77** (balanced). Best: CV **1.07** at bias 0.6, gain 1.0, w0 0.6, density 0.3,
+**noise_sigma 1.0**.
+**⇒ H-D HAS BOTH ARMS, and the knob is a single parameter:**
+| arm | noise_sigma | CV_ISI | inhibition acts | gain control |
+|---|---|---|---|---|
+| **tonic** | 0.2 | ~0.5 | subtractive (offset) | unavailable |
+| **balanced** | 1.0 | ~0.9–1.07 | can be divisive (gain) | **available** |
+**Same network, same genome, same task — one parameter.** That is the within-substrate control D047
+called the strongest thing we have, and it is now demonstrated rather than hoped for.
+
+*Note:* both bugs were **invisible without the diagnostics** — E/I current ratio and V_std vs
+threshold. Neither would have surfaced from CV alone. **Measure the mechanism, not just the outcome.**
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this
