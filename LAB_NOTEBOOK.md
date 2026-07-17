@@ -326,3 +326,8 @@ See QUEUE.md.
 - type `exp` · stage `T0` · git `gdd19cd0` (D064: nest parallelism inward, worker initializer, quick preset; runtime estimates) · status **failed**
 - result: (no result note passed to finalize)
 - _interpretation:_ 
+
+## 2026-07-17 23:04 — `T0-tune_operating_point__20260717-213756__exp__g91f2891__gateb0-interpolation`  <!-- auto -->
+- type `exp` · stage `T0` · git `g91f2891` (D065: pool was never created - eval_fn set before the is-None test; every GA run was silently serial) · status **complete**
+- result: GateB0: 0/1 interpolate; best_train=0.882; control DD=True
+- _interpretation:_ 
