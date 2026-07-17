@@ -173,6 +173,27 @@ arm** (Bartlett's expectation, graded) · **all-structure + cost arm** (Ali's ex
 serving as positive controls**; **mixed+no-cost is THE EXPERIMENT** (both routes available, nothing
 in the design decides); mixed+cost asks **does cost cause the switch from hiding to reading?**
 
+## GENOME (D059) — the genome is an INSTRUMENT, not a model of a genome
+
+**Criterion for inclusion is NOT biological realism but: does this gene offer an ALTERNATIVE ROUTE to
+the phenomenon we attribute to regulation?** *Minimal genome = maximum attribution.*
+
+**Arm 1 (BUILD FIRST): `mag` + `signs` only.** Regulation is the ONLY route to context. Does it emerge?
+**Arm 2 (later): + τ_m / v_thresh.** Regulation now COMPETES with timescale/threshold tuning — which
+does selection take? *Signature: a bimodal τ_m distribution at the waist = a timescale hierarchy
+instead of a regulatory one.*
+**NEVER a gene: `noise_sigma`** — it IS H-D's treatment variable; if evolution controls it the
+population picks its own arm and the contrast collapses.
+**Out of scope:** N (next study, needs high per-node cost), d (niche property, D037).
+**Free capability, not a route:** fixed-but-**heterogeneous** per-neuron τ_m (drawn, not evolved) —
+decorrelates neurons, may reduce reliance on injected noise. Cheap to test in Gate C's harness.
+
+**Definitions of record.** **W** = recurrent matrix, `W[i,j]` = synapse j→i, built as
+`mag × signs[presynaptic]`; **P = |W|**; **no input weight matrix** (environment drives the first
+`n_in` neurons directly); **W is purely recurrent and IS the genome**. **"Training" = the GA**;
+training error = encountered environments, test error = held-out. **Record BOTH best-individual
+(Gate B0: can ANY genome interpolate?) and population-mean (R&N's Occam factor is class-level).**
+
 ## Open
 
 - **H-E's two readings (D048 problem 2):** (a) variance *rises* from encoding overflow then is

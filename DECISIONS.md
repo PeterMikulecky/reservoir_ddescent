@@ -1552,6 +1552,84 @@ called the strongest thing we have, and it is now demonstrated rather than hoped
 *Note:* both bugs were **invisible without the diagnostics** — E/I current ratio and V_std vs
 threshold. Neither would have surfaced from CV alone. **Measure the mechanism, not just the outcome.**
 
+### D059 — GENOME PHILOSOPHY: the genome is an experimental INSTRUMENT, not a model of a genome
+**2026-07-17 · Accepted** · *Credit: PJM ("what's our larger philosophy about which features are genes?")*
+
+**The question:** some features are biologically more evolvable than others. Does that matter, or are
+we sampling the full space anyway?
+
+**"Rates don't matter, we sample the space" DOES NOT SURVIVE our own framework.** D034 established
+the **genotype–phenotype map's bias is real** (Louis), and **Frank's mechanism IS implicit bias**
+(via Wilson). **Mutation structure IS the implicit bias.** So relative evolvability is not a realism
+garnish — **it is part of the mechanism under test**. Choose rates and you have partly chosen the
+answer.
+**But "use biologically realistic rates" also fails** — we cannot justify the numbers, and results
+would inherit unjustifiable precision.
+
+**THE CRITERION THAT WORKS IS NOT REALISM:**
+> **Does this gene offer an ALTERNATIVE ROUTE to the phenomenon we are attributing to regulation?**
+
+| tier | genes | rationale |
+|---|---|---|
+| **Core — the thing under test** | `mag` (W magnitudes) | these **are** Frank's parameters; **P = \|W\|** is the axis |
+| **Enabling — makes the mechanism possible** | per-neuron `signs` (E/I) | D038: regulation needs coherent inhibitory identity |
+| **Alternative route — could BYPASS regulation** | **τ_m, τ_syn, v_thresh** | Arm 2 (below) |
+| **NEVER a gene** | **`noise_sigma`** | **it IS H-D's treatment variable** |
+| **Out of scope** | `N`, `d` | N = next study (needs high per-node cost); **d is a niche property** (D037) |
+| **Low priority / exclude** | `bias`, refractory, v_reset, v_rest | static offsets; bound rates; minor |
+
+**Why each "alternative route" is one:**
+- **τ_m / τ_syn** — context inference requires **history integration**. A network could get that by
+  **evolving slow neurons**, with **no regulatory circuit at all**. Hand it τ_m and **H-C is
+  confounded**: we would see a second descent without regulation and misread it as "regulation is
+  epiphenomenal", when we had handed evolution a shortcut.
+- **v_thresh** — threshold heterogeneity **increases dimensionality of neural dynamics** (Gast et
+  al., already in REFERENCES): dimensionality **without** regulation.
+- **`noise_sigma` — the trap.** It **is** the H-D manipulation. If evolution controls it, **the
+  population chooses its own treatment arm** — it could evolve into the balanced regime to unlock
+  gain control, and the tonic-vs-balanced contrast **collapses**. **Must stay experimenter-controlled
+  permanently.**
+
+**THE GRADED-GENOME DESIGN (D052's logic applied to the genome):**
+| arm | genome | question |
+|---|---|---|
+| **Arm 1 (BUILD FIRST)** | `mag` + `signs` only | regulation is the **ONLY** route to context. **Does it emerge?** |
+| **Arm 2** | + τ_m (and/or v_thresh) | regulation now **competes** with timescale/threshold tuning. **Which does selection take?** |
+*Arm 2 is interesting in its own right — **"is regulatory hierarchy the PREFERRED solution, or merely
+A solution?"** — with a clean signature (PJM): a **bimodal τ_m distribution emerging at the waist**
+would mean evolution built a **timescale** hierarchy instead of a **regulatory** one.*
+**Start with Arm 1** — not because τ_m is unbiological, but because **if regulation cannot emerge
+when it is the only option, Arm 2 is moot.** Every added gene is both a search dimension (population
+~100 against ~10,000 weights is already hard) and an analysis confound.
+
+**THE PRINCIPLE:**
+> **Minimal genome = maximum attribution.** Real biology evolves all of these; a "realistic" genome
+> would make everything heritable — and then **nothing could be attributed**, because every
+> phenomenon would have four available routes. **We are not modelling a genome; we are isolating a
+> mechanism.** Arm 1 is minimal **so that if regulation emerges, it is because regulation was the
+> only way.**
+
+**Heterogeneity survives separately (PJM).** **Fixed-but-heterogeneous** per-neuron τ_m — *drawn, not
+evolved* — is a **capability, not a route**: it decorrelates neurons (our Gate C fluctuations were
+too slow partly because identical τ_m keeps responses correlated and the population drive coherent)
+and may reduce reliance on injected `noise_sigma`, **without handing evolution a shortcut**.
+Perez-Nieves et al. (2021) — heterogeneous time constants improve robustness — already in
+REFERENCES as an unexplored lever. **Cheap to test in Gate C's existing harness.**
+
+**Definition of record — W.** The **recurrent weight matrix**, N×N, `W[i,j]` = synapse **j → i**.
+Assembled from two gene groups: `signs` (N, ±1, per **neuron**) and `mag` (N×N, ≥0), as
+**W = mag × signs[presynaptic]** (Dale's law). **P = |W| = nonzero count = Frank's parameter axis.**
+**There is NO input weight matrix**: the environment drives the first `n_in` neurons directly, one
+channel per sensor. **W is purely recurrent, and it is the entire genome.**
+
+**"Training" = the GA (PJM's check).** No gradient, no trained readout. **Selection is the
+optimizer**: error on *encountered* environments → fitness → reproduction → W changes.
+**training error** = error on environments selection acts on; **test error** = held-out environments.
+*Subtlety:* classical double descent tracks **one model**; we have a **population**. So "training
+error" needs a convention — **best individual** (right for Gate B0: interpolation asks whether **any**
+genome can fit exactly) vs **population mean** (right for R&N's Occam factor, a **class-level**
+effect). **Record both.**
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this
