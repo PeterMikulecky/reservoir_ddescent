@@ -2178,6 +2178,106 @@ Reading the onset instead of the settled response recovers d1. **But `mem_d2` = 
 
 **NEXT (unimplemented; a proposal, not a decision to build):** make τ_syn per-neuron, drawn from a bimodal AMPA/NMDA-like distribution; `present_ms` 150 → 50 with `readout_window_ms` reduced accordingly; **re-run `run_E9_diagnostics.py` — 4 minutes, no GA.** The gate is **`mem_d10`**, not `mem_d1`. *The memory question is validated without evolution, which is why it comes before the batching work (D068) rather than after.*
 
+### D074 — Slow excitatory current: take NMDA's KINETICS, omit its Mg GATE. The capability is step 1; the gate is a ready-made step 2 that would answer H-C by construction.
+**2026-07-17 · Accepted (design)** · **Open (implementation)** · implements D073's slow timescale · *credit: a PJM-requested search (Brunel & Wang 2001; Wang 2002) overturned my proposal — the seventh time*
+
+**THE SEARCH OVERTURNED THREE THINGS I HAD WRONG.**
+
+**1. "Bimodal τ_syn across neurons" is NOT the biology.** The canonical cortical formulation
+(Brunel & Wang 2001; Wang 2002) sums **AMPA + NMDA + GABA as parallel current terms into each
+neuron** — not a bimodal τ distribution across a population. **Every excitatory neuron has both a
+fast and a slow channel.** So "fraction slow" is not a population split; it is the **NMDA/AMPA
+ratio at each excitatory synapse**. *(And the slow channel is EXCITATORY only — NMDA. Inhibition
+stays fast, GABA_A ~2–5 ms. This is a DIFFERENT axis from the 4:1 E/I neuron count, which is
+already implemented as `ei_split=0.8` + `inh_gain=4`, D058. Both are standard; they compose.)*
+
+**2. τ_m is the wrong home on DYNAMICAL grounds, not just physiological ones.** *"For the LIF
+neuron driven by filtered noisy inputs, the firing response is instantaneous (Brunel et al. 2001);
+hence the membrane time constant can be neglected. Among AMPA, NMDA and GABA_A, the NMDA gating
+variable has the longest decay (100 ms) and dominates the time evolution of the system."* **The
+slow timescale lives in the synapse, and specifically in NMDA.** D073's conclusion, from the
+canonical source.
+
+**3. My open-loop decay arithmetic was wrong, in our favour.** I computed e^(−500/100) = 0.7% at
+d10 and concluded τ_NMDA = 100 ms was too short — that we would need τ = 200–300 ms. **Wrong
+model.** Wang 2002 is titled *Probabilistic Decision Making by SLOW REVERBERATION in Cortical
+Circuits*: **NMDA + RECURRENCE integrates far longer than τ_NMDA** because the loop gain does the
+work (τ_eff ≈ τ_syn/(1−g)). The decisive evidence: *"when local reverberation is largely mediated
+by AMPARs the network becomes highly unstable, and without NMDA the model cannot reproduce long
+decision times even with fine-tuning of parameters to maximize integration time — suggesting NMDARs
+at recurrent synapses are critically important."* **⇒ τ_NMDA = 100 ms is not "too short"; it is the
+value that yields seconds of integration in a network WITH THE RIGHT RECURRENT STRUCTURE. A random
+W does not have that structure — building it is selection's job.** *And "fine-tuning cannot
+substitute for the slow recurrent channel" is our exact situation: τ_syn = 5 ms everywhere, and 100
+generations trying to fine-tune to 1,500 ms (D067).*
+
+**THE DISQUALIFYING PART: NMDA's Mg²⁺ BLOCK IS A READY-MADE INSTANCE OF THE MECHANISM H-C TESTS.**
+The NMDA current carries a voltage-dependent gate: **1/(1 + [Mg²⁺]·exp(−0.062·V)/3.57)** — the
+current at a synapse is scaled by a function of the **postsynaptic** voltage. **That is
+multiplicative, voltage-dependent gain modulation.** H-C asks whether selection BUILDS a level that
+modulates another level. **Installing the Mg gate answers that YES by construction, at generation
+zero, before selection acts.** *You cannot measure the emergence of a thing you installed.* **This
+is D039 exactly** — shunting inhibition was rejected for the identical reason (bolting in the
+mechanism makes the result an artifact of our design).
+
+**PJM'S QUESTION, ANSWERED PRECISELY: the GA does NOT "evolve a Mg block", and I mis-stated it if I
+implied otherwise.** The genome is `mag` (magnitudes) + `signs` (per-neuron E/I). Those tune HOW
+MUCH current flows; **there is no gene for "make this synapse's strength depend on the postsynaptic
+cell's voltage."** The GA cannot reach the Mg mechanism from `mag`+`signs`, so including the Mg term
+is not a head-start — it is **installing the finished mechanism ourselves, in every network,
+permanently.** What H-C actually tests is whether selection builds **functional gain modulation out
+of the circuit machinery it DOES have** — and D039 established that route: **divisive gain control
+EMERGES from E/I circuit structure in a fluctuation-driven balanced network** (mutual inhibition
+between subpopulations, read through the nonlinearity). That IS reachable from `mag`+`signs`,
+because it is a question of *which neurons inhibit which*. The Mg block is a *different, molecular*
+route to the same functional end, and it is the one we must not pre-install.
+
+**THE SPLIT, ENFORCED AT THE RECEPTOR:**
+- **TAKE** NMDA's **slow decay** — the CAPABILITY, D073's step 1 (integrate history to infer
+  context). A prerequisite, drawn not evolved, same status as Dale's law (D038) and the balanced
+  regime (D058).
+- **OMIT** NMDA's **Mg gate** — a ready-made instance of the MECHANISM (step 2), the thing H-C
+  measures selection building.
+**The biology hands us both prerequisites in one molecule; we take exactly one.** *This is the
+sharpest application of D038 the project has — "make the architecture capable; let selection build
+the mechanism" — with the capability and the mechanism separated inside a single receptor.*
+
+**HONEST CAVEAT — we are not modelling NMDA, we are modelling "NMDA-like" slow excitation.**
+Dropping the Mg gate makes the channel **decay-only slow current**, not a biophysically complete
+NMDA receptor. This is a standard and defensible modelling choice (many models use decay-only slow
+excitation), but it IS a choice: **we may say "a slow excitatory synaptic current in the NMDA
+range", NOT "we include NMDA receptors".** The distinction matters precisely because the omitted
+part is the part that would have done H-C's job for us.
+
+**THE IMPLEMENTATION (`nmda_frac=0` DEFAULT ⇒ INERT UNTIL ASKED FOR).**
+```
+dv/dt      = (v_rest - v + I_fast + I_slow + I_ext + bias)/tau_m + noise·√(2/tau_m)·ξ
+dI_fast/dt = -I_fast/tau_fast     # tau_fast = tau_syn = 5 ms   (AMPA / GABA_A; all neurons)
+dI_slow/dt = -I_slow/tau_slow     # tau_slow = 100 ms           (NMDA-like; EXCITATORY only)
+```
+Each presynaptic spike deposits a fraction `nmda_frac` of its weight into the postsynaptic
+`I_slow` and (1 − `nmda_frac`) into `I_fast`; **inhibitory synapses deposit only into `I_fast`**
+(no slow inhibition). **`nmda_frac` is a FIXED config parameter, NOT a gene** (D073: drawn, not
+evolved — if heritable, selection dials its own memory and the capability becomes a shortcut).
+**Default `nmda_frac = 0.0` reproduces today's model bit-for-bit** — same protection as
+`readout_pos` (D072): the positive control, Gate C's validated operating point (D058), and every
+past run are untouched until the parameter is set. **The `nmda_frac=0` cell of the sweep is
+therefore a REQUIRED control: it must reproduce today's memoryless `mem_d1=1.000`, or the new
+current path has a bug.**
+
+**THE TEST (diagnostics, NOT the GA — ~5 min, no batching needed).** Sweep
+`nmda_frac ∈ {0.0, 0.3, 0.5, 0.8}` on `run_E9_diagnostics.py` at `present_ms=50`. **GATE = movement
+past d1 (d2–d3), NOT `mem_d10`.** *Rationale (last exchange): d10 needs an EVOLVED recurrent
+attractor (Wang's slow reverberation), so demanding it from a RANDOM network demands the answer
+before the experiment. d2–d3 in a random network shows the CAPABILITY is real and selection has a
+foothold; d10 is later, and it is selection's achievement, not the capability's.* Wang's recurrent
+excitation is NMDA-*dominated*, so `nmda_frac=0.8` is the literature-plausible high end; 0.3–0.5
+hedge. **Cost is diagnostics-scale because we are not evolving yet** — the ~69 h/~4 h GA figure
+(D068) appears only later, when Gate B0 runs with the chosen `nmda_frac` FIXED. *The sweep is the
+cheap thing that de-risks the expensive thing: it names the value to carry in.* Adding `I_slow` is a
+second current equation, ~10–20% per-eval overhead — immaterial now, worth remembering when the GA
+is priced.
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this
