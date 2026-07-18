@@ -1852,7 +1852,24 @@ parallelism state.* Three separate sessions of timing confusion (D060, D064, D06
 that could not report on themselves.
 
 ### D067 — GATE B0 FAILS. The GA never approaches interpolation — and the diagnosis is ARITHMETIC, not biology.
-**2026-07-17 · Accepted** · **THE MOST CONSEQUENTIAL RESULT SO FAR** · lands exactly on the risk D049 flagged
+**2026-07-17 · Accepted, WITH CORRECTIONS** · **cost model superseded by D068 · diagnosis superseded by D072** · lands exactly on the risk D049 flagged
+
+> **⚠ CORRECTION NOTICE (added 2026-07-17).** Two things below were **plainly wrong** and are
+> corrected **in place**, marked `[D068]` / `[D072]`, with the original text struck through so the
+> reasoning survives. *Append-only exists to retain history, not to preserve mis-statements.*
+> **(a) The per-arm cost column is arithmetically wrong** — it assumed per-eval cost ∝ |W|; cost is
+> **timestep-dominated** and ~flat in N (D068). **(b) "The lever is parameter count" is false** —
+> the N decision was never available.
+> **What is NOT edited, because it is superseded JUDGEMENT rather than error:** the ~40×
+> evaluation shortfall (the arithmetic is right: 3,000 vs ~122,000); *"the GA barely started"*;
+> the N=20 proposal; *"Gate A is unanswerable until Gate B0 passes."* **D072 overturns all of
+> them: the network holds ~30 ms of memory and the task needs 1,500 ms, so Gate B0 could not have
+> passed at ANY budget — the shortfall was real and not binding.** *And Gate A was answerable all
+> along: the encoder works (`E|state` = 0.225) and it is a ROUTING problem.*
+> *One imprecision noted, not edited: `best_train` (a TRAINING error) is compared below against
+> `memoryless_floor` (a TEST NMSE from `best_nmse`). Apples to oranges. The conclusion survives —
+> the linear readout's training fit is lower still — but the comparison is not like-for-like.*
+
 **Result (`--preset quick`, real run, 6 workers, 5,193 s):**
 `best_train` **0.936 → 0.882** over 100 generations. Never near interpolation (threshold 0.05).
 **Worse than the memoryless floor (0.834)** — after 100 generations of selection the evolved network
@@ -1869,17 +1886,28 @@ member, and Brian2 **rebuilds a network per evaluation**). So 122,000 evals ≈ 
 the 72-arm map ≈ **4,000 h**. **Evaluation cost is now a first-class design constraint, not a
 detail.**
 
-**THE LEVER IS PARAMETER COUNT, AND IT IS QUADRATIC (|W| ~ density·N²) — not the optimizer:**
-| N | \|W\| @ density 0.5 | evals needed (~100n) | est. per arm |
-|---|---|---|---|
-| 50 (current) | 1,221 | 122,000 | **58 h** ✗ |
-| 30 | ~435 | 43,500 | ~8 h |
-| **20 (proposed)** | **~190** | **19,000** | **~1.5 h** ✓ |
+~~**THE LEVER IS PARAMETER COUNT, AND IT IS QUADRATIC (|W| ~ density·N²) — not the optimizer:**~~
+**[D068] FALSE. The lever is TIMESTEPS, and N does not touch them.** 50 env × 150 ms ÷ 0.5 ms × 2
+(train+test) = **30,000 timesteps/eval**; 3.4 s serial ÷ 30,000 ≈ **113 µs/timestep to update 50
+floats** — pure Python dispatch, ~flat in N and |W|. **Only the N=50 row below was measured; the
+other two assumed cost ∝ |W| and are wrong:**
+
+| N | \|W\| @ density 0.5 | evals needed (~100n) | ~~est. per arm~~ **[D068: WRONG]** | **corrected** (at the measured 1.7 s/eval) |
+|---|---|---|---|---|
+| 50 (current) | 1,221 | 122,000 | **58 h** ✗ | **58 h** — the only measured row |
+| 30 | ~435 | 43,500 | ~~~8 h~~ | **20.5 h** |
+| **20 (proposed)** | **~190** | **19,000** | ~~**~1.5 h** ✓~~ | **9.0 h** ✗ |
+
+**⇒ N=20 gives ~9 h/arm, not 1.5 h; the 72-arm map ≈ 650 h. N=20 never rescued anything, and the
+trade weighed below was never on the table.** *The real lever is batching — engineering, not scale
+(D068). N=50 stands.*
 **And N=20 has a precedent I had forgotten: Frank's own 2025a example is a 20-node network** —
 *"a sparsely and randomly connected network with 20 nodes stores an imperfect and dimensionally
 reduced memory of past inputs."* **We would be at his scale, not an artificially tiny one.**
 Proposed: **N=20, d=3, n_env=20 → 60 constraints, |W|/constraints ≈ 3.2** — still comfortably
-overparameterized, and each eval far cheaper (fewer synapses AND fewer patterns).
+overparameterized, and each eval far cheaper ~~(fewer synapses AND fewer patterns)~~
+**[D068] HALF FALSE: fewer synapses changes NOTHING (cost is timestep-dominated). Fewer PATTERNS
+does help — n_env sets the timestep count. The right half of this was the accidental one.**
 **Other levers to price:** `present_ms` 150 → 50 (~3× faster, less settling time); fewer
 environments (also lowers the constraint count, moving the threshold **toward** us).
 
@@ -2055,6 +2083,100 @@ vocabulary.** Three artifacts — the log, the docs, the code — and **no pass 
 > commit that implements it. Otherwise the log records an **intention** as though it were a
 > **fact** — and every later decision that reads the log inherits the error. *D067 planned around
 > a progress-reporting facility that was never built.*
+
+### D072 — THE DIAGNOSTICS: Gate B0's failure is ARITHMETIC. The network has ~30 ms of memory and the task needs 1,500 ms.
+**2026-07-17 · Accepted** · **supersedes D067's diagnosis, as D068 superseded its cost model** · runs: `E9-evolve__20260718-022622__exp__gb15c3c1__diagnostics` + the rung-1 re-run · *the first run ever filed as E9 (D071)*
+
+**THE RESULT. `mem_d1 = 1.000` in all 8 trailing cells** — not 0.99, **exactly 1.0**, at every gain and every noise level. Zero information about the previous stimulus. **`order/noise` = 0.98–1.16** confirms it independently: shuffling the presentation order changes `state` no more than re-running with fresh noise does.
+
+**Two independent measures agree: the network is memoryless at the presentation timescale.** Context lives in the covariance across `context_dwell`=10 stimuli (D048). **It cannot hold one.**
+
+**⇒ CONTEXT INFERENCE IS IMPOSSIBLE BY CONSTRUCTION. Gate B0 could not have passed at any N, any population size, any number of generations.** D067's ~40× evaluation shortfall was **real and not binding**. We diagnosed the wrong constraint twice: **not the budget (D067), not a broken encoder (D069).** *The encoder works — `E|state` = **0.225**. It sees. It does not remember.*
+
+**RUNG 1: the memory is there, and it is NOT a mode.**
+
+| | best `mem_d1` | best MC | max `order/noise` | best `E\|state` | best `E\|rates` |
+|---|---|---|---|---|---|
+| **trailing** (inherited) | **1.000** | 0.00 | 1.16 | **0.225** | **0.730** |
+| **leading** (rung 1) | **0.531** | 0.47 | **6.09** | 0.492 | 0.931 |
+
+Reading the onset instead of the settled response recovers d1. **But `mem_d2` = 1.000–1.002 in EVERY leading cell.** That is a **cliff, not a decay**, and the arithmetic is exact:
+- **d1:** presentation *k−1* ends at t=0; the leading window is (0, 60]. **Zero gap.** The window physically **overlaps** the previous response's dying tail.
+- **d2:** presentation *k−2* ended 150 ms earlier. **e^(−150/30) = 0.7%.** Gone.
+
+**⇒ This is WINDOW OVERLAP, not memory.** The network is not holding state; the readout is catching `r`'s 30 ms filter tail before it dies. **There is no hidden long mode.** The substrate has precisely the memory the arithmetic predicted and not one millisecond more. **Rung 1 confirmed the diagnosis rather than fixing it — which is what a diagnostic is for.**
+
+**AND RUNG 1 IS NOT ADOPTABLE.** `E|state` 0.225 → 0.492 (encoding **halves**); `E|rates` 0.730 → 0.931 (**what fitness reads is nearly starved**). Reading the transient means reading before the response to the *current* stimulus has developed. **It trades the level-1 signal for a level-2 signal that is still eight presentations short.**
+
+**D030's OPPOSITION, FOURTH APPEARANCE — and it may not be a coincidence.**
+| | the level-2 property | costs the level-1 property |
+|---|---|---|
+| D030 | PR responsiveness | input encoding |
+| D069 | CV_ISI (fluctuation-driven) | input encoding |
+| **D072** | **memory (carryover)** | **input encoding** |
+
+*Every knob that buys a level-2 property costs level-1 encoding.* **Candidate explanation (SPECULATIVE, recorded to be tested, not leaned on):** the state has finite capacity, and what it reflects — current input, recurrent dynamics, noise, history — competes. If so this is not an annoyance but **the precondition for D056's frame**: encoding saturates, and *that* is why leveling up requires new structure rather than more of the same. **Do not lean on this until it is measured.**
+
+**WHAT DID NOT CHANGE.** Context decode is **at chance everywhere** — best 0.315 vs 0.25, across 16 comparisons, *including* the leading cells. One presentation back does not tell you which of four covariance regimes you are in. **`BRIDGE.md` Level 5 listed this measurement and it had never been run.**
+
+**FRAMING sec.3 DOES NOT TRANSFER — and my first verdict over-claimed that it did.** I printed "var EXPANDS 8/8" and called it transfer. It is not sec.3's claim.
+- **sec.3's striking half is that the MEAN channel COMPRESSES** (7.4 from K=20 inputs; *"a reservoir's whole job is to expand — ours compresses"*). Measured: **PR_input 5.86 → PR_mean 6.95–7.18.** Mild **expansion**. **Compression does not transfer.**
+- **PR_var tracks σ, not structure:** trailing 12.67 (σ=0.2) → 26.67 (σ=1.0). **Much of "var expands" is the dimensionality of INJECTED NOISE.** Read the onset, where signal dynamics live, and PR_var collapses to **8.4–9.4 regardless of σ** — next to PR_mean ≈ 7. **The dissociation largely evaporates.**
+- **sec.3 actually rests on PREDICTION** — PR_var predicts generalization, PR_mean anti-predicts. That needs generalization measured across conditions and **remains untested.**
+⇒ **`FRAMING.md` sec.3 is the project's only substrate-specific justification, it is a D028/D033 reservoir-era result (N=1000, K=20, `anisotropic_regression`, trained readout — all four retired by D032/sec.2c in the SAME SESSION sec.3 was written), and half of it demonstrably does not survive the port.** sec.3 needs rewriting. *Not done here: it is a framing decision, not a measurement.*
+
+**AND: `logs/run.log` FINALLY EXISTS.** PJM noticed the terminal summaries were saved nowhere. Correct: **NAMING.md sec.3 has specified `logs/run.log` since the scaffold, `Run.logs` dutifully CREATES the directory, and nothing ever wrote to it.** A run's *numbers* were reproducible and its *reading* of them was not — exactly backwards, since numbers are the recomputable part. **D071's pattern, third instance** (after D066's progress reporting and NAMING.md's own stage vocabulary). Fixed: `Run.start_log()` mirrors stdout/stderr into `logs/run.log`, line-buffered so long runs are tail-able live (D066's real intent), closed by `finalize()` on **both** the complete and failed paths, and it can never break a run.
+
+**STATUS OF THE STUDY.** **H-A and H-B are LEVEL-1 hypotheses and are unaffected** — they need no memory (H-B is *"what distinguishes us from ML"* and concerns r₁, the level-1 map's rank). **H-C, H-D and H-E are LEVEL-2 and are blocked** until the memory gap closes. *Layering is an ORDERING, not an escape: D056's frame — why did regulatory hierarchy evolve — is level 2.*
+
+**AND THE PERFORMANCE WORK IS PARKED, DELIBERATELY.** None of D068's fixes are built. **That call was right for a reason we could not have known:** the diagnostics cost 4 minutes and showed Gate B0 could not have passed at any speed — building the 17× first would have made an impossible run 17× faster. **But D068 is now a decision that exists only as a document, which is exactly D071's category.** Recorded so it does not become another D066: **⇒ what un-parks it: the first diagnostics run showing the network can hold context over ~10 stimuli. The next step after that is a GA run, and that run is unaffordable (~69 h) without batching.**
+
+### D073 — The slow timescale belongs in τ_syn, not τ_m — and D059's tiering INVERTS: τ is not regulation's alternative, it is its prerequisite
+**2026-07-17 · Accepted (analysis)** · **Open (implementation)** · *supersedes the τ_m tier in D059 and the "fixed-heterogeneous τ_m" framing I have used since*
+
+**THE ARITHMETIC. Memory must span `context_dwell` = 10 presentations. NEITHER KNOB WORKS ALONE:**
+
+| | trace surviving 10 presentations |
+|---|---|
+| `present_ms` 150 → 50 alone (τ=30) | e^(−500/30) = **0.002%** |
+| τ = 200 ms alone (`present_ms`=150) | e^(−1500/200) = **0.06%** |
+| **both — τ=200 ms + `present_ms`=50** | e^(−500/200) = **8%** — marginal but real |
+| **τ=300 ms + `present_ms`=50** | **19%** — workable |
+
+**⇒ `present_ms` 150 → 50 is now DOUBLY motivated**: it is also **the 3× compute win** (D068 — cost is timestep-dominated, and `present_ms` is the timestep count). *The one lever that is both a scientific fix and a speedup.* **It also requires `readout_window_ms` to shrink below 50** — the window cannot exceed the presentation.
+
+**τ_m IS THE WRONG HOME, AND I HAVE BEEN SAYING IT WRONG SINCE THE TIMESCALE AUDIT.** Cortical membrane time constants are **~10–50 ms**. **τ_m = 200 ms is not physiological**, and proposing it would have bought the mechanism at the cost of the biology — in a study whose entire claim is that the *substrate* matters.
+
+**τ_syn IS.** The model already has `dI_syn/dt = -I_syn/tau_syn`, currently **τ_syn = 5 ms — which is AMPA**. The physiological range is textbook:
+
+| receptor | τ | |
+|---|---|---|
+| AMPA | **~5 ms** | what we have, globally |
+| NMDA | **~100 ms** | |
+| GABA_B | **~150–200 ms** | |
+
+**A heterogeneous τ_syn spans exactly the range the task needs, and it is standard physiology rather than a fitted parameter.** The equation is already there; only the *scope* changes — per-neuron instead of global. **The brain solves this problem with receptor kinetics, not with implausible membranes, and so should we.**
+
+**D059's TIERING INVERTS — and the diagnostics are why.** D059 tiers τ as an **"alternative route — could BYPASS regulation"**, and withholds it from Arm 1 so that *"regulation is the ONLY route."* **That reasoning does not survive `tasks.py`'s own docstring:**
+> *"Context must select the MAP, not be added as an input: a one-hot context fed additively can only SHIFT the output, never change the E→Y mapping."*
+
+**A slow neuron produces a running average — that is DRIVE, not GAIN. Additive. Useless by the task's own construction.** So integration and modulation are **not alternatives; they are SEQUENTIAL**:
+- **step 1** — infer context by integrating history *(needs a slow timescale)*
+- **step 2** — apply it by **modulating** the level-1 map *(needs regulation)*
+
+**Neither pays alone.** Memory nothing reads is invisible to fitness (which reads the last d neurons' mean rate). Modulation with nothing to modulate by is noise. **⇒ Withholding τ does not FORCE regulation — it REMOVES ITS PREREQUISITE.**
+
+**Honest bound on the claim.** Arm 1 is not *provably* impossible: a recurrent network **can** hold state longer than its components via slow collective modes, and selection might build one. But that asks selection to construct a >150 ms mode from 20 ms parts, **from scratch, in the regime most hostile to one** (σ=1.0 kicks it every timestep), **with fitness blind to step 1 until step 2 also exists.** *A two-prerequisite problem starting at zero on both.* **The diagnostics measured a RANDOM W and found step 1 at exactly zero beyond d1; D067 is 100 generations of evidence that selection does not find it easily.** So: **Arm 1 has one very hard route, not zero — but nothing in the design supports it, and it was never the route D059 intended.**
+
+**THE PROPOSAL — heterogeneous τ_syn, DRAWN, NOT EVOLVED.** This is D038's rule, and the "drawn" is load-bearing:
+- **drawn** ⇒ evolution gets **no tunable shortcut**; it cannot dial τ up to solve the task, so the result cannot be an artifact of handing it the answer.
+- it hands selection **step 1 as a CAPABILITY** — the same status as Dale's law (D038) and the balanced regime (D058).
+- ⇒ **selection's job becomes step 2 ALONE — which is the thing under test.**
+- **And it makes the null informative for the first time: if regulation still does not emerge once step 1 is GIVEN, that is a real finding about selection**, not about our parameter choices. *Under Arm 1 as specified, a null was uninterpretable — D062's trap.*
+
+**D059's Arm 2 signature also sharpens.** D059 predicts a bimodal τ_m distribution at the waist = *"a timescale hierarchy, not a regulatory one"*, read as the **rival** outcome. If τ is the **prerequisite** rather than the alternative, the prediction flips: **Arm 2 should show long τ AND regulatory motifs — both, not either.** *Bimodality would then be a step toward regulation, not a substitute for it.*
+
+**NEXT (unimplemented; a proposal, not a decision to build):** make τ_syn per-neuron, drawn from a bimodal AMPA/NMDA-like distribution; `present_ms` 150 → 50 with `readout_window_ms` reduced accordingly; **re-run `run_E9_diagnostics.py` — 4 minutes, no GA.** The gate is **`mem_d10`**, not `mem_d1`. *The memory question is validated without evolution, which is why it comes before the batching work (D068) rather than after.*
 
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
