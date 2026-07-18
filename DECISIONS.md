@@ -2499,3 +2499,64 @@ the output neurons?), then **Gate B** (does a peak appear?).
   after D017, and D013/D018–D021 were parked at the file's end (all July 14, misplaced, not
   intentional). No entry altered; verified every body preserved. *Cross-references are by D-number,
   never by line, so nothing breaks.*
+
+### D077 — Test error is REPORTING, not selection: a three-tier capture (champion every gen · population every k · full final gen) buys ~1.9× and keeps the epoch-wise-DD option open. D068 step 1.
+**2026-07-18 · Accepted** · **D068's first performance fix** (un-parked by D076) · *design call made against BRIDGE Level 5 + a literature search on neuroevolution test-error conventions*
+
+**THE WASTE.** `evaluate()` ran a full test `behave()` for **every genome, every generation** — a
+second simulation each — and `_fitness()` reads **only `train_err`**. Selection never touches test.
+At pop 30 that was **~half the GA's timesteps, computed and discarded**: the population-mean test
+trajectory it produced is read by **no hypothesis**.
+
+**WHAT THE DESIGN ACTUALLY READS (BRIDGE Level 5).** *"Per genome, on the same P axis."* The study's
+headline double descent is **generalization-error-vs-P, ACROSS ARMS, at convergence** — P is swept
+across density arms (D060), and each arm contributes its *converged* error as one point on the
+curve. **The per-generation, within-run test trajectory is NOT what H-A/H-B/H-C read.** So the
+expensive thing (30 test evals/gen) was producing a curve the study does not use.
+
+**LITERATURE CHECK (PJM factor 1).** Neuroevolution convention is to plot the **fittest-individual**
+test/validation error *per generation* alongside training, and read overfitting from where they
+diverge (e.g. the sparsity-pruning work: validation drops when a genome overfits, and *variance
+rises* — a class-level signal). Population-**mean** test per generation is rarer. ⇒ the conventional
+object is the **champion** trajectory, not the mean.
+
+**THE THREE-TIER CAPTURE (PJM factor 2 — keep what our analysis needs, drop the rest).**
+| tier | cadence | cost | serves |
+|---|---|---|---|
+| **champion test** (best individual) | **every generation** | 1 extra behave/gen | epoch-wise-DD option (below); convergence monitoring; the literature's fittest-individual curve |
+| **population test** (mean + spread) | **every `test_every` (=20) gens** | pop behave / k gens | D059's class-level Occam signal; catches whether the champion is representative or a lucky outlier |
+| **full population test** | **final generation, always** | pop behave once | the **converged P-point that enters the cross-arm DD curve** — the study's actual headline |
+
+Fitness stays train-only for the whole population every generation (selection unchanged). `test_err`
+is `np.nan` on skipped individuals; a `pop_test` flag records per row whether `mean_test` was a real
+sweep or NaN, so no downstream reader mistakes a NaN for a measured zero.
+
+**EQUIVALENCE VERIFIED (the discipline this project earned — twice bitten).** Against an all-test
+reference at identical seed/config: **`best_train` and `mean_train` bit-for-bit identical**, champion
+test finite every gen, `mean_test` NaN exactly on non-sweep gens, final gen always swept. **This is
+same-then-faster, not faster-but-different** — provable because selection provably never read test.
+
+**SPEEDUP (projected from behave-call counting, D068's "name the quantity cost scales with").** Test
+was exactly half the calls; we keep ~1/pop of it (champion) + 1/`test_every` of the population.
+Pop 50 × 4,900 gens: **490k → 262k behave calls = 1.87×.** Essentially the full 2× ceiling. *Measure
+the real wall-clock before believing it (D068: four estimates were wrong) — but the call count is
+exact.*
+
+**TWO HONEST CAVEATS ON THE EPOCH-WISE DATA, so it is not a mirage when we dig into it later.**
+1. **The champion is a RELAY, not a fixed model.** Nakkiran's epoch-wise double descent tracks **one
+   model** over training time. Our champion trajectory is *whichever genome won each generation* —
+   genome A at gen 50, genome B at gen 51. It can legitimately show a dip-rise-dip and is worth
+   studying, but it is **"test error of the current champion," not "one network's generalization
+   over training."** The true fixed-model analogue needs **lineage tracking** (a genome + its
+   descendants), which we do NOT log. If we ever want it, that is a separate decision and added
+   parentage bookkeeping — flagged, not built.
+2. **Generation-axis DD ≠ P-axis DD.** The study's headline double descent is **error-vs-P across
+   arms** (BRIDGE L5). Epoch-wise is **error-vs-generation within one arm**. Same words, two
+   different curves. When we come back to the champion trajectory, it answers the *generation-axis*
+   question only; it must **not** be read as the H-A peak, which lives on the P axis. *This
+   distinction is exactly the kind of thing that looks obvious now and won't in six months.*
+
+**NEXT (D068, in order):** (2) batch the population into one block-diagonal network — the ~15–25×;
+(3) pre-allocated synapses built once (absent = weight 0; NOT a frozen wiring diagram); (4) delete
+the pool; (5) hoist the StateMonitor. Plus D066 fixes 2–3 (ETA + pool announcement) and
+`run.start_log()` in the Gate B0 script.

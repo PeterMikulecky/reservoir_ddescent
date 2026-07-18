@@ -52,6 +52,16 @@ class EvolveConfig:
     n_generations: int = 200
     elite: int = 2                      # copied unchanged each generation
 
+    # --- test-error capture cadence (D077) ---------------------------------------------
+    # Selection never reads test error; it is REPORTING only. Three tiers:
+    #   * champion (best individual) test error: EVERY generation  -> the epoch-wise DD
+    #     trajectory (a champion-RELAY, not a fixed-model curve; and generation-axis, NOT the
+    #     P-axis the study's headline DD lives on -- see D077).
+    #   * whole-population test (mean + spread): every `test_every` gens, AND the final gen
+    #     -> D059's class-level Occam signal, at 1/test_every the cost.
+    # test_every=0 disables the periodic population sweep (champion + final only).
+    test_every: int = 20
+
     # --- ARM 1: selection scheme (D060) ------------------------------------------------
     selection: str = "replicator"       # 'replicator' (Occam factor lives) | 'tournament'
     tournament_k: int = 3
@@ -122,26 +132,36 @@ def _structural_mutate(g: Genome, cfg: EvolveConfig, rng) -> Genome:
     return Genome(signs=g.signs.copy(), mag=mag)
 
 
-def evaluate(genome: Genome, task, net_cfg: EvoNetConfig) -> dict:
-    """Behaviour → phenotype → error. Fitness reads OUTPUT RATES (D036: a design choice —
-    the phenotype is the behaviour itself; rate is how we measure it)."""
+def _nmse_affine(Y, R):
+    """Align the network's arbitrary rate units to the demanded profile via a per-output affine
+    map, then NMSE. NOT a trained readout — d scalars (gain+offset per output neuron), not a
+    mixing matrix; it cannot mix neurons (D036)."""
+    out = np.empty_like(Y)
+    for j in range(Y.shape[1]):
+        A = np.vstack([R[:, j], np.ones(len(R))]).T
+        coef, *_ = np.linalg.lstsq(A, Y[:, j], rcond=None)
+        out[:, j] = A @ coef
+    return float(np.mean((Y - out) ** 2) / (np.var(Y) + 1e-12))
+
+
+def evaluate(genome: Genome, task, net_cfg: EvoNetConfig, with_test: bool = True) -> dict:
+    """Behaviour → phenotype → error. Fitness reads OUTPUT RATES (D036).
+
+    **`with_test` (D077).** Selection (`_fitness`) reads ONLY `train_err`, so test is never needed
+    to evolve — only to REPORT. A full test `behave()` is a second simulation per genome, and at
+    30 genomes × every generation that was ~half the GA's runtime, thrown away: the population-mean
+    test trajectory it produced is read by NO hypothesis (BRIDGE Level 5: the study's double
+    descent is error-vs-P ACROSS ARMS at convergence, not a per-generation curve within one arm).
+    With `with_test=False` we skip the test `behave()` entirely. The caller (run_evolution) then
+    computes test only where it is actually used: the champion every generation (the epoch-wise
+    trajectory — kept dense, one extra behave/gen) and the whole population every `test_every`
+    generations + the final generation (D059's class-level Occam signal). `test_err` is np.nan
+    when skipped, which pandas carries cleanly.
+    """
     net = EvoNet(genome, net_cfg)
     B_tr = net.behave(task.E_train)
-    B_te = net.behave(task.E_test)
-
-    def nmse(Y, R):
-        # align scales: the network's rate units are arbitrary w.r.t. the demanded profile,
-        # so fit a per-output affine map. This is NOT a trained readout — it is d scalars
-        # (gain+offset per output neuron), not a mixing matrix; it cannot mix neurons.
-        out = np.empty_like(Y)
-        for j in range(Y.shape[1]):
-            A = np.vstack([R[:, j], np.ones(len(R))]).T
-            coef, *_ = np.linalg.lstsq(A, Y[:, j], rcond=None)
-            out[:, j] = A @ coef
-        return float(np.mean((Y - out) ** 2) / (np.var(Y) + 1e-12))
-
-    err_tr = nmse(task.Y_train, B_tr["rates"])
-    err_te = nmse(task.Y_test, B_te["rates"])
+    err_tr = _nmse_affine(task.Y_train, B_tr["rates"])
+    err_te = _nmse_affine(task.Y_test, net.behave(task.E_test)["rates"]) if with_test else float("nan")
     return dict(train_err=err_tr, test_err=err_te, n_params=genome.n_params(),
                 exc_frac=genome.exc_fraction(), state=B_tr["state"], state_var=B_tr["state_var"])
 
@@ -160,8 +180,12 @@ def _init_worker(task, net_cfg):
 
 
 def _eval_payload(genome):
-    """TOP-LEVEL, picklable — Windows spawn (D007). One individual; task comes from the worker."""
-    r = evaluate(genome, _WORKER["task"], _WORKER["net_cfg"])
+    """TOP-LEVEL, picklable — Windows spawn (D007). One individual; task comes from the worker.
+
+    D077: TRAIN-ONLY. Population evaluation never needs test (fitness reads train), so the worker
+    skips the test `behave()`. Test is computed back in run_evolution for the champion + periodic
+    population sweeps only."""
+    r = evaluate(genome, _WORKER["task"], _WORKER["net_cfg"], with_test=False)
     r.pop("state", None); r.pop("state_var", None)   # do not ship big arrays back
     return r
 
@@ -180,7 +204,8 @@ def run_evolution(task, net_cfg: EvoNetConfig, cfg: EvolveConfig,
     # therefore ALWAYS FALSE, so the pool was NEVER created and every run was silently SERIAL
     # (one process, ~1 core). Caught by PJM watching Task Manager: "only 1 Python process at 12%".
     use_pool = (n_workers > 1) and (eval_fn is None)
-    eval_fn = eval_fn or (lambda g: evaluate(g, task, net_cfg))
+    # D077: population eval is TRAIN-ONLY (fitness reads train). Test computed selectively below.
+    eval_fn = eval_fn or (lambda g: evaluate(g, task, net_cfg, with_test=False))
 
     pop = [random_genome(net_cfg, cfg.density, w0=cfg.w0, ei_split=cfg.ei_split,
                          seed=cfg.seed + i) for i in range(cfg.pop_size)]
@@ -196,22 +221,38 @@ def run_evolution(task, net_cfg: EvoNetConfig, cfg: EvolveConfig,
             res = pool.map(_eval_payload, pop)      # only the genome is shipped
           else:
             res = [eval_fn(g) for g in pop]
-          errs = np.array([r["train_err"] for r in res])
-          tests = np.array([r["test_err"] for r in res])
+          errs = np.array([r["train_err"] for r in res])       # train: whole population (fitness)
           nps = np.array([r["n_params"] for r in res])
           fits = np.array([_fitness(e, p, cfg) for e, p in zip(errs, nps)])
-
           order = np.argsort(-fits)
+
+          # ---- D077: selective TEST evaluation -----------------------------------------
+          # Population eval above was train-only. Compute test only where a hypothesis reads it.
+          is_final = (gen == cfg.n_generations - 1)
+          do_pop_test = is_final or (cfg.test_every > 0 and gen % cfg.test_every == 0)
+          if do_pop_test:
+            # whole population — D059's class-level Occam signal + the final-gen P-point that
+            # enters the cross-arm double-descent curve (the STUDY's headline DD, BRIDGE L5).
+            tests = np.array([evaluate(pop[i], task, net_cfg, with_test=True)["test_err"]
+                              for i in range(len(pop))])
+            best_test = float(tests[order[0]]); mean_test = float(np.nanmean(tests))
+            std_test = float(np.nanstd(tests))
+          else:
+            # champion only — the epoch-wise DD trajectory, kept dense (one extra behave/gen).
+            best_test = evaluate(pop[order[0]], task, net_cfg, with_test=True)["test_err"]
+            mean_test = float("nan"); std_test = float("nan")
+
           history.append(dict(
             gen=gen,
-            # best individual — the right convention for Gate B0 (can ANY genome interpolate?)
-            best_train=float(errs[order[0]]), best_test=float(tests[order[0]]),
+            # best individual — Gate B0's convention (can ANY genome interpolate?) + epoch-wise DD
+            best_train=float(errs[order[0]]), best_test=best_test,
             best_params=int(nps[order[0]]),
-            # population mean — the right convention for R&N's class-level Occam factor
-            mean_train=float(errs.mean()), mean_test=float(tests.mean()),
+            # population mean — R&N's class-level Occam factor; test is NaN on non-sweep gens
+            mean_train=float(errs.mean()), mean_test=mean_test, std_test=std_test,
             mean_params=float(nps.mean()), std_params=float(nps.std()),
             mean_exc_frac=float(np.mean([r["exc_frac"] for r in res])),
             fit_mean=float(fits.mean()), fit_std=float(fits.std()),
+            pop_test=bool(do_pop_test),      # provenance: was mean_test a real sweep or NaN?
           ))
           if verbose and (gen % 20 == 0 or gen == cfg.n_generations - 1):
             h = history[-1]
