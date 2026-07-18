@@ -2278,6 +2278,90 @@ cheap thing that de-risks the expensive thing: it names the value to carry in.* 
 second current equation, ~10–20% per-eval overhead — immaterial now, worth remembering when the GA
 is priced.
 
+### D075 — The NMDA collapse was a CHARGE/units error, not a stability limit: the naive split delivered 16× the excitatory drive. Fixed by conserving charge; validated across the whole axis.
+**2026-07-18 · Accepted** · *credit: PJM flagged the inverted-NMDA effect as the results came in; a PJM-requested search (Edge-of-Stability; working-memory balance) then overturned my proposed fix*
+
+**THE RESULT THAT TRIGGERED THIS.** The D074 sweep did the OPPOSITE of the hypothesis. Adding slow
+excitation **destroyed** encoding and memory together: PR_mean **7.3 → 1.10 → 1.04 → 1.01** as
+`nmda_frac` went 0 → 0.8; `E|state` 0.32 → 1.00; memory and context both to zero. **PR_mean = 1
+means the whole population collapsed onto a single shared mode** — a global synchronous fixed point.
+All four signals died at once: the signature of a **dynamical collapse**, not a missing capability.
+
+**MY FIRST DIAGNOSIS WAS RIGHT IN KIND, WRONG IN MECHANISM.** I called it "slow excitation with
+unbalanced inhibition → runaway" and proposed to fix it by scaling `inh_gain` up (an **amplitude**
+fix). **The search says amplitude balance is not the issue.** Two findings:
+- **The Edge-of-Stability result (Kang et al. 2016):** *"even when the strengths of excitatory and
+  inhibitory connections are perfectly balanced, violation of the TEMPORAL balance condition — the
+  relative speed of fast (AMPA) and slow (NMDA) currents — makes the network unstable; deviations of
+  a few percent tip it into delta oscillation and then runaway."* **Scaling `inh_gain` would not
+  have addressed the actual instability.** My reflex fix was wrong.
+- **The stabilizing configuration is FAST inhibition against SLOW excitation** (working-memory
+  modelling): *"a balance of fast inhibition and slow excitation stabilizes networks so they
+  integrate accurately... fast inhibition rapidly prevents runaway excitation and still yields
+  irregular cortical-type activity."* **⇒ we do NOT need slow inhibition / GABA_B. Fast inhibition
+  is the cortical solution** — it provides negative-DERIVATIVE feedback, opposing slow excitation as
+  it builds. *(My other candidate — add a slow inhibitory channel — was unnecessary, a second new
+  mechanism to get wrong.)*
+
+**BUT THE ACTUAL BUG WAS SIMPLER AND ENTIRELY MINE: a units error in the split.** A spike deposits
+weight `w` as a jump into `I`, which then decays with `tau`; the **integrated current (charge)**
+delivered downstream is `w·tau`. So a 100 ms channel delivers **tau_slow/tau_fast = 20×** the charge
+of a 5 ms channel **per unit weight**. My split `w_slow = nmda_frac·w` moved a fraction of the
+weight to slow **and silently multiplied its charge by 20.** Total excitatory charge vs the balanced
+`nmda_frac=0` baseline:
+
+| nmda_frac | total exc charge | × baseline |
+|---|---|---|
+| 0.0 | 5.0 | 1.00× |
+| 0.3 | 33.5 | **6.70×** |
+| 0.5 | 52.5 | **10.5×** |
+| 0.8 | 81.0 | **16.2×** |
+
+**At nmda_frac=0.8 the network received 16× its balanced excitatory charge. Of course it seized.**
+*This is NOT the Edge-of-Stability temporal violation — it is cruder: I overdrove excitation by up
+to 16×. The temporal condition matters and is respected by the fix, but the collapse we SAW was the
+units error. Both were live; the units error dominated.*
+
+**THE FIX — CONSERVE CHARGE, keep inhibition fast, no new mechanism, no gene.**
+```
+want   w_slow · tau_slow = nmda_frac · (w · tau_fast)      # slow carries fraction f of the CHARGE
+⇒      w_slow = nmda_frac · w · tau_fast/tau_slow
+       w_fast = (1 − nmda_frac) · w
+total charge = (1−f)·w·tau_fast + f·w·tau_fast = w·tau_fast   — CONSTANT in nmda_frac.
+```
+Fast inhibition (`inh_gain`, D058) then opposes the **same total excitation it always did, at the
+same speed** — precisely the fast-inhibition/slow-excitation configuration the literature calls
+stabilizing. **No `inh_gain` retuning, no slow inhibitory channel, no new gene.**
+
+**VALIDATED ON THE REAL NETWORK, ACROSS THE WHOLE AXIS** (this is the "highly effective, automatic"
+bar PJM set — an automatic fix that fails silently at 0.8 is worse than a knob):
+
+| nmda_frac | PR_mean, bugged | PR_mean, fixed | across-env variance |
+|---|---|---|---|
+| 0.0 | 7.25 | **7.25** | healthy |
+| 0.3 | 1.10 | **7.36** | healthy |
+| 0.5 | 1.04 | **7.54** | healthy |
+| 0.8 | 1.01 | **7.76** | healthy |
+
+**No collapse anywhere; PR stays healthy, rate barely drifts (0.87 → 0.80), charge conservation
+holds exactly on the synapse arrays.** *nmda_frac=0 still reproduces the prior model bit-for-bit
+(w_slow=0).*
+
+**THE STANCE THIS SETTLES (PJM).** E/I balance — including temporal balance under slow excitation —
+is **NOT a hypothesis; it is a precondition for the substrate to be cortex-like at all.** It belongs
+with Dale's law (D038) and the balanced regime (D058): **guaranteed by construction so selection
+operates on a working cortical network, not asked of selection as an outcome.** The stabilization is
+**strictly automatic and invisible to the genome** — no config knob, no gene. *Our hypotheses are
+about learning and memory under selection on cortex-like networks; whether balance can evolve is a
+different study we are deliberately not running.* **The onus this creates (PJM): the automatic fix
+must be highly effective across the entire operating range — hence the full-axis validation above,
+not a single-point check.**
+
+**SIXTH TIME THE STANDING RULE BIT.** D074 QUOTED the Edge-of-Stability warning ("AMPAR-dominated
+reverberation → instability; NMDA critical for stability") and I implemented past it — with a units
+error the same physics predicts. *The rule is not "search"; it is "search AND let the result
+constrain the implementation." I did the first and half of the second.*
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this
