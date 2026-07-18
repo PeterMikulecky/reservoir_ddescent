@@ -41,7 +41,14 @@ class EvoNetConfig:
     n_in: int = 10               # input neurons (driven by the environment)
     d: int = 10                  # OUTPUT neurons -> phenotype dimensionality (niche property)
     tau_m: float = 20.0
-    tau_syn: float = 5.0
+    tau_syn: float = 5.0          # FAST synaptic current (AMPA / GABA_A). Renamed role: tau_fast.
+    tau_slow: float = 100.0       # SLOW excitatory current (NMDA-like decay; D074). tau_r-scale.
+    nmda_frac: float = 0.0        # D074: fraction of each EXC weight routed to the slow current.
+                                  # 0.0 = today's model bit-for-bit (fast-only). NOT a gene
+                                  # (D073: drawn, not evolved -- heritable memory would be a
+                                  # shortcut). We take NMDA's KINETICS, never its Mg gate (D074:
+                                  # the gate is voltage-dependent multiplicative gain modulation,
+                                  # = a ready-made instance of the mechanism H-C tests for).
     tau_r: float = 30.0
     v_thresh: float = 1.0
     v_reset: float = 0.0
@@ -218,25 +225,45 @@ class EvoNet:
 
     def _build(self):
         c = self.cfg
+        # D074: two synaptic currents. I_fast = AMPA/GABA_A (tau_syn=5 ms, all synapses);
+        # I_slow = NMDA-like (tau_slow=100 ms, EXCITATORY synapses only). Decay-only -- NO Mg
+        # gate (that gate is the mechanism H-C measures selection building; installing it would
+        # answer H-C by construction). At nmda_frac=0 the slow term is inert and the dynamics
+        # equal the prior single-current model exactly.
         eqs = """
-        dv/dt = (v_rest - v + I_syn + I_ext + bias)/tau_m + noise_sigma*sqrt(2/tau_m)*xi : 1 (unless refractory)
-        dI_syn/dt = -I_syn/tau_syn : 1
+        dv/dt = (v_rest - v + I_fast + I_slow + I_ext + bias)/tau_m + noise_sigma*sqrt(2/tau_m)*xi : 1 (unless refractory)
+        dI_fast/dt = -I_fast/tau_syn : 1
+        dI_slow/dt = -I_slow/tau_slow : 1
         dr/dt = -r/tau_r : 1
         I_ext = ta(t, i) : 1
         """
         self._dummy = b2.TimedArray(np.zeros((1, c.N)), dt=b2.defaultclock.dt)
         ns = dict(v_rest=c.v_rest, tau_m=c.tau_m * ms, tau_syn=c.tau_syn * ms,
+                  tau_slow=c.tau_slow * ms,
                   tau_r=c.tau_r * ms, bias=c.bias, noise_sigma=c.noise_sigma,
                   v_thresh=c.v_thresh, v_reset=c.v_reset, ta=self._dummy)
         G = b2.NeuronGroup(c.N, eqs, threshold="v > v_thresh",
                            reset="v = v_reset; r += 1", refractory=c.refractory_ms * ms,
                            method="euler", namespace=ns, name="evonet")
         G.v = c.v_rest
+        # D074: each synapse deposits a FAST and a SLOW component. `w_fast` and `w_slow` are
+        # per-synapse so we can route the slow fraction to EXC presynaptic cells only (there is
+        # no slow inhibition). nmda_frac=0 => w_slow all zero => I_slow stays 0 => prior model.
         post, pre = np.nonzero(self.W)
-        S = b2.Synapses(G, G, model="w : 1", on_pre="I_syn_post += w", name="rec")
+        S = b2.Synapses(G, G, model="w_fast : 1\nw_slow : 1",
+                        on_pre="I_fast_post += w_fast\nI_slow_post += w_slow", name="rec")
         if len(pre):
             S.connect(i=pre, j=post)
-            S.w = self.W[post, pre]
+            w = self.W[post, pre]
+            # presynaptic sign: slow current is excitatory-only. genome.signs is per-NEURON;
+            # for a raw-W legacy net, fall back to the weight's own sign.
+            if self.genome is not None:
+                pre_exc = self.genome.signs[pre] > 0
+            else:
+                pre_exc = w > 0
+            f = c.nmda_frac
+            S.w_slow = np.where(pre_exc, f * w, 0.0)
+            S.w_fast = w - np.where(pre_exc, f * w, 0.0)   # exc: (1-f)w ; inh: full w in fast
         self.G, self.S = G, S
         self.net = b2.Network(G, S)
         self.net.store("init")

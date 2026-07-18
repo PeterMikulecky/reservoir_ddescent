@@ -153,16 +153,19 @@ def carryover(net, E, state_ref, rng) -> tuple:
     return d_order, d_noise, d_order / max(d_noise, 1e-12)
 
 
-def one_cell(gain: float, sigma: float, pos: str, task, args, rng) -> dict:
+def one_cell(gain: float, sigma: float, pos: str, nmda_frac: float, task, args, rng) -> dict:
     net_cfg = EvoNetConfig(N=args.N, n_in=args.K, d=args.d, bias=args.bias,
-                           input_gain=gain, noise_sigma=sigma, readout_pos=pos)
+                           input_gain=gain, noise_sigma=sigma, readout_pos=pos,
+                           nmda_frac=nmda_frac, present_ms=args.present_ms,
+                           readout_window_ms=min(args.readout_window_ms, args.present_ms * 0.4))
     g = random_genome(net_cfg, args.density, w0=args.w0, seed=args.seed)
     net = EvoNet(g, net_cfg)
 
     Btr, Bte = net.behave(task.E_train), net.behave(task.E_test)
     Str, Ste = Btr["state"], Bte["state"]
 
-    row = dict(input_gain=gain, noise_sigma=sigma, readout_pos=pos, n_params=g.n_params())
+    row = dict(input_gain=gain, noise_sigma=sigma, readout_pos=pos, nmda_frac=nmda_frac,
+               present_ms=args.present_ms, n_params=g.n_params())
 
     # --- 1. does the state encode E? and does it REACH the output neurons? ----------
     row["E_from_state"] = decode_nmse(Str, task.E_train, Ste, task.E_test)
@@ -202,7 +205,20 @@ def main():
     ap.add_argument("--density", type=float, default=0.3)   # Gate C's operating point
     ap.add_argument("--w0", type=float, default=0.6)        # Gate C's operating point
     ap.add_argument("--bias", type=float, default=0.6)      # Gate C's operating point
-    ap.add_argument("--max-delay", type=int, default=6)
+    ap.add_argument("--max-delay", type=int, default=10,
+                    help="D074: gate is movement past d1 (d2-d3), not d10. d10 needs an EVOLVED "
+                         "attractor (Wang slow reverberation); demanding it from a random net "
+                         "demands the answer before the experiment. Kept at 10 to SEE the shape.")
+    ap.add_argument("--nmda-frac", default="0,0.3,0.5,0.8",
+                    help="D074: comma-separated sweep. 0.0 = today's model (REQUIRED control: "
+                         "must reproduce mem_d1=1.000). Wang recurrent exc is NMDA-dominated, so "
+                         "0.8 is the literature high end.")
+    ap.add_argument("--present-ms", type=float, default=50.0,
+                    help="D073: 150->50 shortens the span memory must cross AND is D068's 3x "
+                         "compute win. The one lever that is both a fix and a speedup.")
+    ap.add_argument("--readout-window-ms", type=float, default=60.0,
+                    help="capped at 0.4*present_ms inside one_cell so the window fits the "
+                         "presentation (at present_ms=50 -> 20 ms).")
     ap.add_argument("--readout-pos", choices=("both", "trailing", "leading"), default="both",
                     help="rung 1: 'trailing' is the inherited default (read after ~4.5 tau_m of "
                          "settling); 'leading' reads the onset, where carryover lives.")
@@ -212,22 +228,26 @@ def main():
     ap.add_argument("--runs-root", default=None)
     args = ap.parse_args()
 
-    gains = (1.0, 10.0) if args.quick else (1.0, 3.0, 10.0, 30.0)
-    sigmas = (1.0,) if args.quick else (0.2, 1.0)
+    gains = (10.0,) if args.quick else (3.0, 10.0)     # D069: gain=1 is the worst cell; drop it
+    sigmas = (0.2,) if args.quick else (0.2, 1.0)
+    nmdas = tuple(float(x) for x in args.nmda_frac.split(","))
     # RUNG 1 (D072): readout POSITION is now an axis. mem_d1 = 1.000 in all 8 trailing cells
     # has two readings -- memory absent, or memory unread. Running both positions on the SAME
     # grid separates them in one pass. 'trailing' is the inherited default; every number in the
     # first diagnostics run is a trailing number.
-    positions = ("trailing", "leading") if args.readout_pos == "both" else (args.readout_pos,)
+    # D074: with the slow current in play, TRAILING is the right readout again -- we WANT the
+    # settled response now that memory can persist through it. leading was a rung-1 diagnostic.
+    positions = (args.readout_pos,) if args.readout_pos != "both" else ("trailing",)
 
     task_kw = dict(K=args.K, d=args.d, r1=3, n_contexts=4, n_train=args.n_env,
                    n_test=args.n_env, context_dwell=10, seed=args.seed)
 
     run = P.new_run("E9", "exp", project_root=args.project_root, runs_root=args.runs_root,
                     config=dict(task=task_kw,
-                                grid=dict(gains=gains, sigmas=sigmas, positions=positions),
+                                grid=dict(gains=gains, sigmas=sigmas, positions=positions,
+                                          nmda_frac=nmdas, present_ms=args.present_ms),
                                 net=vars(args)),
-                    tag="diagnostics", seeds=[args.seed],
+                    tag="nmda-sweep", seeds=[args.seed],
                     notes="E9 diagnostics: encode/route, PR channels, memory, carryover, context")
     print(f"run: {run.run_id}")
     # D072: mirror everything below into logs/run.log. NAMING.md sec.3 has specified
@@ -248,7 +268,7 @@ def main():
               f"(D048: contexts differ in COVARIANCE only; this must be ~0)")
         print(f"      context timescale = {10 * 150} ms vs tau_m = 20 ms  -> 75x\n")
 
-        cells = list(itertools.product(gains, sigmas, positions))
+        cells = list(itertools.product(gains, sigmas, positions, nmdas))
         # D068's rule: NAME the quantity cost scales with. It is TIMESTEPS.
         # 113 us/timestep is D065's 3.4 s/eval divided by its 30,000 timesteps, serial.
         n_steps = len(cells) * 4 * args.n_env * 150 / 0.5     # 4 behave() calls per cell
@@ -258,14 +278,15 @@ def main():
 
         rng = np.random.default_rng(args.seed)
         rows = []
-        for i, (gain, sigma, pos) in enumerate(cells):
+        for i, (gain, sigma, pos, nf) in enumerate(cells):
             t0 = time.time()
-            rows.append(one_cell(gain, sigma, pos, task, args, rng))
+            rows.append(one_cell(gain, sigma, pos, nf, task, args, rng))
             r = rows[-1]
-            print(f"  [{i+1}/{len(cells)}] gain={gain:<5g} sigma={sigma:<4g} {pos:<9} "
+            print(f"  [{i+1}/{len(cells)}] gain={gain:<4g} sig={sigma:<4g} nmda={nf:<4g} "
                   f"E|state={r['E_from_state']:.3f} E|rates={r['E_from_rates']:.3f} "
-                  f"mem_d1={r['mem_d1']:.3f} order/noise={r['order_over_noise']:.2f} "
-                  f"ctx={r['context_acc']:.2f}  ({time.time()-t0:.0f}s)", flush=True)
+                  f"d1={r['mem_d1']:.3f} d2={r['mem_d2']:.3f} d3={r['mem_d3']:.3f} "
+                  f"MC={r['memory_capacity']:.2f} ctx={r['context_acc']:.2f}  "
+                  f"({time.time()-t0:.0f}s)", flush=True)
 
         df = pd.DataFrame(rows)
         df.to_parquet(run.table_path("diagnostics"))
@@ -340,7 +361,39 @@ def main():
         print(f"  best = {ca:.3f} vs chance {ch:.2f} -> "
               f"{'context IS recoverable' if ca > ch + 0.15 else 'AT CHANCE'}")
 
-        # ------------------------------------------------------ RUNG 1: the fork
+        # -------------------------------------------------- D074: the NMDA sweep verdict
+        if len(nmdas) > 1:
+            print(f"\n=== D074: DOES SLOW EXCITATORY CURRENT BUY MEMORY PAST d1? ===")
+            print(f"    present_ms={args.present_ms:g}, tau_slow=100 ms. Gate = d2-d3 MOVEMENT in a")
+            print(f"    RANDOM net (d10 is selection's job -- Wang slow reverberation needs an")
+            print(f"    EVOLVED attractor). Watch the ENCODING COST: D030's opposition, again.")
+            agg = (df.groupby("nmda_frac")
+                     .agg(d1=("mem_d1","min"), d2=("mem_d2","min"), d3=("mem_d3","min"),
+                          MC=("memory_capacity","max"), E_state=("E_from_state","min"),
+                          E_rates=("E_from_rates","min"), ctx=("context_acc","max"))
+                     .reset_index())
+            print(f"{'nmda':>6} {'best_d1':>8} {'best_d2':>8} {'best_d3':>8} {'MC':>6} "
+                  f"{'E|state':>8} {'E|rates':>8} {'ctx':>6}")
+            for _, r in agg.iterrows():
+                print(f"{r.nmda_frac:>6g} {r.d1:>8.3f} {r.d2:>8.3f} {r.d3:>8.3f} {r.MC:>6.2f} "
+                      f"{r.E_state:>8.3f} {r.E_rates:>8.3f} {r.ctx:>6.3f}")
+            ctrl = agg[agg.nmda_frac == 0.0]
+            if len(ctrl) and ctrl.d1.iloc[0] < 0.95:
+                print(f"  !! CONTROL BROKEN: nmda_frac=0 gives d1={ctrl.d1.iloc[0]:.3f}, not ~1.0.")
+                print(f"     The new current path has a bug -- fix before reading anything else.")
+            else:
+                print(f"  control OK: nmda_frac=0 reproduces the memoryless result (d1~1.0).")
+            best = agg[agg.nmda_frac > 0]
+            moved = best.d2.min() < 0.9 if len(best) else False
+            print(f"  slow current moves memory past d1: "
+                  f"{'YES -- the capability is real, selection has a foothold' if moved else 'NO'}")
+            if moved:
+                worst_cost = (best.loc[best.d2.idxmin(), "E_state"]
+                              - ctrl.E_state.iloc[0]) if len(ctrl) else float('nan')
+                print(f"     encoding cost at that cell: E|state worsens by {worst_cost:+.3f}")
+                print(f"     (D030's opposition -- weigh memory gained vs level-1 lost)")
+
+        # ------------------------------------------------------ RUNG 1: the fork (only if swept)
         if len(positions) > 1:
             tr = df[df.readout_pos == "trailing"]
             le = df[df.readout_pos == "leading"]
