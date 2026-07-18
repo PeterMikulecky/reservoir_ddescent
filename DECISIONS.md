@@ -2016,7 +2016,7 @@ network, and Gate A (does *evolution* fix it?) is now **unanswerable until Gate 
 |---|---|---|
 | **Stop evaluating the test set for every individual, every generation.** `evaluate()` computes `err_te` for all 30; `_fitness()` reads **only `train_err`**; only `order[0]`'s test error reaches the verdict. **Half the timesteps are computed and discarded.** | **exact 2×** | none for Gate B0 |
 | **Batch the population into ONE network.** pop×N = 30×50 = **1,500 neurons**, block-diagonal W, one `run()` per generation. The 113 µs is paid **once**, not 30×; 1,500-float arrays are still overhead-dominated. Drive = `np.tile(drive, (1, pop_size))`; `xi` is per-neuron so each block keeps its own noise. | **~15–25×** | **none** |
-| **Fixed topology ⇒ build once per run.** Allocate all N(N−1) synapses per block; set `w=0` for absent ones. Per generation: `restore("init")` → `S.w[:] = ...` → `run()`. No rebuild, ever. | enables the above | **none** — zero-weight synapses are dynamically inert, and `Genome.n_params()` counts `mag != 0`, so **P = \|W\| is untouched** |
+| **Pre-allocated synapses, built once per run** (NOT a frozen wiring diagram — evolution still adds/removes/reweights edges via the genome; "fixed" refers only to the Brian2 object). Allocate all N(N−1) synapse slots per block; **an absent edge is a slot at weight 0, which is dynamically inert**, so effective topology still varies per genome. Set `w=0` for absent ones. Per generation: `restore("init")` → `S.w[:] = ...` → `run()`. No rebuild, ever. | enables the above | **none** — zero-weight synapses are dynamically inert, and `Genome.n_params()` counts `mag != 0`, so **P = \|W\| is untouched** |
 | **Delete the pool.** Measured **3.4 s serial → 1.7 s on 6 workers = 2.0×, i.e. 33% efficiency.** Batching removes the pool, spawn, pickling, and the `pool.map` barrier; D064's `_init_worker` becomes moot. | ~1.5× | none |
 | **Hoist the StateMonitor** out of `behave()` — it is `add`ed and `remove`d on **every call**, forcing `before_run` re-preparation each time — and record the **output slice only**: `state`/`state_var` are computed in `evaluate()` and then **popped and discarded in `_eval_payload`**. | ~20% | none |
 
@@ -2485,7 +2485,7 @@ longer premature — it is the blocker.**
 
 **NEXT (the parked list, now live):** build D068's fixes in order — **(1)** drop the discarded
 test-set eval (exact 2×); **(2)** batch the population into one block-diagonal network (~15–25×);
-**(3)** fixed topology / build once; **(4)** delete the pool; **(5)** hoist the StateMonitor — plus
+**(3)** pre-allocated synapses built once (absent = weight 0; NOT a frozen wiring diagram — evolution still reweights and adds/removes edges); **(4)** delete the pool; **(5)** hoist the StateMonitor — plus
 **D066 fixes 2–3** (per-gen ETA + pool announcement, never implemented, D071) and `run.start_log()`
 in `run_GateB0_interpolation.py`. **MEASURE the per-generation time before believing any projection**
 (D068: four consecutive runtime estimates were wrong). Then: **Gate A** (does evolution route E to

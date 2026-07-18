@@ -137,7 +137,7 @@ structure rather than more of the same.
    +linear readout. **Wherever the phenomenon first appears names its precondition.**
 
 ## The performance work (D068) — PARKED, and this is what un-parks it
-Batching · common random numbers · drop the discarded test eval · fixed topology / build once ·
+Batching · common random numbers · drop the discarded test eval · pre-allocated synapses (absent = weight 0), built once ·
 hoist the StateMonitor. **~17×, all of it still on paper.**
 **The parking was right for a reason we could not have known:** the diagnostics cost 4 minutes and
 showed Gate B0 could not have passed at any speed — building the 17× first would have made an
