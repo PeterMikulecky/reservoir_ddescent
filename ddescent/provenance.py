@@ -133,6 +133,32 @@ def runhash(run_id: str) -> str:
     return hashlib.sha1(run_id.encode()).hexdigest()[:8]
 
 
+# ------------------------------------------------------------------ stdout mirror
+class _Tee:
+    """Write to several streams at once. Used by `Run.start_log` (D072)."""
+
+    def __init__(self, *streams):
+        self._s = streams
+
+    def write(self, text):
+        for st in self._s:
+            try:
+                st.write(text); st.flush()
+            except Exception:
+                pass                      # a broken log must never break a run
+        return len(text)
+
+    def flush(self):
+        for st in self._s:
+            try:
+                st.flush()
+            except Exception:
+                pass
+
+    def isatty(self):
+        return False
+
+
 # ------------------------------------------------------------------ Run object
 @dataclass
 class Run:
@@ -157,6 +183,46 @@ class Run:
         p.mkdir(exist_ok=True)
         return p
 
+    # ---------------------------------------------------------------- run.log (D072)
+    def start_log(self):
+        """Mirror stdout/stderr into `logs/run.log`. Closed automatically by `finalize()`.
+
+        **Why this exists.** NAMING.md sec.3 has specified `logs/run.log` since the scaffold,
+        and `Run.logs` above dutifully CREATES the directory — but **nothing ever wrote to
+        it.** Every table, verdict and interpretation a script printed was lost the moment
+        the terminal closed; only `data/*.parquet` survived. A run's NUMBERS were reproducible
+        and its READING of them was not — which is exactly backwards, since the numbers are
+        the recomputable part.
+
+        **D071's pattern, third instance** (after D066's progress reporting, and NAMING.md's
+        own stage vocabulary): a document promising what the code never implemented. Three
+        artifacts — log, docs, code — and no pass ever compares them.
+
+        Hooked to the lifecycle rather than a `with` block so no script body needs
+        re-indenting, and so it closes on BOTH the complete and failed paths.
+        Never breaks a run: if the file cannot be opened (OneDrive/AV lock) we carry on
+        unlogged — the same principle as `_append_notebook`'s bare except.
+        """
+        try:
+            # line-buffered so a long run's log is tail-able live (D066's real intent)
+            f = open(self.logs / "run.log", "w", encoding="utf-8", buffering=1)
+        except Exception:
+            return None
+        self._log_fh = f
+        self._saved_streams = (sys.stdout, sys.stderr)
+        sys.stdout, sys.stderr = _Tee(sys.stdout, f), _Tee(sys.stderr, f)
+        return self.logs / "run.log"
+
+    def _stop_log(self):
+        if getattr(self, "_log_fh", None) is None:
+            return
+        sys.stdout, sys.stderr = self._saved_streams
+        try:
+            self._log_fh.close()
+        except Exception:
+            pass
+        self._log_fh = None
+
     def figure_path(self, slug: str, ext: str = "png") -> Path:
         """Figure path with a runhash prefix so it stays traceable if copied out."""
         return self.figures / f"{self.runhash}_{slug}.{ext}"
@@ -175,6 +241,7 @@ class Run:
         # The interpretation line is left blank on purpose, for a human to fill in.
         if notebook and self.project_root and self.manifest.get("type") != "smoke":
             _append_notebook(self.project_root, self.manifest, notebook_note)
+        self._stop_log()      # D072: closes on the complete AND failed paths
 
 
 # ------------------------------------------------------------------ notebook

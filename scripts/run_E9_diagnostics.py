@@ -230,6 +230,14 @@ def main():
                     tag="diagnostics", seeds=[args.seed],
                     notes="E9 diagnostics: encode/route, PR channels, memory, carryover, context")
     print(f"run: {run.run_id}")
+    # D072: mirror everything below into logs/run.log. NAMING.md sec.3 has specified
+    # that file since the scaffold and nothing ever wrote to it -- every verdict these
+    # scripts print was lost on terminal close. finalize() closes it, on both paths.
+    run.start_log()
+    # D072: mirror everything below into logs/run.log. NAMING.md sec.3 has specified
+    # that file since the scaffold; nothing ever wrote to it, so every verdict this
+    # script prints has been lost on terminal close while data/*.parquet survived.
+    run.start_log()
     try:
         task = T.hierarchical_environments(**task_kw)
         hr = task.headroom()                     # D057: required pre-run check
