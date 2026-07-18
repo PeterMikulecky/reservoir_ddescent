@@ -261,9 +261,26 @@ class EvoNet:
                 pre_exc = self.genome.signs[pre] > 0
             else:
                 pre_exc = w > 0
+            # D075: split CHARGE, not peak weight. A spike deposits w as a jump into I, which
+            # then decays with tau; the integrated current it delivers downstream is w*tau. So a
+            # 100 ms channel delivers tau_slow/tau_fast = 20x the charge of a 5 ms channel PER
+            # UNIT WEIGHT. The naive split `w_slow = f*w` therefore multiplied the slow fraction's
+            # DRIVE by 20 -- at nmda_frac=0.8 the network received 16.2x its balanced excitatory
+            # charge and seized (delta-collapse; the Edge-of-Stability temporal-balance violation
+            # D074 quoted and I built past). The fix conserves total charge across all nmda_frac:
+            #   want  w_slow*tau_slow = f * (w*tau_fast)   [slow carries fraction f of the charge]
+            #   =>    w_slow = f*w * tau_fast/tau_slow ;   w_fast = (1-f)*w
+            #   total = (1-f)*w*tau_fast + f*w*tau_fast = w*tau_fast, CONSTANT in f.
+            # Fast inhibition (inh_gain, D058) then opposes the SAME total excitation it always
+            # did, at the same speed -- the fast-inhibition/slow-excitation configuration the
+            # working-memory literature identifies as the stabilizing one (negative-derivative
+            # feedback). No inhibition retuning, no slow inhibitory channel, no new gene.
             f = c.nmda_frac
-            S.w_slow = np.where(pre_exc, f * w, 0.0)
-            S.w_fast = w - np.where(pre_exc, f * w, 0.0)   # exc: (1-f)w ; inh: full w in fast
+            charge_scale = c.tau_syn / c.tau_slow          # tau_fast/tau_slow
+            w_slow = np.where(pre_exc, f * w * charge_scale, 0.0)
+            w_fast = np.where(pre_exc, (1.0 - f) * w, w)   # inh: full w in fast (pre_exc False)
+            S.w_slow = w_slow
+            S.w_fast = w_fast
         self.G, self.S = G, S
         self.net = b2.Network(G, S)
         self.net.store("init")
