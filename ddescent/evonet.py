@@ -52,8 +52,30 @@ class EvoNetConfig:
     noise_sigma: float = 0.0
     present_ms: float = 150.0
     readout_window_ms: float = 60.0
+    readout_pos: str = "trailing"   # 'trailing' | 'leading'  -- see below
     sample_ms: float = 5.0
     seed: int | None = None
+
+    # ---- readout_pos: WHERE in the presentation we look. A DIAGNOSTIC KNOB (D072). --------
+    # Every timing parameter above is IDENTICAL to `ReservoirConfig` -- inherited across D032
+    # untouched, together with their rationale, which reservoir.py states outright:
+    #   "With present_ms >> tau_r, cross-pattern carryover fades, so order effects are small."
+    # **Carryover-fading was the DESIGN GOAL.** D048 then put context in the statistics across
+    # context_dwell=10 stimuli and made carryover THE MECHANISM. Nobody revisited the engine.
+    #
+    # 'trailing' (default, = every result so far): read the LAST readout_window_ms of the
+    #     presentation. 90 ms of settling elapses first = 4.5 tau_m, so any trace of the
+    #     previous stimulus has decayed to ~1% BEFORE the readout opens.
+    # 'leading' : read the FIRST readout_window_ms. Averaging exp(-t/tau_m) over t in [0,60]
+    #     retains ~32% of the previous stimulus -- and `r` (tau_r=30) carries pre-switch spikes
+    #     across the boundary, so in practice more.
+    #
+    # **Why this is a diagnostic and not a fix.** E9 diagnostics measured mem_d1 = 1.000 in all
+    # 8 cells -- ZERO information about the previous stimulus. That has two readings:
+    # the memory is ABSENT, or the memory is PRESENT AND WE ARE NOT LOOKING AT IT. This knob
+    # separates them. It CANNOT reach context_dwell=10: exp(-1500/30) = 0 at any window
+    # position, so it buys d1-d2, never d10. Only heterogeneous tau_m spans 1500 ms.
+    # **Default is unchanged, so no existing result moves.**
 
     def n_params(self, density: float) -> int:
         """P = |W|. Frank's x-axis. Compare against n_env * d (the constraint count)."""
@@ -223,6 +245,9 @@ class EvoNet:
         """Run the network over a batch of environments; return the behavior.
 
         E : (n_env, n_in) — each row drives the input neurons.
+        The window is `cfg.readout_window_ms` long, placed by `cfg.readout_pos` ('trailing'
+        = the inherited default, after settling; 'leading' = at onset, where carryover lives).
+
         Returns dict with:
           'rates'  : (n_env, d)  output-neuron rates  -> what FITNESS reads
           'state'  : (n_env, N)  full internal state (window mean)
@@ -245,10 +270,21 @@ class EvoNet:
 
         state = np.empty((n, c.N)); state_var = np.empty((n, c.N))
         for k in range(n):
-            end = (k + 1) * c.present_ms
-            m = (t > end - c.readout_window_ms) & (t <= end)
+            t0 = k * c.present_ms
+            t1 = (k + 1) * c.present_ms
+            # D072: window POSITION within the presentation. 'trailing' = the inherited
+            # behaviour (read after ~4.5 tau_m of settling, when the previous stimulus is
+            # gone); 'leading' = read the onset, where the carryover still is.
+            if c.readout_pos == "leading":
+                lo, hi = t0, t0 + c.readout_window_ms
+            elif c.readout_pos == "trailing":
+                lo, hi = t1 - c.readout_window_ms, t1
+            else:
+                raise ValueError(f"readout_pos must be 'trailing' or 'leading', "
+                                 f"got {c.readout_pos!r}")
+            m = (t > lo) & (t <= hi)
             if not m.any():
-                m = (t > end - c.present_ms) & (t <= end)
+                m = (t > t0) & (t <= t1)
             win = r[:, m]
             state[k] = win.mean(axis=1)
             state_var[k] = win.var(axis=1)

@@ -153,16 +153,16 @@ def carryover(net, E, state_ref, rng) -> tuple:
     return d_order, d_noise, d_order / max(d_noise, 1e-12)
 
 
-def one_cell(gain: float, sigma: float, task, args, rng) -> dict:
+def one_cell(gain: float, sigma: float, pos: str, task, args, rng) -> dict:
     net_cfg = EvoNetConfig(N=args.N, n_in=args.K, d=args.d, bias=args.bias,
-                           input_gain=gain, noise_sigma=sigma)
+                           input_gain=gain, noise_sigma=sigma, readout_pos=pos)
     g = random_genome(net_cfg, args.density, w0=args.w0, seed=args.seed)
     net = EvoNet(g, net_cfg)
 
     Btr, Bte = net.behave(task.E_train), net.behave(task.E_test)
     Str, Ste = Btr["state"], Bte["state"]
 
-    row = dict(input_gain=gain, noise_sigma=sigma, n_params=g.n_params())
+    row = dict(input_gain=gain, noise_sigma=sigma, readout_pos=pos, n_params=g.n_params())
 
     # --- 1. does the state encode E? and does it REACH the output neurons? ----------
     row["E_from_state"] = decode_nmse(Str, task.E_train, Ste, task.E_test)
@@ -203,6 +203,9 @@ def main():
     ap.add_argument("--w0", type=float, default=0.6)        # Gate C's operating point
     ap.add_argument("--bias", type=float, default=0.6)      # Gate C's operating point
     ap.add_argument("--max-delay", type=int, default=6)
+    ap.add_argument("--readout-pos", choices=("both", "trailing", "leading"), default="both",
+                    help="rung 1: 'trailing' is the inherited default (read after ~4.5 tau_m of "
+                         "settling); 'leading' reads the onset, where carryover lives.")
     ap.add_argument("--quick", action="store_true")
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--project-root", default=".")
@@ -211,12 +214,18 @@ def main():
 
     gains = (1.0, 10.0) if args.quick else (1.0, 3.0, 10.0, 30.0)
     sigmas = (1.0,) if args.quick else (0.2, 1.0)
+    # RUNG 1 (D072): readout POSITION is now an axis. mem_d1 = 1.000 in all 8 trailing cells
+    # has two readings -- memory absent, or memory unread. Running both positions on the SAME
+    # grid separates them in one pass. 'trailing' is the inherited default; every number in the
+    # first diagnostics run is a trailing number.
+    positions = ("trailing", "leading") if args.readout_pos == "both" else (args.readout_pos,)
 
     task_kw = dict(K=args.K, d=args.d, r1=3, n_contexts=4, n_train=args.n_env,
                    n_test=args.n_env, context_dwell=10, seed=args.seed)
 
     run = P.new_run("E9", "exp", project_root=args.project_root, runs_root=args.runs_root,
-                    config=dict(task=task_kw, grid=dict(gains=gains, sigmas=sigmas),
+                    config=dict(task=task_kw,
+                                grid=dict(gains=gains, sigmas=sigmas, positions=positions),
                                 net=vars(args)),
                     tag="diagnostics", seeds=[args.seed],
                     notes="E9 diagnostics: encode/route, PR channels, memory, carryover, context")
@@ -231,7 +240,7 @@ def main():
               f"(D048: contexts differ in COVARIANCE only; this must be ~0)")
         print(f"      context timescale = {10 * 150} ms vs tau_m = 20 ms  -> 75x\n")
 
-        cells = list(itertools.product(gains, sigmas))
+        cells = list(itertools.product(gains, sigmas, positions))
         # D068's rule: NAME the quantity cost scales with. It is TIMESTEPS.
         # 113 us/timestep is D065's 3.4 s/eval divided by its 30,000 timesteps, serial.
         n_steps = len(cells) * 4 * args.n_env * 150 / 0.5     # 4 behave() calls per cell
@@ -241,11 +250,11 @@ def main():
 
         rng = np.random.default_rng(args.seed)
         rows = []
-        for i, (gain, sigma) in enumerate(cells):
+        for i, (gain, sigma, pos) in enumerate(cells):
             t0 = time.time()
-            rows.append(one_cell(gain, sigma, task, args, rng))
+            rows.append(one_cell(gain, sigma, pos, task, args, rng))
             r = rows[-1]
-            print(f"  [{i+1}/{len(cells)}] gain={gain:<5g} sigma={sigma:<4g} "
+            print(f"  [{i+1}/{len(cells)}] gain={gain:<5g} sigma={sigma:<4g} {pos:<9} "
                   f"E|state={r['E_from_state']:.3f} E|rates={r['E_from_rates']:.3f} "
                   f"mem_d1={r['mem_d1']:.3f} order/noise={r['order_over_noise']:.2f} "
                   f"ctx={r['context_acc']:.2f}  ({time.time()-t0:.0f}s)", flush=True)
@@ -258,11 +267,11 @@ def main():
         print(f"\n=== 1. DOES THE STATE ENCODE E, AND DOES IT REACH FITNESS? ===")
         print(f"    (NMSE reconstructing E. 1.0 = no information. This is D030's ACTUAL gate,")
         print(f"     which has never been run: skill() takes the retired TaskData API — D069.)")
-        print(f"{'gain':>6} {'sigma':>6} {'E|state':>9} {'E|rates':>9}  routed?")
+        print(f"{'gain':>6} {'sigma':>6} {'pos':>9} {'E|state':>9} {'E|rates':>9}  routed?")
         for _, r in df.iterrows():
             routed = "YES" if r.E_from_rates < 0.9 else ("state only" if r.E_from_state < 0.9 else "-")
-            print(f"{r.input_gain:>6g} {r.noise_sigma:>6g} {r.E_from_state:>9.3f} "
-                  f"{r.E_from_rates:>9.3f}  {routed}")
+            print(f"{r.input_gain:>6g} {r.noise_sigma:>6g} {r.readout_pos:>9} "
+                  f"{r.E_from_state:>9.3f} {r.E_from_rates:>9.3f}  {routed}")
         enc = df.E_from_state.min()
         print(f"  best E|state = {enc:.3f} -> encoder "
               f"{'WORKS' if enc < 0.5 else 'DEGRADED' if enc < 0.9 else 'CARRIES NOTHING'}")
@@ -273,10 +282,21 @@ def main():
         print(f"\n=== 2. DOES FRAMING sec.3 TRANSFER? (PR_mean compresses, PR_var expands) ===")
         print(f"    reservoir era, D028/D033 at K=20: PR_mean~7.4 (compress), PR_var~27 (expand).")
         print(f"    Here K={args.K}, input PR = {df.pr_input.iloc[0]:.2f}.")
-        print(f"{'gain':>6} {'sigma':>6} {'PR_mean':>9} {'PR_var':>9}  verdict")
+        print(f"{'gain':>6} {'sigma':>6} {'pos':>9} {'PR_in':>6} {'PR_mean':>9} {'PR_var':>9}")
         for _, r in df.iterrows():
-            v = "var EXPANDS" if r.pr_var > r.pr_mean else "no dissociation"
-            print(f"{r.input_gain:>6g} {r.noise_sigma:>6g} {r.pr_mean:>9.2f} {r.pr_var:>9.2f}  {v}")
+            print(f"{r.input_gain:>6g} {r.noise_sigma:>6g} {r.readout_pos:>9} "
+                  f"{r.pr_input:>6.2f} {r.pr_mean:>9.2f} {r.pr_var:>9.2f}")
+        # D072: "PR_var > PR_mean" is NOT the sec.3 claim and my first verdict over-claimed it.
+        # sec.3's striking half is that the MEAN channel COMPRESSES (7.4 from K=20 inputs).
+        # Run 1: PR_input 5.86 -> PR_mean 7.00 = mild EXPANSION. Compression did NOT transfer.
+        # And PR_var tracks sigma (12-14 at 0.2, 23-34 at 1.0) -- much of "var expands" is the
+        # dimensionality of INJECTED NOISE. D028's real claim is that PR_var PREDICTS
+        # generalization while PR_mean anti-predicts it. That needs generalization measured
+        # across conditions and is NOT tested here. Reported, not adjudicated.
+        print(f"  PR_mean vs PR_input: "
+              f"{'COMPRESSES (sec.3 transfers)' if df.pr_mean.min() < df.pr_input.iloc[0] else 'EXPANDS -- sec.3 compression does NOT transfer'}")
+        print(f"  NOTE: PR_var tracks noise_sigma, so 'var expands' is partly the dimensionality")
+        print(f"        of injected noise. sec.3 rests on PREDICTION, which this does not test.")
         if (df.pr_var > df.pr_mean).mean() < 0.5:
             print("  !! The channel dissociation does NOT transfer to evonet. FRAMING sec.3's")
             print("     ONLY substrate-specific justification is a retired-model result.")
@@ -285,10 +305,10 @@ def main():
         print(f"    present_ms=150, tau_m=20 (tau_r=30 is the READOUT FILTER, not state).")
         print(f"    Context needs memory over context_dwell=10 presentations = 1500 ms.")
         dcols = [c for c in df.columns if c.startswith("mem_d")]
-        print(f"{'gain':>6} {'sigma':>6} " + " ".join(f"{c:>7}" for c in dcols) +
+        print(f"{'gain':>6} {'sigma':>6} {'pos':>9} " + " ".join(f"{c:>7}" for c in dcols) +
               f" {'MC':>6} {'ord/noise':>10}")
-        for _, r in df.iterrows():
-            print(f"{r.input_gain:>6g} {r.noise_sigma:>6g} " +
+        for _, r in df.sort_values(["readout_pos", "input_gain", "noise_sigma"]).iterrows():
+            print(f"{r.input_gain:>6g} {r.noise_sigma:>6g} {r.readout_pos:>9} " +
                   " ".join(f"{r[c]:>7.3f}" for c in dcols) +
                   f" {r.memory_capacity:>6.2f} {r.order_over_noise:>10.2f}")
         mc = df.memory_capacity.max()
@@ -304,13 +324,45 @@ def main():
             print("     -> D067 was NEVER about the evaluation budget.")
 
         print(f"\n=== 5. IS THE MEMORY USEFUL? (context decode; BRIDGE L5, never run) ===")
-        print(f"{'gain':>6} {'sigma':>6} {'ctx_acc':>9} {'chance':>7}")
+        print(f"{'gain':>6} {'sigma':>6} {'pos':>9} {'ctx_acc':>9} {'chance':>7}")
         for _, r in df.iterrows():
-            print(f"{r.input_gain:>6g} {r.noise_sigma:>6g} {r.context_acc:>9.3f} "
-                  f"{r.context_chance:>7.2f}")
+            print(f"{r.input_gain:>6g} {r.noise_sigma:>6g} {r.readout_pos:>9} "
+                  f"{r.context_acc:>9.3f} {r.context_chance:>7.2f}")
         ca, ch = df.context_acc.max(), df.context_chance.iloc[0]
         print(f"  best = {ca:.3f} vs chance {ch:.2f} -> "
               f"{'context IS recoverable' if ca > ch + 0.15 else 'AT CHANCE'}")
+
+        # ------------------------------------------------------ RUNG 1: the fork
+        if len(positions) > 1:
+            tr = df[df.readout_pos == "trailing"]
+            le = df[df.readout_pos == "leading"]
+            print(f"\n=== RUNG 1: IS THE MEMORY ABSENT, OR UNREAD? ===")
+            print(f"    trailing reads after ~4.5 tau_m of settling; leading reads the onset.")
+            print(f"    Arithmetic: averaging exp(-t/tau_m) over a 60 ms leading window retains")
+            print(f"    ~32% of the previous stimulus. If mem_d1 does not move, it is not there.")
+            print(f"{'':>10} {'best mem_d1':>12} {'best MC':>9} {'max ord/noise':>14} {'best E|state':>13}")
+            for nm, sub in (("trailing", tr), ("leading", le)):
+                print(f"{nm:>10} {sub.mem_d1.min():>12.3f} {sub.memory_capacity.max():>9.2f} "
+                      f"{sub.order_over_noise.max():>14.2f} {sub.E_from_state.min():>13.3f}")
+            moved = (tr.mem_d1.min() - le.mem_d1.min())
+            print(f"\n  mem_d1 improvement, trailing -> leading: {moved:+.3f}")
+            if le.mem_d1.min() < 0.95:
+                print("  -> THE MEMORY IS THERE AND WE WERE NOT LOOKING AT IT.")
+                print("     The inherited trailing window (reservoir.py: 'present_ms >> tau_r,")
+                print("     cross-pattern carryover fades') was doing exactly what it was")
+                print("     designed to do. This is a MEASUREMENT fix, not a design fix.")
+                print("     BUT: it buys d1-d2, NEVER d10. exp(-1500/30) = 0 at any position.")
+                print("     Spanning context_dwell=10 still needs heterogeneous tau_m.")
+            else:
+                print("  -> THE MEMORY IS GENUINELY ABSENT. Window position is not the problem.")
+                print("     A random W at tau_m=20 builds no collective mode outlasting 150 ms.")
+                print("     -> the fix is a DESIGN change: fixed-heterogeneous tau_m, DRAWN not")
+                print("        evolved (D038: a capability, not a route). D059 tiers tau_m as an")
+                print("        'alternative route that could BYPASS regulation' -- but a slow")
+                print("        neuron gives a running AVERAGE, i.e. DRIVE, and tasks.py says an")
+                print("        additive signal 'can only SHIFT the output, never change the E->Y")
+                print("        mapping'. So tau_m is not regulation's ALTERNATIVE, it is its")
+                print("        PREREQUISITE -- and Arm 1 as specified has ZERO routes, not one.")
 
         print(f"\n=== WHAT THIS DECIDES ===")
         print(f"  memoryless floor {base:.3f} == the raw-input baseline BY IDENTITY (D069):")
@@ -323,10 +375,13 @@ def main():
             print("     fix is fixed-heterogeneous tau_m (drawn, not evolved -- a CAPABILITY,")
             print("     not a route: it gives step 1 without handing evolution a shortcut).")
 
-        note = (f"E|state={enc:.3f} E|rates={df.E_from_rates.min():.3f}; "
-                f"PR_var>PR_mean in {(df.pr_var > df.pr_mean).sum()}/{len(df)}; "
-                f"MC={mc:.2f}; order/noise={df.order_over_noise.max():.2f}; "
-                f"ctx={ca:.2f} vs chance {ch:.2f}")
+        note = (f"rung1: best mem_d1 trailing="
+                f"{df[df.readout_pos=='trailing'].mem_d1.min() if 'trailing' in set(df.readout_pos) else float('nan'):.3f} "
+                f"leading="
+                f"{df[df.readout_pos=='leading'].mem_d1.min() if 'leading' in set(df.readout_pos) else float('nan'):.3f}; "
+                f"E|state={enc:.3f} E|rates={df.E_from_rates.min():.3f}; "
+                f"PR_in={df.pr_input.iloc[0]:.2f} PR_mean_min={df.pr_mean.min():.2f}; "
+                f"MC={mc:.2f}; ord/noise={df.order_over_noise.max():.2f}; ctx={ca:.2f}/{ch:.2f}")
         run.finalize(status="complete", n_conditions=len(df), notebook_note=note)
     except Exception as e:
         run.finalize(status="failed", error=str(e)); raise
