@@ -2677,3 +2677,118 @@ appear on the P axis? *The apparatus is finally fast enough to ask.*
 flat per-generation cost. It is the honest decision input; the *ground-truth* full-arm number
 arrives free with the first real Gate A/B run, and if it drifts materially from 2 h we revisit. The
 27× and the equivalence are measured facts; the full-depth hours are a measured-rate projection.
+
+### D080 — Gate A, PRE-REGISTERED before running: does selection route E to the output neurons? Metric, arms, and pass/fail fixed in advance.
+**2026-07-18 · Accepted (specification)** · **pre-registration** — written and committed BEFORE the run, so the result cannot be reverse-justified (the D063 discipline: D061 claimed a first descent that wasn't there because the reading came after the plot)
+
+**WHAT GATE A IS NOW (its meaning shifted across the arc — pinning it).**
+- **D030 original:** "does evolution beat the raw-input baseline?"
+- **D069 dissolved that:** the raw-input baseline ≡ the memoryless floor BY IDENTITY, so "beat the
+  baseline" ≡ "infer context" ≡ the WHOLE experiment (H-C), not a gate.
+- **D072 re-sharpened it into ROUTING.** The diagnostics measured, on a RANDOM network: **E is in
+  the state (`E|state`≈0.22, 1.0=blind) but barely reaches the output neurons (`E|rates`≈0.73).**
+  Fitness reads only the last `d` of `N` neurons (`out_slice`), so a network can encode E richly and
+  still be graded near-blind. **Gate A asks whether SELECTION fixes the routing** — whether an
+  evolved W carries E's information into the output slice, which a random W does not.
+
+**WHY IT IS WELL-POSED (the task rewards exactly this).** The demand is `Y = tanh(E @ W_ctx[c])`
+(tasks.py L351) — the target is a function of E, so error CANNOT fall unless E reaches the outputs.
+Routing is not a side-metric; it is the necessary condition for any training-error progress at all.
+*This is also why Gate A is separable from the memory problem (D072/D076): routing E to the outputs
+is a LEVEL-1 requirement — it needs no memory. Gate A can pass (or fail) independently of whether
+the network can later infer context.*
+
+**THE METRIC (fixed now).** Per genome, `E_from_rates` = NMSE reconstructing E (the K-dim stimulus)
+from the `d` output-neuron rates via ridge (the diagnostics' `decode_nmse`, standardize=True,
+best-alpha over the grid). 1.0 = outputs carry no information about E; lower = E is routed.
+- **Primary:** does the CHAMPION's `E_from_rates` **fall over generations**, from the random-init
+  baseline toward `E_from_state` (≈0.22 — the ceiling set by what the state encodes at all)?
+- **Secondary (the D030 spirit, kept honest):** does the champion's **train NMSE** fall below the
+  memoryless floor (0.698 at this task config)? *Note (D069): beating that floor requires CONTEXT,
+  which is level-2 and blocked (D076) — so we do NOT expect the secondary to pass yet. It is recorded
+  as the level-2 tell, not Gate A's criterion.* **Gate A is the ROUTING metric, primary only.**
+
+**PASS / FAIL, DECIDED IN ADVANCE:**
+- **PASS:** champion `E_from_rates` falls by **≥ 0.15 absolute** from gen 0 to final, AND ends
+  **below 0.85** (a random net sits ~0.90–1.00; `E|state`≈0.22 is the ceiling). I.e. selection
+  demonstrably moves E into the output slice.
+- **AMBIGUOUS:** falls 0.05–0.15, or ends 0.85–0.90 — some routing, weak. Report; do not over-read.
+- **FAIL:** `E_from_rates` does not fall (< 0.05), OR train error is flat. Then routing is NOT what
+  selection builds first, and we investigate BEFORE Gate B (which presupposes the network can express
+  E at its outputs at all).
+*The 0.15 threshold is a judgement call registered now so it cannot be tuned to the result. It is
+deliberately loose — Gate A asks "does routing happen AT ALL under selection," a direction question,
+not an effect-size one.*
+
+**ARMS.** Gate A is the single **fixed-density** operating point, not the full sweep — it is a
+precondition check, not the map. Config: **N=50, pop=30, d=3, n_env=50, density=0.5, present_ms=50,
+nmda_frac=0.5, noise=1.0, gain=10** (the D079 measured arm; gain=10 because D069 showed gain=1 is
+the worst encoding cell). Depth: **full ~4,900 gens (~2.2 h, D079).** Selection=replicator (Occam
+factor live, D060). One seed first; replicate if it passes.
+
+**INSTRUMENTATION.** `E_from_rates` and `E_from_state` must be logged per generation (champion) — a
+NEW measurement in `evolve.py`'s history, computed from the champion's `behave` output (state +
+rates), reusing the diagnostics' `decode_nmse`. This is the ONE code addition Gate A needs; without
+it the run produces train/test but not the routing metric the gate reads.
+
+**WHAT A PASS BUYS / A FAIL COSTS.**
+- **Pass** → the network can be *graded* on E, so Gate B (the peak on the P axis) is meaningful:
+  there is a signal for selection to shape. Proceed to Gate B.
+- **Fail** → selection does not even route E to the readable neurons, so any Gate B null would be
+  uninterpretable (is there no peak, or can the network not express the target?). Fix routing first
+  — candidate causes: `out_slice` too small (d=3 of N=50), output neurons not reachable from input
+  neurons under sparse W, or replicator selection too weak. **Registered so a fail sends us to a
+  named next step, not to rationalisation.**
+
+### D081 — Gate A pre-registration CORRECTED before running: the 0.73 baseline was a grid-minimum artifact; the true single-config random baseline is E|rates≈0.99, E|state≈0.43. Thresholds re-set.
+**2026-07-18 · Accepted** · **amends D080's metric and thresholds BEFORE the run** — corrected after measuring the baseline, before seeing any result (legitimate pre-registration amendment; the alternative was launching a 2.2 h run against a miscalibrated gate)
+
+**THE ERROR IN D080.** Its pass threshold (E|rates ends < 0.85) was calibrated to a random-network
+baseline of "E|rates≈0.73, E|state≈0.22." **Those numbers were grid MINIMA** — the best cell across
+the E9 diagnostics' whole gain×σ×nmda sweep (`df.E_from_state.min()`), not the value at Gate A's
+single operating point. Building a threshold on a grid-min is calibrating against the luckiest cell.
+
+**TWO IMPLEMENTATION BUGS FOUND while checking the baseline (before the run — the point of
+pre-registration).**
+1. **Split-in-half decode.** My first `_routing_nmse` split ONE champion behave in half for
+   train/test. The halves are NOT independent — sequential context carryover (D048) bleeds across
+   the split — so the decode was contaminated. The diagnostics used SEPARATE behave runs on
+   separate E sets; fixed to match.
+2. **Under-determined decode.** At Gate A's n_env=50, a half-split gives ~25 samples to fit 50
+   state dims — fitting noise. Fixed with a **fixed 200-env probe** (over-determined, matches the
+   diagnostics), passed in via `cfg._routing_probe`.
+
+**THE TRUE BASELINE (measured, n=6 random genomes, EXACT Gate A config: N=50, d=3, density=0.5,
+gain=10, noise=1.0, nmda_frac=0.5, 200-env decode):**
+- **E|rates = 0.993 ± 0.003** — a random net's OUTPUT neurons carry ~nothing about E.
+- **E|state = 0.429 ± 0.036** — the full state carries meaningfully more.
+- **The routing gap (0.99 → 0.43) is real and clean.** Gate A asks whether selection closes it.
+
+**CORRECTED THRESHOLDS (re-registered now, before any result):**
+- **Metric:** champion **E|rates** (NMSE reconstructing E from output-neuron rates), on the fixed
+  200-env probe, logged at gen 0 · every `test_every` · final. E|state logged alongside as the
+  **ceiling** (routing cannot make outputs carry more than the state holds).
+- **PASS:** champion E|rates falls from ~0.99 (gen 0) to **below 0.80** by the final gen — i.e.
+  selection moves E's information into the output slice, closing ≥ ~⅓ of the 0.99→0.43 gap.
+  *Rationale: 0.80 is comfortably outside the baseline's 0.993±0.003, and represents real routing
+  without demanding the network reach the state's full 0.43 ceiling (which would also require the
+  routing to be near-lossless).*
+- **AMBIGUOUS:** ends 0.80–0.93 — some routing, weak; report, do not over-read.
+- **FAIL:** ends > 0.93 (indistinguishable from random), OR does not fall ≥ 0.05 from gen 0.
+- **Secondary (unchanged, D080):** champion train NMSE vs the memoryless floor (0.698). Beating it
+  needs CONTEXT (level-2, blocked, D076) — NOT expected; recorded as the level-2 tell, not Gate A.
+
+**COST NOTE (D081).** The routing decode is TWO extra behave runs (train+test probe) per logged
+generation. At 200 env that is ~2.6 s each — doing it EVERY generation would ~double the 2.2 h arm
+(+3.6 h). Hence sparse logging (endpoints + `test_every` cadence): the pass criterion reads the
+ENDPOINTS, so dense routing is unnecessary. The champion train/test trajectory stays dense (D077).
+
+**EVERYTHING ELSE IN D080 STANDS** — the routing framing, why the task rewards routing
+(Y=tanh(E@W_ctx) needs E at the outputs), level-1 separability from the memory problem, the arms,
+and the fail→named-next-step map (out_slice too small / outputs unreachable / selection too weak).
+
+**PROCESS NOTE.** This is the SECOND time a "baseline" number turned out to be an artifact demanding
+recalibration before a run (cf. D069: the raw-input baseline was an identity, not a gate). The
+pattern: **a number quoted from a prior run's SUMMARY (a min, a best cell, an aggregate) is not the
+number for THIS config — measure the baseline at the exact operating point before gating on it.**
+Adding to standing rules.

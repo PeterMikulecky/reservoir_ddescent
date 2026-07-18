@@ -63,6 +63,17 @@ class EvolveConfig:
     # test_every=0 disables the periodic population sweep (champion + final only).
     test_every: int = 20
 
+    # --- Gate A routing metric (D080) --------------------------------------------------
+    # When True, log the CHAMPION's E_from_rates and E_from_state per generation: NMSE
+    # reconstructing the stimulus E from the output-neuron rates (vs the full state). Gate A
+    # asks whether selection ROUTES E into the output slice (E|rates falls toward E|state).
+    # Off by default — it adds a decode per generation, wanted only for Gate A / routing runs.
+    track_routing: bool = False
+    # A fixed, well-posed probe {E_train, E_test} for the routing decode (D081: ~200 env so the
+    # decode is over-determined). Set by the Gate A script; None disables routing even if
+    # track_routing is on. Not a scientific parameter — a measurement probe.
+    _routing_probe: dict = None
+
     # --- ARM 1: selection scheme (D060) ------------------------------------------------
     selection: str = "replicator"       # 'replicator' (Occam factor lives) | 'tournament'
     tournament_k: int = 3
@@ -205,6 +216,25 @@ def _errs_from_behave(B_list, task, which):
     return np.array([_nmse_affine(Y, B["rates"]) for B in B_list])
 
 
+def _routing_nmse(genome, net_cfg, probe):
+    """Gate A metric (D080/D081). NMSE reconstructing the stimulus E from the OUTPUT-neuron rates
+    (E_from_rates) and from the full state (E_from_state), using SEPARATE train/test behave runs
+    on a FIXED probe set — exactly the diagnostics' method (best_nmse, standardized), so the
+    numbers are comparable to the measured random baseline (E|rates≈0.99, E|state≈0.43).
+
+    `probe` is a dict {E_train, E_test} of held-out stimuli, sized for a well-posed decode
+    (>= ~3x the state dim; D081 uses 200). Two behave runs on the champion — NOT free, so this is
+    logged sparsely (endpoints + cadence), never every generation (would ~double runtime, D081)."""
+    from .baseline import best_nmse
+    net = EvoNet(genome, net_cfg)
+    Btr = net.behave(probe["E_train"]); Bte = net.behave(probe["E_test"])
+    er = float(best_nmse(Btr["rates"], probe["E_train"], Bte["rates"], probe["E_test"],
+                         standardize=True)[0])
+    es = float(best_nmse(Btr["state"], probe["E_train"], Bte["state"], probe["E_test"],
+                         standardize=True)[0])
+    return er, es
+
+
 def run_evolution(task, net_cfg: EvoNetConfig, cfg: EvolveConfig,
                   eval_fn=None, n_workers: int = 1, verbose: bool = True,
                   batched: bool = True) -> tuple:
@@ -292,11 +322,24 @@ def run_evolution(task, net_cfg: EvoNetConfig, cfg: EvolveConfig,
                 best_test = evaluate(champ, task, net_cfg, with_test=True)["test_err"]
             mean_test = float("nan"); std_test = float("nan")
 
+          # ---- D080/D081: Gate A routing metric (champion; sparse — endpoints + cadence) --
+          # Two extra behave runs per logged gen, so NOT every gen (would ~double runtime, D081).
+          # Logged at gen 0, the final gen, and every test_every gens — the endpoints are what
+          # D080's pass criterion actually reads (fall from gen 0 to final).
+          want_routing = cfg.track_routing and (gen == 0 or is_final or
+                          (cfg.test_every > 0 and gen % cfg.test_every == 0))
+          if want_routing and cfg._routing_probe is not None:
+            e_rates, e_state = _routing_nmse(pop[order[0]], net_cfg, cfg._routing_probe)
+          else:
+            e_rates = e_state = float("nan")
+
           history.append(dict(
             gen=gen,
             # best individual — Gate B0's convention (can ANY genome interpolate?) + epoch-wise DD
             best_train=float(errs[order[0]]), best_test=best_test,
             best_params=int(nps[order[0]]),
+            # D080 Gate A: does selection route E into the output slice? (NaN unless track_routing)
+            e_from_rates=e_rates, e_from_state=e_state,
             # population mean — R&N's class-level Occam factor; test is NaN on non-sweep gens
             mean_train=float(errs.mean()), mean_test=mean_test, std_test=std_test,
             mean_params=float(nps.mean()), std_params=float(nps.std()),
