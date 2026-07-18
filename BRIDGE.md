@@ -76,8 +76,8 @@ their goals been hierarchical.
 | **W is the genome**, P = \|W\| swept by density | H-A needs P as the axis | ✅ `evonet.py` (D037) |
 | **Product-rule mutation** (`mag *= N(1,σ)`) | D043: sum-rule prevents waists 94–97% of the time | ❌ **blocker B1** |
 | **Dale's law, evolvable neuron sign** | regulation needs coherent inhibitory identity | ✅ D038 |
-| **Intrinsic timescales** (τ_m, τ_syn, τ_r) | Level 2(iii): integrate history to infer context | ✅ inherent to LIF |
-| **Reachable fluctuation-driven regime** | H-D: gain modulation requires it (D039) | ❌ **Gate C** (`noise_sigma = 0`, tonic bias) |
+| **Intrinsic timescales** for context inference | Level 2(iii): integrate history to infer context | ⚠️ **NOT inherent (D072–D076)** — a bare LIF net is memoryless at the presentation timescale; the slow channel (τ_slow≈100 ms, NMDA-like) had to be BUILT IN (D073/D074), charge-conserved (D075), and even then a *random* net reaches only d2–d3 — d10 needs an EVOLVED reverberatory loop (D076) |
+| **Reachable fluctuation-driven regime** | H-D: gain modulation requires it (D039) | ✅ **Gate C PASSED (D058)** via inh_gain + noise_sigma>0; ⚠️ but on CV_ISI ONLY, not skill — needs a v2 (D069) |
 | **No trained readout** | selection acts on the whole network (D032/D036) | ✅ |
 
 ## LEVEL 4 — WHY SPIKING: the answer the chain produces
@@ -121,6 +121,12 @@ That is a **within-substrate control**, not a cross-substrate comparison. It con
 spiking?" from a positioning argument into an experimental manipulation.
 
 ### 4c. Timescale separation is intrinsic, not imposed
+> ⚠️ **SUPERSEDED (D072–D076).** The premise below — that a LIF network's native τ_m/τ_syn/τ_r
+> supply the hierarchy for free — is FALSE. The diagnostics measured a memoryless substrate; the
+> slow timescale had to be built in as an NMDA-like synaptic current (τ_slow≈100 ms, D073/D074),
+> and even then it is a *capability* a random net barely expresses (d2–d3, D076), not a native
+> hierarchy. The paragraph is kept as the reasoning that led to the measurement; read it as
+> hypothesis, not fact.
 
 Level 2(iii) needs the system to separate a **fast** stimulus stream from a **slow** context drift.
 A LIF network *has* τ_m, τ_syn, τ_r, refractoriness, and (if we allow it) adaptation — a native

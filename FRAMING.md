@@ -130,6 +130,15 @@ independent knob on where |W| crosses the threshold — exactly what the P-vs-D 
 
 ## 3. Why a spiking substrate? — stated honestly (corrected 2026-07-16, D035)
 
+> ⚠️ **UNDER REVISION (D072, 2026-07-18).** The PR_mean/PR_var evidence in this section is
+> **reservoir-era** (D028/D033: N=1000, K=20, `anisotropic_regression`, trained readout — all four
+> retired by D032/§2c). Measured on `evonet` (D072): **PR_mean EXPANDS rather than compresses**
+> (PR_input 5.86 → PR_mean ~7), so the compression claim below **does not transfer**; and PR_var's
+> "expansion" partly tracks injected noise. §3's real claim — that PR_var *predicts* generalization
+> — remains **untested on evonet** and needs generalization measured across conditions, i.e. the
+> GA. **Do not cite §3's numbers as current.** The substrate justification is being rebuilt on
+> evonet, not assumed from the reservoir.
+
 **The P/D separation is NOT the reason.** An earlier draft of this document claimed the
 justification for spiking was that it pulls P and D apart by ~100:1. That is true but **not
 distinguishing**: *any* recurrent network with N units has ~N² adjustable weights and ~N state
