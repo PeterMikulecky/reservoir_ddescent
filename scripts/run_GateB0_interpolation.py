@@ -150,6 +150,7 @@ def main():
                     tag="gateB0-interpolation", seeds=[args.seed],
                     notes="Gate B0: can the GA reach interpolation? (D049) + bolt-on positive control")
     print(f"run: {run.run_id}")
+    run.start_log()
     try:
         task = T.hierarchical_environments(**task_kw)
         net_cfg = EvoNetConfig(**net_kw)
