@@ -386,3 +386,8 @@ substrate. See QUEUE.md.
 - type `exp` · stage `E9` · git `gf82d585` (D074: slow NMDA-like excitatory current (tau_slow=100ms, exc-only, no Mg gate), inert at nmda_frac=0 default; diagnostics sweep nmda_frac at present_ms=50, gate on d2-d3 movement) · status **complete**
 - result: rung1: best mem_d1 trailing=0.826 leading=nan; E|state=0.316 E|rates=0.884; PR_in=5.86 PR_mean_min=1.01; MC=0.18; ord/noise=3.61; ctx=0.33/0.25
 - _interpretation:_ 
+
+## 2026-07-18 05:39 — `E9-evolve__20260718-053700__exp__ga6d1c98__nmda-sweep`  <!-- auto -->
+- type `exp` · stage `E9` · git `ga6d1c98` (D075: charge-conserving fast/slow split (w_slow = f*w*tau_fast/tau_slow) - validated no collapse across nmda_frac axis, PR_mean stays ~7; fix diagnostics control check to test PR-collapse not hardcoded d1) · status **complete**
+- result: rung1: best mem_d1 trailing=0.766 leading=nan; E|state=0.311 E|rates=0.893; PR_in=5.86 PR_mean_min=7.28; MC=0.29; ord/noise=2.14; ctx=0.32/0.25
+- _interpretation:_ 
