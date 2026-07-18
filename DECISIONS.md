@@ -1988,6 +1988,74 @@ An independent reviewer read those results as current, concluded `input_gain=1.0
 
 *Why this belongs in the decision log:* D013's unifying rule is **append and date, never silently overwrite reasoning**. A result in a docstring is reasoning with **no date and no provenance** — and it silently overwrites itself every time the model changes underneath it. That is the one failure mode this log exists to prevent, occurring in the one place the log does not reach.
 
+### D071 — Three documentation-vs-code divergences, all found by reading: a stage bug, a stale vocabulary, and a decision that was never implemented
+**2026-07-17 · Accepted** · *found while preparing Phase 1; each is the same failure in a different direction* · **the stage bug and the vocabulary are FIXED in this commit**
+
+**1. THE STAGE BUG — the flagship's gate was filed under "tuning/prep". FIXED.**
+`run_GateB0_interpolation.py` registered as `P.new_run("T0", "exp", tag="gateB0-interpolation")`.
+**`"T0"` is `tune_operating_point`.** Meanwhile `provenance.CANONICAL` has had `"E9": "evolve"`
+since **D021 created the stage**. *The stage was available and unused.*
+*The damage, in one path:*
+```
+runs\T0_tune_operating_point\T0-tune_operating_point__20260717-213756__exp__g91f2891__gateb0-interpolation\
+```
+NAMING.md §5's provenance chain (figure → runhash → manifest → upstream run IDs → git hash) is
+**intact but mislabelled at the root**: an E9 result is not discoverable as one, and the real
+identity survives only in a freeform `tag`, which §1 calls "optional".
+*Fix:* `P.new_run("E9", "exp", ...)`.
+**Accepted consequence — a permanent split.** `runs/` is never hand-edited (NAMING.md §3), so the
+D067 run **stays** under `T0_tune_operating_point` while everything from here lands in
+`runs/E9_evolve/`. Recorded here so the split is legible rather than mysterious. *The alternative
+— rewriting the registry — would violate the append-only property that is the only reason the
+registry is worth having.*
+
+**2. NAMING.md WAS STALE — and it is why (1) happened. FIXED.**
+§1's STAGE row read `E0`–`E8`, and the controlled-vocabulary block stopped at `E8` — for three
+days after D021 added E9 to `CANONICAL`. **The code was current; the document was stale.**
+**That is the exact INVERSE of D070's failure** (`baseline.py`: document current, code retired).
+*Both are the same absence — nothing checks the log, the docs, and the code against each other —
+and it can fail in either direction.* Fixed, plus a line naming `CANONICAL` as the source of truth
+and this table as a copy of it.
+
+**3. D066 WAS NEVER IMPLEMENTED. Confirmed by reading; not fixed here.**
+
+| D066 specifies | the code does |
+|---|---|
+| `verbose=True` by default in `_arm` | `run_evolution(..., verbose=False)` |
+| progress every **10** generations with **elapsed + ETA**, `flush=True` | `if verbose and (gen % 20 == 0 ...)` — no elapsed, no ETA, no flush |
+| the pool announces `[PARALLEL: 6 workers]` vs `[SERIAL (1 process)]` | absent |
+
+**And there is no D066 commit:** the log runs D064 → D065 → **D067**. *D064's and D065's fixes ARE
+present, so this is not a stale working copy — D066 alone never landed.*
+**Corroborating evidence from D067 itself:** it reports "**~1.7 s/eval**", which is
+5,193 s ÷ 3,000 evals — **total-time-over-total-evals arithmetic**. That is precisely what you
+compute when the run *did not report its own timings*. **A D066-compliant run would have printed
+the ETA.** *D066 was written in response to PJM's "is there a way to assess its progress?" — and
+the answer is still no.*
+**⇒ D066 is a decision that exists only as prose.** *The failure it exists to prevent — an
+unobservable long-running job — is guaranteed to recur, because D066 was never anything but a
+document.* **Fix 1 is applied here** (it is one line in the file already being edited); **fixes
+2–3 land in `evolve.py` with the D068 batching changeset**, which rewrites `run_evolution` anyway.
+
+**4. AND WHILE IN THE FILE: D064's printed estimate was wrong by ~5×. FIXED.**
+```python
+print(f"    {est:,} total evaluations ~ {est*2/max(args.workers,1)/60:.0f} min "
+      f"at ~2 s/eval on {args.workers} workers")
+```
+It divides by `workers` **and** uses a per-eval figure that was already **6-worker throughput** —
+**double-counting the parallelism**. Printed **17 min** for a run that took **87**.
+*This is D068's rule in miniature: the formula never named the quantity it assumed cost scaled
+with.* Replaced with the measured throughput, an explicit "do NOT divide by n_workers again", and
+a note that cost is **timestep-dominated** — hence ~flat in N and |W| (D068).
+
+**THE PATTERN, AND THE RULE.** D070 covers code that outlives its results. **This covers the two
+reverses: decisions that outlive their implementation, and documents that outlive their
+vocabulary.** Three artifacts — the log, the docs, the code — and **no pass ever compares them.**
+> **A decision that specifies code is not done until the code exists.** Cite the D-number in the
+> commit that implements it. Otherwise the log records an **intention** as though it were a
+> **fact** — and every later decision that reads the log inherits the error. *D067 planned around
+> a progress-reporting facility that was never built.*
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this

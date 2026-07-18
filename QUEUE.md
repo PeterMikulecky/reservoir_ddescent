@@ -188,7 +188,9 @@ believing any of that** (D068: four consecutive runtime estimates were wrong).
   (D030) — **and check what the baseline IS: if it is an identity, it is not a gate** (D069).
   **Check the environment PERMITS the phenomenon before concluding it is absent** (D045).
   **`headroom()` before any run** (D057).
-- **Docstrings state RULES; results carry a D-number or run_id** (D070).
+- **Docstrings state RULES; results carry a D-number or run_id** (D070). **And the reverse:
+  a decision that specifies code is NOT DONE until the code exists — cite the D-number in the
+  commit that implements it** (D071: D066 was never built; D067 planned around it anyway).
 - **Log-transform heavy-tailed outcomes; treat convergence warnings as results** (D028).
 - **Don't raise structural alarms from smoke-preset numbers** (D033).
 - **Don't bolt on mechanisms; make the architecture capable and let selection build them** (D038).

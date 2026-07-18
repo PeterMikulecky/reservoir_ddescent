@@ -16,7 +16,7 @@ directory and (b) the key in the run registry.
 
 | Field | Meaning | Rules |
 |---|---|---|
-| STAGE | experiment code | `E0`–`E8`, `T0` (tuning/prep), `AN` (analysis-only). Uppercase. |
+| STAGE | experiment code | `E0`–`E9`, `T0` (tuning/prep), `AN` (analysis-only). Uppercase. |
 | slug | stable short name | from the controlled vocabulary below; lowercase snake_case |
 | timestamp | run start, **UTC** | `YYYYMMDD-HHMMSS`; sortable; UTC avoids collaborator tz drift |
 | type | provenance status | `reg` (pre-registered/confirmatory), `exp` (exploratory), `smoke` (test/demo) |
@@ -32,11 +32,15 @@ E0  readout_width            E5  temporal
 E1  fixed_n                  E6  snakeness
 E2  vargeo                   E7  ladder
 E3  aliasing                 E8  neutral
-E4  implicit_bias            T0  tune_operating_point
+E4  implicit_bias            E9  evolve      <- the flagship (D021)
+                             T0  tune_operating_point
                              AN  analysis
 ```
 One slug per stage; the mapping lives in `provenance.CANONICAL` and cannot be
-overridden ad hoc. New experiments get a new (stage, slug) pair added there.
+overridden ad hoc. **`CANONICAL` is the source of truth; this table is a copy of it.**
+*(D071: this table read `E0`–`E8` for three days after D021 added E9 to `CANONICAL`. The
+code was current, the document stale — and `run_GateB0_interpolation.py` filed the
+flagship's gate under `T0` because the stage it needed looked unavailable here.)* New experiments get a new (stage, slug) pair added there.
 
 ## 2. The confirmatory firewall
 
