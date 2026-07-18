@@ -2660,9 +2660,13 @@ redundant" — is satisfied by bypassing it, not by deleting it.*
 | 3+5 — build-once refactor | ⏭️ **skipped — measured unnecessary (this entry)** |
 | 4 — delete the pool | ⏭️ **skipped — retained as reference path** |
 
-**STILL OWED, small, travels with the first real Gate B0 commit:** D066 fixes 2–3 (per-gen ETA +
-pool/ batch announcement — never implemented, D071) and `run.start_log()` in
-`run_GateB0_interpolation.py`. *These are output/logging, not performance; they do not gate Gate A.*
+**~~STILL OWED~~ DONE (2026-07-18):** D066 fixes 2–3 are now implemented in `run_evolution` — a
+mode announcement (`BATCHED`/`PARALLEL`/`SERIAL`), and per-10-gen progress with **elapsed + ETA +
+s/gen + `flush=True`**, printing from gen 0 (previously silent until gen 20, and a 2 h arm printed
+nothing). Verified: output renders live AND equivalence still holds after the edit. `time` was also
+unimported — a latent `NameError` the ETA code would have hit; fixed. **`run.start_log()` added to
+`run_GateB0_interpolation.py` manually by PJM.** *The last D066 debt (D071) is closed; the two
+compose — `start_log` catches the stream, D066 fills it with an ETA worth catching.*
 
 **⇒ NEXT IS THE SCIENCE, NOT THE ENGINEERING. Gate A** — does evolution route E to the output
 neurons? (D069/D072: the encoder works, `E|state`≈0.22, but `E|rates`≈0.73 — E barely reaches the

@@ -40,6 +40,7 @@ treatment variable (if evolution controlled it, the population would choose its 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import time
 import numpy as np
 
 from .evonet import EvoNetConfig, EvoNet, Genome, random_genome, mutate
@@ -232,6 +233,20 @@ def run_evolution(task, net_cfg: EvoNetConfig, cfg: EvolveConfig,
         import multiprocessing as mp
         pool = mp.get_context("spawn").Pool(n_workers, initializer=_init_worker,
                                             initargs=(task, net_cfg))
+
+    # ---- D066/D071: announce mode + start the wall clock (progress reporting was SPEC'd in
+    # D066 and never implemented — a 2 h arm printed nothing, so you could not tell a live run
+    # from a hung one, or batched from silently-serial. Fixed here.) ------------------------
+    if batched:
+        _mode = "BATCHED (one block-diagonal network/gen, D078)"
+    elif pool is not None:
+        _mode = f"PARALLEL ({n_workers} workers)"
+    else:
+        _mode = "SERIAL (1 process)"
+    _t_start = time.perf_counter()
+    if verbose:
+        print(f"[run_evolution] {_mode} | pop={cfg.pop_size} gens={cfg.n_generations} "
+              f"density={cfg.density} N={net_cfg.N} test_every={cfg.test_every}", flush=True)
     try:
       for gen in range(cfg.n_generations):
           # ---- TRAIN: whole population (fitness reads train) -----------------------------
@@ -289,10 +304,17 @@ def run_evolution(task, net_cfg: EvoNetConfig, cfg: EvolveConfig,
             fit_mean=float(fits.mean()), fit_std=float(fits.std()),
             pop_test=bool(do_pop_test),      # provenance: was mean_test a real sweep or NaN?
           ))
-          if verbose and (gen % 20 == 0 or gen == cfg.n_generations - 1):
+          # ---- D066: progress with elapsed + ETA + flush, every 10 gens (and gen 0 + final) --
+          if verbose and (gen % 10 == 0 or gen == cfg.n_generations - 1):
             h = history[-1]
-            print(f"  gen {gen:>4}: best_train={h['best_train']:.3f} best_test={h['best_test']:.3f} "
-                  f"|W|={h['mean_params']:.0f}±{h['std_params']:.0f} exc={h['mean_exc_frac']:.2f}")
+            done = gen + 1
+            elapsed = time.perf_counter() - _t_start
+            per_gen = elapsed / done
+            eta = per_gen * (cfg.n_generations - done)
+            print(f"  gen {gen:>4}/{cfg.n_generations}: best_train={h['best_train']:.3f} "
+                  f"best_test={h['best_test']:.3f} |W|={h['mean_params']:.0f}±{h['std_params']:.0f} "
+                  f"exc={h['mean_exc_frac']:.2f} | {elapsed:5.0f}s elapsed, "
+                  f"~{eta/60:4.1f} min ETA ({per_gen:.2f} s/gen)", flush=True)
 
           if gen == cfg.n_generations - 1:
             break
