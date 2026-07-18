@@ -1894,6 +1894,100 @@ descent to 2.50, **first descent now present** (1.037 → **1.034** at M=2 — s
 **But the reservoir states STILL never beat raw input** (best 1.034 vs 0.834) — that is a RANDOM
 network, and Gate A (does *evolution* fix it?) is now **unanswerable until Gate B0 passes.**
 
+### D068 — D067's COST MODEL IS WRONG: per-eval cost is TIMESTEP-dominated, not |W|-dominated. The N decision was never available.
+**2026-07-17 · Accepted** · **supersedes D067's N table** (D067's *shortfall* diagnosis stands — we are ~40× short; only the cost model and the proposed remedy are wrong) · *Credit: an independent code review in a fresh chat, cross-checked against the source*
+
+**THE ERROR.** D067 priced each N by assuming **per-eval cost ∝ |W|**. Back the assumption out and it is visible:
+
+| N | \|W\| | evals (~100n) | D067's per-arm | implied s/eval | at the **measured** 1.7 s/eval |
+|---|---|---|---|---|---|
+| 50 | 1,221 | 122,000 | 58 h | 1.71 | 57.6 h |
+| 30 | ~435 | 43,500 | ~8 h | **0.66** | **20.5 h** |
+| 20 | ~190 | 19,000 | ~1.5 h | **0.28** | **9.0 h** |
+
+**Only the N=50 row used a measured number.** The other two silently assumed 1.7 s falls 2.6× and 6.4× — exactly in proportion to |W|.
+
+**THE CODE SAYS OTHERWISE. The cost is TIMESTEPS, and N does not touch them:**
+- `behave()` runs **all n_env in ONE `net.run()`** — environments are **already batched**. That lever is spent.
+- `b2.defaultclock.dt = 0.5*ms` — already 5× coarser than Brian2's default. Spent.
+- n_env=50 × `present_ms`=150 ÷ 0.5 ms = **15,000 timesteps per `behave()`**, and `evaluate()` calls it **twice** (train + test) ⇒ **30,000 timesteps per eval**.
+- D065's measured **3.4 s/eval serial ÷ 30,000 ≈ 113 µs per timestep** — to update **50 floats**. That is ~100% Python/numpy dispatch across Brian2's ~5 code objects (state update, threshold, reset, synapse pathway, StateMonitor). **It does not scale with N or |W| at this size.** N=20 makes the arrays 20 floats instead of 50 and changes nothing else.
+
+**⇒ N=20 gives ~9 h/arm, not 1.5 h** (19,000 × 1.7 s); the 72-arm map ≈ **650 h**. **N=20 does not rescue the study.** The trade D067 posed — *"the fix shrinks networks to where 'spiking network' is a generous description"* — **was never on the table.** *We came close to paying a real scientific price (Gate C's K≫1 at ~6 inputs/neuron; regulatory headroom at N=20; H-B's r₁ range collapsing to {1,2} at d=3) for a speedup that does not exist.*
+
+**THE REAL LEVER IS THE TIMESTEP OVERHEAD — ENGINEERING, NOT SCALE:**
+
+| fix | payoff | scientific cost |
+|---|---|---|
+| **Stop evaluating the test set for every individual, every generation.** `evaluate()` computes `err_te` for all 30; `_fitness()` reads **only `train_err`**; only `order[0]`'s test error reaches the verdict. **Half the timesteps are computed and discarded.** | **exact 2×** | none for Gate B0 |
+| **Batch the population into ONE network.** pop×N = 30×50 = **1,500 neurons**, block-diagonal W, one `run()` per generation. The 113 µs is paid **once**, not 30×; 1,500-float arrays are still overhead-dominated. Drive = `np.tile(drive, (1, pop_size))`; `xi` is per-neuron so each block keeps its own noise. | **~15–25×** | **none** |
+| **Fixed topology ⇒ build once per run.** Allocate all N(N−1) synapses per block; set `w=0` for absent ones. Per generation: `restore("init")` → `S.w[:] = ...` → `run()`. No rebuild, ever. | enables the above | **none** — zero-weight synapses are dynamically inert, and `Genome.n_params()` counts `mag != 0`, so **P = \|W\| is untouched** |
+| **Delete the pool.** Measured **3.4 s serial → 1.7 s on 6 workers = 2.0×, i.e. 33% efficiency.** Batching removes the pool, spawn, pickling, and the `pool.map` barrier; D064's `_init_worker` becomes moot. | ~1.5× | none |
+| **Hoist the StateMonitor** out of `behave()` — it is `add`ed and `remove`d on **every call**, forcing `before_run` re-preparation each time — and record the **output slice only**: `state`/`state_var` are computed in `evaluate()` and then **popped and discarded in `_eval_payload`**. | ~20% | none |
+
+**NOT WORTH TOUCHING** — recorded so the temptation dies here. The `lstsq` loop in `nmse()` is **10 calls on (50,2) matrices ≈ 0.5 ms of 3,400 ms = 0.015%**. `mutate`'s (N,N) copies and `dale_violations()`: microseconds, not in the hot path. *Vectorizing numpy while 113 µs/timestep sits there would be D060/D064/D065 repeated a fourth time.*
+
+**PROJECTED — and it must be MEASURED, not believed:** pop30×100gens **85 min → ~5 min**; one arm at N=50 at the required depth (~4,000–5,000 generations) **~4 h, not 58 h**; Gate B's 6-arm density sweep **~17 h**.
+
+**⇒ N=50 STANDS.** It is the scale Gate C was validated at (D058) and the scale balanced-state dynamics require: N=20 at density 0.3 gives **~6 recurrent inputs per neuron**, and √K fluctuation scaling at K=6 is not a balanced regime. **The N question DISSOLVES rather than being answered.**
+
+**STANDING RULE, NOW EARNED FOUR TIMES.** D060, D064, D065 and D067 each produced a confident runtime estimate from arithmetic, and **all four were wrong**. The pattern is not carelessness; it is that each estimate rested on an **unnamed assumption about what cost scales with** (arms, workers, parameters). ⇒ *Any cost model must **name the quantity it assumes cost scales with**, and that assumption must be **measured** before it is used to make a design decision.* **Measure the per-generation time after batching before believing the ~5 min above.**
+
+### D069 — The skill gate IS the whole experiment: `baseline ≡ memoryless_floor` is an IDENTITY, not a finding
+**2026-07-17 · Accepted** · *corrects the reading recorded in D063; sharpens the Gate C indictment rather than softening it*
+
+**THE IDENTITY.** `HierarchicalTask.headroom()`:
+```python
+floor = best_nmse(self.E_train, self.Y_train, self.E_test, self.Y_test,
+                  alphas=alphas, standardize=False)[0]
+```
+`run_GateB0_interpolation.py`:
+```python
+base = best_nmse(task.E_train, task.Y_train, task.E_test, task.Y_test,
+                 standardize=False)[0]
+```
+**Same call. Same data.** So D063's *"the task's memoryless floor is 0.79 — the raw-input baseline reaches it"* is not an observation. It is `x == x`. **We recorded a tautology as a finding and then reasoned from it.**
+
+**WHAT FOLLOWS.** `baseline ≡ memoryless floor` ⇒ **"beats baseline" ≡ "infers context" ≡ THE ENTIRE EXPERIMENT.** Failing that bar tells us **nothing** about whether the state encodes E. **D030's actual gate was lower and diagnostic — *does the state encode the input?* We imported D030's NUMBER and lost D030's RULE.**
+
+**MEASURED** (gain × σ sweep; state-readout test NMSE; raw-input baseline **0.791**):
+
+| gain | σ=0.2 | σ=1.0 |
+|---|---|---|
+| 1 | 0.935 | 0.993 |
+| 10 | **0.835** | 0.869 |
+| 30 | **0.835** | 0.840 |
+
+**Read correctly, this says THE ENCODER IS NOT BROKEN.** 0.835 against a memoryless floor of 0.791 is the network **reaching the memoryless floor lossily** — the best *anything* can do without context. *"Nothing beats the baseline anywhere"* is not a failure; it is **what a network with no context inference must look like.** The level-1 map is `tanh(E @ W_c)` — **nearly linear** — so a linear readout on raw E already captures it, and a random nonlinear scramble cannot beat that. **The only route to value is memory for context inference, which a RANDOM W does not have.**
+
+**THE GATE C INDICTMENT STANDS, AND SHARPENS.** Gate C's operating point (bias 0.6, **gain 1.0**, w0 0.6) is the **worst cell in the table** — 0.935 / 0.993 ≈ predicting the mean. Gate C scored operating points on **CV_ISI alone** and never asked whether the state encodes the input. **That is D030's error exactly, one level up** — and D030 is the entry in this log that says the two objectives are *in opposition* and that **skill is a GATE, not a metric**. *The rule was written down. It was not applied to Gate C.* **`headroom()` is a required pre-run check (D057). `skill` is not — and D030 says it must be.**
+
+**HYPOTHESIS REJECTED — recorded because the check was cheap and decisive.** That the drive never reached the network: `_build()` seeds the namespace with a **zeros** TimedArray and `behave()` rebinds `G.namespace["ta"]` afterwards, so a stale binding would leave `I_ext ≡ 0` — which would have explained *every* symptom (train ≈ 0.94 ≈ mean-prediction, test ≈ 1.0, states at 1.034, and a positive control that still passes because random features uncorrelated with the target show the M=n spike perfectly well). **FALSE:** |state(E) − state(0)| = **3.12** at gain=1.0; output neurons vary across environments (std **0.49**). **The drive lands.** *A 30-second check killed a hypothesis that would otherwise have consumed a session.*
+
+**WHAT HAS NEVER BEEN MEASURED** — both cheap; the second is listed in `BRIDGE.md` Level 5 and has never been run:
+1. **Decode E from `state`, and separately from `rates`** — D030's actual gate. Fitness reads the **last d of N** neurons: a random W may encode E in the state and never **route** it to the output slice. *That is Gate A's question, sharpened — and the two decodes separate "the encoder is broken" from "the encoder works but nothing reaches fitness".*
+2. **Decode context from `state`** (chance = 1/`n_contexts` = 0.25) — *is the system doing Level 2(iii) at all?*
+
+**CONSEQUENCE FOR D063.** Its finding *"the reservoir states never beat raw input (1.034 vs 0.834)"* is **not** evidence that the network destroys information. It is evidence that **a random network cannot infer context** — which was never in doubt, and which is precisely what E9's premise says selection is for. **Gate A remains open and is now the live question.**
+
+### D070 — Docstrings state RULES; results live in `DECISIONS.md` with a D-number or run_id
+**2026-07-17 · Accepted** · *Credit: PJM — "your point about some stale docstrings having confused you highlights the need for us to be even more scrupulous"*
+
+**THE FAILURE.** `baseline.py`'s module docstring contains two different kinds of thing:
+- **A RULE** — *"skill is a GATE, not a metric. An operating point that fails it is disqualified regardless of how good its dimensionality looks."* **Still true. Aged perfectly.**
+- **RESULTS** — *"the reservoir scored test NMSE 0.880 against a raw-input baseline of 0.216 ... It only beat baseline at input_gain=10."* **From the RETIRED N=1000 reservoir on the RETIRED scalar-tanh task** — both killed by D032/D036 and `FRAMING.md` §2c. **Dead numbers, no provenance, no date.**
+
+An independent reviewer read those results as current, concluded `input_gain=1.0` was the bug and `gain=10` was "the useful regime", and was wrong on both counts (D069). **The rule never went stale. Only the results did.** *The file that taught this project "skill is a gate" is the file whose stale numbers misdirected a review of that same gate.*
+
+**THE RULE:**
+> **Docstrings state RULES. Results live in `DECISIONS.md` with a D-number or a run_id.** A number in a docstring must carry the entry that produced it, or it does not belong there.
+
+**SAME SPECIES, STILL LIVE:** `EvoNetConfig.input_gain: float = 10.0  # D030/D033: the useful regime` — **a result from a different model, frozen into a default.** It carries D-numbers, which is the minimum; but a default value is not a place for a finding, and "the useful regime" is now false (D069: no gain beats the memoryless floor, because nothing without memory can).
+
+**ACTION — one audit pass:** `grep -nE '[0-9]\.[0-9]{2,}' ddescent/*.py`. Every number found either gains a D-number/run_id or moves out of the docstring.
+
+*Why this belongs in the decision log:* D013's unifying rule is **append and date, never silently overwrite reasoning**. A result in a docstring is reasoning with **no date and no provenance** — and it silently overwrites itself every time the model changes underneath it. That is the one failure mode this log exists to prevent, occurring in the one place the log does not reach.
+
 ### D013 — Project keeps a lab notebook and this decision log
 **2026-07-14 · Accepted**
 `LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this
