@@ -124,6 +124,55 @@ of static inputs. With coupling in the operative range, static gives ~124–159%
 across density — as good as or better than temporal. The static/temporal axis was never
 the binding constraint.
 
+### D013 — Project keeps a lab notebook and this decision log
+**2026-07-14 · Accepted**
+`LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this
+`DECISIONS.md` are maintained as the project's narrative and governance memory.
+*Reasoning:* keeps the project self-explaining as it evolves; the unifying rule across
+code/outputs/narrative/rules is **append and date, never silently overwrite reasoning**.
+
+### D014 — Recurrent coupling uses fixed per-synapse weights (w0), not gain renormalization
+**2026-07-14 · Accepted · supersedes D012**
+`ConnectivityConfig.w0` (fixed per-synapse weight, no renormalization) is the coupling
+mode for E1. Operative range for this LIF model is **w0 ≈ 0.5–3.0**.
+
+*Reasoning — two compounding faults found, both ours, not the model's:*
+1. **Renormalization erased the effect under test.** Both prior modes held effective
+   coupling ~constant as density varied: the `spectral_radius` mode rescales W to a fixed
+   target rho; the `gain` mode divides by √(p·N), which also pins rho ≈ gain. Sweeping
+   density while renormalizing gain holds constant the very quantity that mediates
+   density → dimensionality. Recanatesi et al. (2019) vary connection probability
+   *without* renormalizing, and dimensionality responds strongly.
+2. **The weight scale was ~60× too small for recurrence to matter at all.** Control test:
+   at w0 = 0.05 (≈ what spectral-radius normalization produced) PR was numerically
+   identical to a network with *no recurrent synapses whatsoever* (15.06 vs 14.97).
+   The "edge of chaos at rho ≈ 1" heuristic is a **rate-network** result; in this spiking
+   LIF model with reset and refractoriness, the entire rho ∈ [0.5, 2.0] sweep sits in a
+   dead zone where recurrence has no measurable effect on PR.
+
+*Evidence:* with w0 in the operative range, PR spread across density = **124–159% (static)**
+and **127% (temporal)**, versus ~0–4% under renormalization. Direction matches Recanatesi
+et al.: **PR decreases as density increases.**
+
+*Consequences:*
+- **E1 is viable, and stays static.** No framing change; H1–H5 need no restatement on this
+  account. The design_doc temporal-pivot revision is not needed.
+- **H2 gains strong prior support.** Frank's intuition is that more wiring → more
+  dimensionality; Recanatesi et al. and our own data both show dimensionality *decreasing*
+  with connectivity. This sharpens H2 from "possibly non-monotonic" to a directional
+  prediction with independent literature backing.
+- `spectral_radius` is retained only for legacy comparison and is documented as unsuitable
+  for E1; the ConnectivityConfig docstrings now carry the warning.
+- **Methodological lesson (generalize this):** when sweeping a structural variable, verify
+  no normalization is holding the mediating quantity constant, and run a
+  *disconnected-network control* to confirm the manipulated component has any effect at all
+  before interpreting a null. Both faults were invisible to the tuning sweep, which was
+  measuring a real quantity in a regime where the independent variable did nothing.
+
+*Credit:* found via targeted literature search (Recanatesi/Ocker/Buice/Shea-Brown 2019,
+PLOS Comp Biol; Legenstein & Maass 2007; Büsing et al. 2010), not from first-principles
+reasoning — which had produced a confident and wrong mechanistic story.
+
 ### D015 — The density→PR finding is scoped narrowly; it does NOT bear on Frank's core claim
 **2026-07-14 · Accepted**
 Our result "PR decreases as density increases" is recorded as: *one route* to more wiring
@@ -174,47 +223,65 @@ were building. Better to learn this now than after the flagship run.
 *Open:* whether the group wants novelty at the framing level (evolutionary/comparative,
 E7) or at the result level (the motif dissociation, H5). These call for different investments.
 
-### D014 — Recurrent coupling uses fixed per-synapse weights (w0), not gain renormalization
-**2026-07-14 · Accepted · supersedes D012**
-`ConnectivityConfig.w0` (fixed per-synapse weight, no renormalization) is the coupling
-mode for E1. Operative range for this LIF model is **w0 ≈ 0.5–3.0**.
+### D018 — Retire the "PR is Frank's x-axis" interpretation test (H5) as a headline claim
+**2026-07-14 · Accepted**
+H5 is demoted from candidate flagship to a supporting/diagnostic measurement.
+*Reasoning:* the RMT literature already establishes that **effective** dimensionality, not
+nominal parameter count, sets the interpolation threshold — the peak occurs where the
+normalized effective degrees of freedom η_κ = (1/n)·Tr[Σ²(Σ+κI)⁻²] → 1 (Bach 2023;
+Hastie et al.; Mei & Montanari). So the abstract claim is taken. Worse, the literature also
+supplies the *principled* metric (edof), which is a different functional of the same
+spectrum than PR (a moment ratio). A PR-vs-edof horse race is therefore a rigged game: if
+PR loses, that is the expected analytic result and not a finding; if PR wins, the natural
+reading is that asymptotic assumptions fail on structured reservoir covariance — a technical
+ML question, not a biological one. *Credit:* PJM's critique — "we'd need to show not only
+that PR is Frank's axis but that other candidates aren't" — is what forced the check.
 
-*Reasoning — two compounding faults found, both ours, not the model's:*
-1. **Renormalization erased the effect under test.** Both prior modes held effective
-   coupling ~constant as density varied: the `spectral_radius` mode rescales W to a fixed
-   target rho; the `gain` mode divides by √(p·N), which also pins rho ≈ gain. Sweeping
-   density while renormalizing gain holds constant the very quantity that mediates
-   density → dimensionality. Recanatesi et al. (2019) vary connection probability
-   *without* renormalizing, and dimensionality responds strongly.
-2. **The weight scale was ~60× too small for recurrence to matter at all.** Control test:
-   at w0 = 0.05 (≈ what spectral-radius normalization produced) PR was numerically
-   identical to a network with *no recurrent synapses whatsoever* (15.06 vs 14.97).
-   The "edge of chaos at rho ≈ 1" heuristic is a **rate-network** result; in this spiking
-   LIF model with reset and refractoriness, the entire rho ∈ [0.5, 2.0] sweep sits in a
-   dead zone where recurrence has no measurable effect on PR.
+### D019 — The dissociation is a SCREENING-OFF test on natural scatter, not an engineered manipulation
+**2026-07-14 · Accepted · refines D017**
+Do **not** vary motifs *in order to* move PR. That makes structure and PR coupled by
+construction and collinear as predictors — the same error class as the D014 normalization
+bug (manipulating A through B, then claiming to separate them).
+*Correct design:* exploit the fact that the structure → PR map is **many-to-one** (exactly
+Recanatesi et al.'s finding that PR varies widely at fixed density). Build a library of
+networks spanning many structural axes (density, reciprocity/motifs, E/I, heterogeneity,
+coupling), let PR fall out where it falls, then locate **iso-PR networks with differing
+structure** and **iso-structure networks with differing PR**. The test is conditional
+independence: *given PR, does structure still predict generalization?* Frank's claim H is
+precisely "**dimensionality screens off circuit features**." Natural scatter is the
+instrument; a designed manipulation destroys it. *Credit:* PJM.
 
-*Evidence:* with w0 in the operative range, PR spread across density = **124–159% (static)**
-and **127% (temporal)**, versus ~0–4% under renormalization. Direction matches Recanatesi
-et al.: **PR decreases as density increases.**
+### D020 — E7's reference role is scoped as a scaling-and-invariants study
+**2026-07-14 · Accepted · refines E7**
+If the reservoir is to serve as the clean reference the group's messier systems (beehives,
+colonies, boolean networks) are compared against, the deliverable is not a number but
+**what scales and what doesn't**: how PR scales with N, whether the PR→generalization
+relation preserves its shape across scales, and which findings are substrate-specific
+versus portable. *Reasoning:* a reference point that hasn't characterized its own scaling
+behaviour cannot license comparison to a colony. *Credit:* PJM.
 
-*Consequences:*
-- **E1 is viable, and stays static.** No framing change; H1–H5 need no restatement on this
-  account. The design_doc temporal-pivot revision is not needed.
-- **H2 gains strong prior support.** Frank's intuition is that more wiring → more
-  dimensionality; Recanatesi et al. and our own data both show dimensionality *decreasing*
-  with connectivity. This sharpens H2 from "possibly non-monotonic" to a directional
-  prediction with independent literature backing.
-- `spectral_radius` is retained only for legacy comparison and is documented as unsuitable
-  for E1; the ConnectivityConfig docstrings now carry the warning.
-- **Methodological lesson (generalize this):** when sweeping a structural variable, verify
-  no normalization is holding the mediating quantity constant, and run a
-  *disconnected-network control* to confirm the manipulated component has any effect at all
-  before interpreting a null. Both faults were invisible to the tuning sweep, which was
-  measuring a real quantity in a regime where the independent variable did nothing.
-
-*Credit:* found via targeted literature search (Recanatesi/Ocker/Buice/Shea-Brown 2019,
-PLOS Comp Biol; Legenstein & Maass 2007; Büsing et al. 2010), not from first-principles
-reasoning — which had produced a confident and wrong mechanistic story.
+### D021 — FLAGSHIP: evolve motif-encoded reservoirs with a genetic algorithm (new stage E9)
+**2026-07-14 · Accepted · supersedes D017's reposition target as the headline**
+The flagship becomes a **genetic algorithm over motif-encoded reservoir genomes**, with the
+linear readout as the scoring mechanism. See `GA_DESIGN.md`.
+*Reasoning:* every mechanism link we planned is already established (see REFERENCES.md
+Positioning), and D018 removes the interpretation test. What the entire neuroscience/ML
+literature we surveyed **lacks is selection** — no heredity, no lineage, no population.
+Frank's claim is evolutionary, and a GA supplies exactly the missing ingredient. It also
+makes his mapping *literal* rather than metaphorical: regulatory connections = genome,
+**selective history = training environments**, selection = the optimizer, **novel
+environments = test data**. No unearned analogy (contrast D003, where a learning optimizer
+stood in for selection).
+*Key structural insight:* in the overparameterized regime every individual interpolates the
+training data, so **the fitness landscape is flat — a neutral network**. Naively this kills
+selection; in fact it lands the population in precisely the regime Frank's argument is
+about (his Gavrilets/neutral-space reframing: what matters is not position on a fitness
+surface but which solution the dynamics find within the connected neutral region). The
+central contrast therefore becomes **below vs. above the interpolation threshold**,
+manipulated via the size of the selective history.
+*Bonus:* the GA generates the D019 screening-off library as a byproduct — an evolved
+population *is* natural scatter over structure and PR.
+*Credit:* PJM's proposal.
 
 ### D022 — Flat-landscape check: assumption confirmed, and it exposed a design flaw
 **2026-07-14 · Accepted**
@@ -2362,69 +2429,73 @@ reverberation → instability; NMDA critical for stability") and I implemented p
 error the same physics predicts. *The rule is not "search"; it is "search AND let the result
 constrain the implementation." I did the first and half of the second.*
 
-### D013 — Project keeps a lab notebook and this decision log
-**2026-07-14 · Accepted**
-`LAB_NOTEBOOK.md` (auto-appended run facts + hand-written interpretation) and this
-`DECISIONS.md` are maintained as the project's narrative and governance memory.
-*Reasoning:* keeps the project self-explaining as it evolves; the unifying rule across
-code/outputs/narrative/rules is **append and date, never silently overwrite reasoning**.
+### D076 — The diagnostics phase is COMPLETE: the substrate holds a little memory, it costs no encoding, and it is small BY DESIGN. Every remaining memory question needs selection. This un-parks D068.
+**2026-07-18 · Accepted** · run: `E9-evolve__…__nmda-sweep` (post-D075) · *the seam between "diagnose the substrate" and "run the experiment"*
 
-### D018 — Retire the "PR is Frank's x-axis" interpretation test (H5) as a headline claim
-**2026-07-14 · Accepted**
-H5 is demoted from candidate flagship to a supporting/diagnostic measurement.
-*Reasoning:* the RMT literature already establishes that **effective** dimensionality, not
-nominal parameter count, sets the interpolation threshold — the peak occurs where the
-normalized effective degrees of freedom η_κ = (1/n)·Tr[Σ²(Σ+κI)⁻²] → 1 (Bach 2023;
-Hastie et al.; Mei & Montanari). So the abstract claim is taken. Worse, the literature also
-supplies the *principled* metric (edof), which is a different functional of the same
-spectrum than PR (a moment ratio). A PR-vs-edof horse race is therefore a rigged game: if
-PR loses, that is the expected analytic result and not a finding; if PR wins, the natural
-reading is that asymptotic assumptions fail on structured reservoir covariance — a technical
-ML question, not a biological one. *Credit:* PJM's critique — "we'd need to show not only
-that PR is Frank's axis but that other candidates aren't" — is what forced the check.
+**WHAT THE FINAL SWEEP SHOWS (charge-conserving, network healthy, min PR_mean 7.28 across the axis).**
+The blunt printed verdict — *"slow current moves memory past d1: NO"* — undersells it; the gate
+(d2 < 0.9) was set higher than a random network delivers. The trend is real. At the best cell
+(gain 10, σ 0.2), as `nmda_frac` climbs 0 → 0.8:
 
-### D019 — The dissociation is a SCREENING-OFF test on natural scatter, not an engineered manipulation
-**2026-07-14 · Accepted · refines D017**
-Do **not** vary motifs *in order to* move PR. That makes structure and PR coupled by
-construction and collinear as predictors — the same error class as the D014 normalization
-bug (manipulating A through B, then claiming to separate them).
-*Correct design:* exploit the fact that the structure → PR map is **many-to-one** (exactly
-Recanatesi et al.'s finding that PR varies widely at fixed density). Build a library of
-networks spanning many structural axes (density, reciprocity/motifs, E/I, heterogeneity,
-coupling), let PR fall out where it falls, then locate **iso-PR networks with differing
-structure** and **iso-structure networks with differing PR**. The test is conditional
-independence: *given PR, does structure still predict generalization?* Frank's claim H is
-precisely "**dimensionality screens off circuit features**." Natural scatter is the
-instrument; a designed manipulation destroys it. *Credit:* PJM.
+| nmda_frac | mem_d2 | mem_d3 | memory capacity |
+|---|---|---|---|
+| 0.0 | 0.947 | 0.994 | 0.18 |
+| 0.3 | 0.991 | — | 0.19 |
+| 0.5 | 0.982 | — | 0.21 |
+| 0.8 | **0.947** | **0.994** | **0.29** |
 
-### D020 — E7's reference role is scoped as a scaling-and-invariants study
-**2026-07-14 · Accepted · refines E7**
-If the reservoir is to serve as the clean reference the group's messier systems (beehives,
-colonies, boolean networks) are compared against, the deliverable is not a number but
-**what scales and what doesn't**: how PR scales with N, whether the PR→generalization
-relation preserves its shape across scales, and which findings are substrate-specific
-versus portable. *Reasoning:* a reference point that hasn't characterized its own scaling
-behaviour cannot license comparison to a colony. *Credit:* PJM.
+**Three findings:**
+1. **The capability is REAL and measurable.** Slow current extends memory to d2–d3 and **MC rises
+   monotonically 0.18 → 0.29 with `nmda_frac`.** A random network holds a *whisper* of history.
+2. **It is SMALL, and small BY DESIGN.** d2 = 0.947 is ~5% of one stimulus, two presentations back;
+   context needs ~10 back. **This is exactly what was predicted before the run:** a 100 ms synaptic
+   decay integrates a little across a 50 ms gap and then dies. Turning 100 ms of *synaptic* memory
+   into 1,500 ms of *network* memory needs Wang's slow **reverberation** — the loop gain of an
+   **evolved recurrent attractor**. The substrate supplies the capability; selection must build the
+   amplifier. **This does not block H-C — it IS H-C:** the memory is necessarily an evolved property.
+3. **IT COSTS NO ENCODING — D030's opposition BREAKS for the first time.** `E|state` across the nmda
+   axis: **0.311 → 0.334 → 0.321 → 0.316 — flat.** Memory went up; level-1 encoding did not go down.
+   **Why: D075's charge conservation.** We are not adding drive, we are re-timing it — the encoder
+   sees the same total current spread over two timescales. *The opposition (D030/D069/D072) was never
+   fundamental; it was the signature of buying a level-2 property by cranking a knob that also floods
+   level-1. A charge-neutral knob does not pay that tax.* **This is a point FOR the substrate
+   framing, and worth a measurement in the eventual paper.**
 
-### D021 — FLAGSHIP: evolve motif-encoded reservoirs with a genetic algorithm (new stage E9)
-**2026-07-14 · Accepted · supersedes D017's reposition target as the headline**
-The flagship becomes a **genetic algorithm over motif-encoded reservoir genomes**, with the
-linear readout as the scoring mechanism. See `GA_DESIGN.md`.
-*Reasoning:* every mechanism link we planned is already established (see REFERENCES.md
-Positioning), and D018 removes the interpretation test. What the entire neuroscience/ML
-literature we surveyed **lacks is selection** — no heredity, no lineage, no population.
-Frank's claim is evolutionary, and a GA supplies exactly the missing ingredient. It also
-makes his mapping *literal* rather than metaphorical: regulatory connections = genome,
-**selective history = training environments**, selection = the optimizer, **novel
-environments = test data**. No unearned analogy (contrast D003, where a learning optimizer
-stood in for selection).
-*Key structural insight:* in the overparameterized regime every individual interpolates the
-training data, so **the fitness landscape is flat — a neutral network**. Naively this kills
-selection; in fact it lands the population in precisely the regime Frank's argument is
-about (his Gavrilets/neutral-space reframing: what matters is not position on a fitness
-surface but which solution the dynamics find within the connected neutral region). The
-central contrast therefore becomes **below vs. above the interpolation threshold**,
-manipulated via the size of the selective history.
-*Bonus:* the GA generates the D019 screening-off library as a byproduct — an evolved
-population *is* natural scatter over structure and PR.
-*Credit:* PJM's proposal.
+**WHAT THE DIAGNOSTICS PHASE ACCOMPLISHED (D072 → D076).**
+- **Ruled out the budget as the FIRST problem** (D072): Gate B0 could not have passed at any N —
+  not because of evaluations (D067) but because the substrate was memoryless.
+- **Found and fixed a real capability gap** (D073/D074): the slow timescale belongs in τ_syn
+  (AMPA/NMDA), not τ_m; take NMDA's kinetics, omit its Mg gate (the mechanism H-C tests).
+- **Found and fixed a real stability bug** (D075): the naive split delivered 16× charge; conserving
+  charge holds the network healthy across the whole axis; fast inhibition suffices.
+- **Confirmed the encoder works and Gate A is a ROUTING problem** (D069/D072): E is in the state
+  (`E|state` = 0.31) and barely reaches the output neurons — selection's job.
+
+**⇒ EVERY REMAINING MEMORY QUESTION REQUIRES SELECTION.** *"Does a random network hold context?"* is
+answered: **no, and correctly so.** *"Can an EVOLVED network build the reverberatory loop that turns
+100 ms into 1,500 ms?"* is Gate A / H-C, and **it cannot be answered without running the GA.** The
+diagnostics have done their job; there is no cheaper question left to ask of a random network.
+
+**⇒ THIS UN-PARKS D068 BY ITS OWN TRIGGER.** D068's performance work was parked with an explicit
+condition (QUEUE): *"un-parks the moment a diagnostics run shows the network can hold context over
+~10 stimuli — the next step is a GA run, unaffordable (~69 h) without batching."* We have now reached
+the weaker but sufficient form of that trigger: **the capability is present and evolvable, and the
+only way forward is the GA.** A conclusive GA run is ~69 h unbatched, ~4 h batched. **Batching is no
+longer premature — it is the blocker.**
+
+**NEXT (the parked list, now live):** build D068's fixes in order — **(1)** drop the discarded
+test-set eval (exact 2×); **(2)** batch the population into one block-diagonal network (~15–25×);
+**(3)** fixed topology / build once; **(4)** delete the pool; **(5)** hoist the StateMonitor — plus
+**D066 fixes 2–3** (per-gen ETA + pool announcement, never implemented, D071) and `run.start_log()`
+in `run_GateB0_interpolation.py`. **MEASURE the per-generation time before believing any projection**
+(D068: four consecutive runtime estimates were wrong). Then: **Gate A** (does evolution route E to
+the output neurons?), then **Gate B** (does a peak appear?).
+
+**HOUSEKEEPING (this commit).**
+- **`run_E9_diagnostics.py`** — the §3-4 header printed a stale `present_ms=150, tau_m=20` (the run
+  was present_ms=50), and the "WHAT THIS DECIDES" footer still recommended heterogeneous **τ_m**,
+  pre-D073 boilerplate now contradicted by D074/D075. Both corrected.
+- **`DECISIONS.md`** — entries **reordered to strict D001…D076**. Two artifacts removed: D014 sat
+  after D017, and D013/D018–D021 were parked at the file's end (all July 14, misplaced, not
+  intentional). No entry altered; verified every body preserved. *Cross-references are by D-number,
+  never by line, so nothing breaks.*

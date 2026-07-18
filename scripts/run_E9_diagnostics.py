@@ -331,8 +331,9 @@ def main():
             print("     ONLY substrate-specific justification is a retired-model result.")
 
         print(f"\n=== 3-4. THE TIMESCALE AUDIT ===")
-        print(f"    present_ms=150, tau_m=20 (tau_r=30 is the READOUT FILTER, not state).")
-        print(f"    Context needs memory over context_dwell=10 presentations = 1500 ms.")
+        print(f"    present_ms={args.present_ms:g}, tau_m=20, tau_slow=100 (NMDA-like, D074).")
+        print(f"    Context needs memory over context_dwell={task.meta['context_dwell']} "
+              f"presentations = {task.meta['context_dwell']*args.present_ms:.0f} ms.")
         dcols = [c for c in df.columns if c.startswith("mem_d")]
         print(f"{'gain':>6} {'sigma':>6} {'pos':>9} " + " ".join(f"{c:>7}" for c in dcols) +
               f" {'MC':>6} {'ord/noise':>10}")
@@ -423,26 +424,23 @@ def main():
                 print("     BUT: it buys d1-d2, NEVER d10. exp(-1500/30) = 0 at any position.")
                 print("     Spanning context_dwell=10 still needs heterogeneous tau_m.")
             else:
-                print("  -> THE MEMORY IS GENUINELY ABSENT. Window position is not the problem.")
-                print("     A random W at tau_m=20 builds no collective mode outlasting 150 ms.")
-                print("     -> the fix is a DESIGN change: fixed-heterogeneous tau_m, DRAWN not")
-                print("        evolved (D038: a capability, not a route). D059 tiers tau_m as an")
-                print("        'alternative route that could BYPASS regulation' -- but a slow")
-                print("        neuron gives a running AVERAGE, i.e. DRIVE, and tasks.py says an")
-                print("        additive signal 'can only SHIFT the output, never change the E->Y")
-                print("        mapping'. So tau_m is not regulation's ALTERNATIVE, it is its")
-                print("        PREREQUISITE -- and Arm 1 as specified has ZERO routes, not one.")
+                print("  -> THE MEMORY IS GENUINELY ABSENT at this readout position.")
+                print("     The fix (D073/D074/D075) is the slow EXCITATORY current already in")
+                print("     evonet.py -- tau_slow=100 ms (NMDA-like), charge-conserved. In a")
+                print("     RANDOM net it buys d2/d3 only; d10 needs an EVOLVED reverberatory")
+                print("     loop, which is selection's job (D076). Sweep --nmda-frac to see it.")
 
         print(f"\n=== WHAT THIS DECIDES ===")
         print(f"  memoryless floor {base:.3f} == the raw-input baseline BY IDENTITY (D069):")
         print(f"  'beats baseline' == 'infers context' == the whole experiment. So the only")
         print(f"  question that matters here is whether the substrate CAN hold context at all.")
         if ca <= ch + 0.15:
-            print("  -> Context is NOT recoverable from a random network's state. Next: is that")
-            print("     because selection hasn't acted (Gate A's premise), or because the")
-            print("     timing parameters forbid it? Measurement 3-4 separates those, and the")
-            print("     fix is fixed-heterogeneous tau_m (drawn, not evolved -- a CAPABILITY,")
-            print("     not a route: it gives step 1 without handing evolution a shortcut).")
+            print("  -> Context is NOT recoverable from a RANDOM network's state -- correctly so.")
+            print("     The slow-current capability is present (d2/d3 move, MC rises with nmda)")
+            print("     but small: a random net has no recurrent attractor. Turning 100 ms of")
+            print("     synaptic memory into 1500 ms of network memory needs an EVOLVED loop")
+            print("     (Wang slow reverberation). Every remaining memory question needs")
+            print("     SELECTION. Next: build D068 batching (un-parked, D076), then Gate A.")
 
         note = (f"rung1: best mem_d1 trailing="
                 f"{df[df.readout_pos=='trailing'].mem_d1.min() if 'trailing' in set(df.readout_pos) else float('nan'):.3f} "
