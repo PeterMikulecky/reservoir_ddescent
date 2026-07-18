@@ -371,3 +371,8 @@ long jobs that printed **nothing** — a silently-serial pool looks exactly like
 substrate. See QUEUE.md.
 
 <!-- Future run stubs will be auto-appended below this line. -->
+
+## 2026-07-18 02:29 — `E9-evolve__20260718-022622__exp__gb15c3c1__diagnostics`  <!-- auto -->
+- type `exp` · stage `E9` · git `gb15c3c1` (E9 diagnostics: D030's actual gate (decode E from state and rates), FRAMING sec3 channel check on evonet, memory-vs-delay, carryover vs noise floor, context decode) · status **complete**
+- result: E|state=0.218 E|rates=0.737; PR_var>PR_mean in 8/8; MC=0.00; order/noise=1.16; ctx=0.34 vs chance 0.25
+- _interpretation:_ 
