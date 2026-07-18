@@ -2623,3 +2623,53 @@ guaranteed at scale.
 reassembles the block-diagonal synapses every call; building the topology once and only rewriting
 weights per generation removes that (absent = weight 0; NOT a frozen wiring diagram). (4) pool
 deletion (now a cleanup). (5) hoist the StateMonitor. Plus D066 fixes 2–3 and `run.start_log()`.
+
+### D079 — Measured: one Gate B0 arm is 2.17 h (was ~58 h). D068 is COMPLETE; steps 3–5 skipped on the evidence. The sweep runs overnight.
+**2026-07-18 · Accepted** · closes the D068 performance arc · *the honest end-to-end wall-clock D078 owed*
+
+**THE MEASUREMENT (PJM's machine, real Gate B0 operating point, `batched=True`).**
+- equivalence re-verified in-environment first: **batch == single-genome, True** — timings trusted.
+- **1.59 s/generation** at N=50, pop=30, n_env=50, density=0.5, |W|≈1,225.
+- **⇒ full-depth arm (~4,900 gens): 2.17 h.  6-arm density sweep: 13.0 h.**
+
+**AGAINST THE BASELINE:** D067 measured this exact arm at **~58 h**. We are at **2.17 h — a
+measured 27×**, landing on the steps-1+2 projection (~30×). **For once the estimate and the clock
+AGREE** — after D060/D064/D065/D067 each missed. The discipline (D068: name the quantity, then
+measure) produced a projection that survived contact with the stopwatch.
+
+**THE D068 STEP 3+5 DECISION, MADE FROM DATA — SKIP.** The build-once refactor (pre-allocate all
+N² synapses per block, persist the network + StateMonitor across generations, rewrite only weights)
+would trim ~20–40 min off a 2 h arm by removing per-generation synapse reassembly and `before_run`
+re-prep. **Against that: the pop·N² memory ceiling (D078 hazard 3) and a persistent-network state
+with more surface to get wrong.** Trading real risk and complexity for ~30 min on an
+overnight-comfortable run is a bad trade. **Had the arm come back at ~6 h the refactor would clearly
+have earned its place; at 2 h it does not.** *This is precisely why we measured instead of building
+on principle — the clock decides, and it decided against.*
+
+**STEP 4 (delete the pool) — ALSO SKIP.** `batched=True` bypasses the pool entirely; the pool path
+survives as the `batched=False` **reference implementation** that `verify_batch_equivalence` and
+D078's end-to-end check compare against. Deleting it would remove a validated comparison for zero
+performance gain (it does not run in the fast path). *Step 4's rationale — "batching makes the pool
+redundant" — is satisfied by bypassing it, not by deleting it.*
+
+**⇒ D068 IS COMPLETE.**
+| step | status |
+|---|---|
+| 1 — drop the discarded test eval (D077) | ✅ ~1.9× |
+| 2 — population batching (D078) | ✅ ~15× |
+| 3+5 — build-once refactor | ⏭️ **skipped — measured unnecessary (this entry)** |
+| 4 — delete the pool | ⏭️ **skipped — retained as reference path** |
+
+**STILL OWED, small, travels with the first real Gate B0 commit:** D066 fixes 2–3 (per-gen ETA +
+pool/ batch announcement — never implemented, D071) and `run.start_log()` in
+`run_GateB0_interpolation.py`. *These are output/logging, not performance; they do not gate Gate A.*
+
+**⇒ NEXT IS THE SCIENCE, NOT THE ENGINEERING. Gate A** — does evolution route E to the output
+neurons? (D069/D072: the encoder works, `E|state`≈0.22, but `E|rates`≈0.73 — E barely reaches the
+d output neurons; Gate A asks whether *selection* fixes the routing.) Then **Gate B** — does a peak
+appear on the P axis? *The apparatus is finally fast enough to ask.*
+
+**CAVEAT (D068's standing rule, honoured).** 2.17 h is projected from 30 timed generations assuming
+flat per-generation cost. It is the honest decision input; the *ground-truth* full-arm number
+arrives free with the first real Gate A/B run, and if it drifts materially from 2 h we revisit. The
+27× and the equivalence are measured facts; the full-depth hours are a measured-rate projection.
