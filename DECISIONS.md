@@ -2560,3 +2560,66 @@ exact.*
 (3) pre-allocated synapses built once (absent = weight 0; NOT a frozen wiring diagram); (4) delete
 the pool; (5) hoist the StateMonitor. Plus D066 fixes 2–3 (ETA + pool announcement) and
 `run.start_log()` in the Gate B0 script.
+
+### D078 — Population batching: the whole population runs as ONE block-diagonal network per generation. ~15× measured, bit-for-bit identical evolution. D068 step 2.
+**2026-07-18 · Accepted** · **D068's second and largest performance fix** · *separate runner by design (PJM); equivalence verified on the real network before acceptance*
+
+**THE CHANGE.** Instead of `pop_size` separate `net.run()` calls per generation, all genomes run
+**simultaneously as independent diagonal blocks of one (pop·N)-neuron network** — one `run()` per
+generation. `evonet.behave_batch(genomes, cfg, E)` assembles the block-diagonal synapse lists,
+runs once, and splits the recorded trace back into per-genome results.
+
+**MEASURED: ~15× at pop 30 × N 50** (14.2 s single-genome loop → 0.9 s batched), squarely in the
+projected 15–25×. **Composed with D077's ~1.9×, the Gate B0 arithmetic goes from ~69 h to ~2–4 h.**
+
+**SEPARATE RUNNER, NOT A REWRITE OF `EvoNet.behave` (PJM design call).** The single-genome
+`behave` remains the **validated reference path** — diagnostics, Gate C, the positive control all
+call it, untouched. `behave_batch` is a separate ADDITIVE path used only by the GA loop. This is
+the structure this project keeps needing:
+- a batching bug **cannot silently corrupt the diagnostics** — they do not call it;
+- the equivalence check is **permanent and trivial**: batched block *k* must equal
+  `EvoNet(genomes[k]).behave(E)` exactly;
+- windowing is **shared** via the new module-level `_window_readout` helper (single-genome behave
+  now calls it too), so the readout logic **cannot drift** between the two paths — it is one
+  function, not two copies.
+
+**EQUIVALENCE VERIFIED ON THE REAL NETWORK (the discipline, twice earned).**
+- **`behave_batch` == single-genome `behave`, bit-for-bit** at noise=0, at nmda_frac 0.0 AND 0.5
+  (so the D075 charge-split is reproduced exactly through the batched assembly).
+- **End-to-end: `run_evolution(batched=True)` == `run_evolution(batched=False)`** — every
+  `best_train`/`mean_train`/`best_test`/`mean_test` identical across all generations, final-gen
+  population params identical. **Same evolution, ~11× faster even at pop 12.**
+- **Cross-block independence: verified** — perturbing genome 0 changes block 0 and leaves blocks
+  1–5 bit-identical. Hazard 1 (silent cross-block contamination — the worst failure) is both
+  **guarded** (an assert that every synapse stays within its block) and **empirically clean**.
+- `verify_batch_equivalence(genomes, cfg, E)` is retained as a **standing check**: run it whenever
+  the batched path or the model equations change. *"Blocks are independent" and "a zero-weight
+  synapse is inert" are SHOULDs, and this project's should-be-fines have twice been bugs (the pool
+  that never ran, D065; the 16× charge, D075).*
+
+**THREE HAZARDS, each named in the code and guarded:**
+1. **Cross-block contamination** — synapses assembled with per-block offsets; `assert i//N == j//N`
+   before the run; empirically confirmed independent.
+2. **Per-neuron noise** — Brian2's `xi` is per-neuron, so each block gets an independent noise
+   realisation automatically (matches `pop_size` separate runs with distinct draws). This is NOT
+   common-random-numbers across blocks — that is a **separate open question** (D077 tier-2 / the
+   H-D confound fix); batching neither blocks nor implements it.
+3. **Memory** — pop·N neurons, and once step 3 lands, all-to-all pre-allocated synapses per block.
+   At pop 30 × N 50 = 1,500 neurons it is small; the ceiling grows as **pop·N²**. Flagged; at
+   larger N or pop it becomes the binding constraint and may cap how much of the sweep runs in one
+   batch (a batch can be split into sub-batches with no loss — blocks are independent).
+
+**`batched=True` IS NOW THE DEFAULT.** The `n_workers`/pool path survives for `batched=False` and
+`eval_fn` overrides but is the **slow path**: batching makes multiprocessing redundant (D068 step
+4 — deleting the pool — is now mostly a cleanup, since `batched=True` bypasses it entirely).
+
+**HONEST LIMITATION.** The ~15× is a single-run micro-benchmark, not a full Gate B0 wall-clock. The
+per-call and assembly overheads are real; at the required depth the sustained speedup is what
+matters and it **must be measured on the actual run** (D068's standing rule: four runtime estimates
+were wrong). The equivalence is exact and proven; the *multiplier* is measured-so-far, not
+guaranteed at scale.
+
+**NEXT (D068):** (3) pre-allocated synapses built once per run — currently `behave_batch`
+reassembles the block-diagonal synapses every call; building the topology once and only rewriting
+weights per generation removes that (absent = weight 0; NOT a frozen wiring diagram). (4) pool
+deletion (now a cleanup). (5) hoist the StateMonitor. Plus D066 fixes 2–3 and `run.start_log()`.

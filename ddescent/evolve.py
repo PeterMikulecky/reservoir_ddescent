@@ -198,13 +198,30 @@ def run_evolution(task, net_cfg: EvoNetConfig, cfg: EvolveConfig,
     (Gate B0) asks whether **any** genome can fit exactly; R&N's Occam factor is a
     **class-level** effect.
     """
+def _errs_from_behave(B_list, task, which):
+    """NMSE per genome from a list of behave outputs (batched or single). which: 'train'|'test'."""
+    Y = task.Y_train if which == "train" else task.Y_test
+    return np.array([_nmse_affine(Y, B["rates"]) for B in B_list])
+
+
+def run_evolution(task, net_cfg: EvoNetConfig, cfg: EvolveConfig,
+                  eval_fn=None, n_workers: int = 1, verbose: bool = True,
+                  batched: bool = True) -> tuple:
+    """Evolve W. Returns (history_rows, final_population).
+
+    Records BOTH best-individual and population-mean training error (D059): interpolation
+    (Gate B0) asks whether **any** genome can fit exactly; R&N's Occam factor is a
+    **class-level** effect.
+
+    **`batched=True` (D078, default).** The whole population runs as ONE block-diagonal network
+    per generation (`evonet.behave_batch`) — the ~15× measured speedup. The per-genome pool path
+    (`n_workers>1`) is retained for `batched=False` / `eval_fn` overrides but is now the SLOW
+    path: batching makes multiprocessing redundant (step 4). Train/selection are identical to the
+    single-genome path — verified bit-for-bit at noise=0 by `verify_batch_equivalence` (D078).
+    """
+    from .evonet import behave_batch
     rng = np.random.default_rng(cfg.seed)
-    # BUG FIX (D065): decide about the pool BEFORE overwriting eval_fn.
-    # The old order set `eval_fn` to a lambda first, then tested `eval_fn is None` — which was
-    # therefore ALWAYS FALSE, so the pool was NEVER created and every run was silently SERIAL
-    # (one process, ~1 core). Caught by PJM watching Task Manager: "only 1 Python process at 12%".
-    use_pool = (n_workers > 1) and (eval_fn is None)
-    # D077: population eval is TRAIN-ONLY (fitness reads train). Test computed selectively below.
+    use_pool = (not batched) and (n_workers > 1) and (eval_fn is None)
     eval_fn = eval_fn or (lambda g: evaluate(g, task, net_cfg, with_test=False))
 
     pop = [random_genome(net_cfg, cfg.density, w0=cfg.w0, ei_split=cfg.ei_split,
@@ -217,29 +234,47 @@ def run_evolution(task, net_cfg: EvoNetConfig, cfg: EvolveConfig,
                                             initargs=(task, net_cfg))
     try:
       for gen in range(cfg.n_generations):
-          if pool is not None:
-            res = pool.map(_eval_payload, pop)      # only the genome is shipped
+          # ---- TRAIN: whole population (fitness reads train) -----------------------------
+          if batched:
+            B_tr = behave_batch(pop, net_cfg, task.E_train)          # one run, all genomes
+            errs = _errs_from_behave(B_tr, task, "train")
+            nps = np.array([g.n_params() for g in pop])
+            excf = np.array([g.exc_fraction() for g in pop])
+          elif pool is not None:
+            res = pool.map(_eval_payload, pop)
+            errs = np.array([r["train_err"] for r in res])
+            nps = np.array([r["n_params"] for r in res])
+            excf = np.array([r["exc_frac"] for r in res])
           else:
             res = [eval_fn(g) for g in pop]
-          errs = np.array([r["train_err"] for r in res])       # train: whole population (fitness)
-          nps = np.array([r["n_params"] for r in res])
+            errs = np.array([r["train_err"] for r in res])
+            nps = np.array([r["n_params"] for r in res])
+            excf = np.array([r["exc_frac"] for r in res])
           fits = np.array([_fitness(e, p, cfg) for e, p in zip(errs, nps)])
           order = np.argsort(-fits)
 
-          # ---- D077: selective TEST evaluation -----------------------------------------
-          # Population eval above was train-only. Compute test only where a hypothesis reads it.
+          # ---- D077: selective TEST evaluation (batched too) -----------------------------
           is_final = (gen == cfg.n_generations - 1)
           do_pop_test = is_final or (cfg.test_every > 0 and gen % cfg.test_every == 0)
           if do_pop_test:
             # whole population — D059's class-level Occam signal + the final-gen P-point that
             # enters the cross-arm double-descent curve (the STUDY's headline DD, BRIDGE L5).
-            tests = np.array([evaluate(pop[i], task, net_cfg, with_test=True)["test_err"]
-                              for i in range(len(pop))])
+            if batched:
+                B_te = behave_batch(pop, net_cfg, task.E_test)
+                tests = _errs_from_behave(B_te, task, "test")
+            else:
+                tests = np.array([evaluate(pop[i], task, net_cfg, with_test=True)["test_err"]
+                                  for i in range(len(pop))])
             best_test = float(tests[order[0]]); mean_test = float(np.nanmean(tests))
             std_test = float(np.nanstd(tests))
           else:
             # champion only — the epoch-wise DD trajectory, kept dense (one extra behave/gen).
-            best_test = evaluate(pop[order[0]], task, net_cfg, with_test=True)["test_err"]
+            champ = pop[order[0]]
+            if batched:
+                best_test = float(_errs_from_behave(behave_batch([champ], net_cfg, task.E_test),
+                                                    task, "test")[0])
+            else:
+                best_test = evaluate(champ, task, net_cfg, with_test=True)["test_err"]
             mean_test = float("nan"); std_test = float("nan")
 
           history.append(dict(
@@ -250,7 +285,7 @@ def run_evolution(task, net_cfg: EvoNetConfig, cfg: EvolveConfig,
             # population mean — R&N's class-level Occam factor; test is NaN on non-sweep gens
             mean_train=float(errs.mean()), mean_test=mean_test, std_test=std_test,
             mean_params=float(nps.mean()), std_params=float(nps.std()),
-            mean_exc_frac=float(np.mean([r["exc_frac"] for r in res])),
+            mean_exc_frac=float(excf.mean()),
             fit_mean=float(fits.mean()), fit_std=float(fits.std()),
             pop_test=bool(do_pop_test),      # provenance: was mean_test a real sweep or NaN?
           ))

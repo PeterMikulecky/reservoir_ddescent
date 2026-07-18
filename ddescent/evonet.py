@@ -205,6 +205,35 @@ def mutate(g: Genome, mag_sigma: float = 0.2, sign_flip_p: float = 0.01,
     return Genome(signs=signs, mag=mag)
 
 
+def _window_readout(r, t, n, N, present_ms, readout_window_ms, readout_pos):
+    """Extract per-presentation (state_mean, state_var) from a recorded rate trace.
+
+    **SHARED by the single-genome and batched paths (D078) so windowing can never drift between
+    them.** r: (N, n_samples) rate trace for ONE block/network. t: (n_samples,) sample times in ms.
+    Returns (state (n,N), state_var (n,N)). This is the exact logic that used to live inline in
+    EvoNet.behave; factoring it out makes the batched runner's equivalence to the single-genome
+    path a property of construction, not of copy-paste.
+    """
+    import numpy as _np
+    state = _np.empty((n, N)); state_var = _np.empty((n, N))
+    for k in range(n):
+        t0 = k * present_ms
+        t1 = (k + 1) * present_ms
+        if readout_pos == "leading":
+            lo, hi = t0, t0 + readout_window_ms
+        elif readout_pos == "trailing":
+            lo, hi = t1 - readout_window_ms, t1
+        else:
+            raise ValueError(f"readout_pos must be 'trailing' or 'leading', got {readout_pos!r}")
+        m = (t > lo) & (t <= hi)
+        if not m.any():
+            m = (t > t0) & (t <= t1)
+        win = r[:, m]
+        state[k] = win.mean(axis=1)
+        state_var[k] = win.var(axis=1)
+    return state, state_var
+
+
 class EvoNet:
     """A spiking network whose recurrent weights ARE the genome."""
 
@@ -312,24 +341,148 @@ class EvoNet:
         t = np.asarray(mon.t / ms)
         self.net.remove(mon)
 
-        state = np.empty((n, c.N)); state_var = np.empty((n, c.N))
-        for k in range(n):
-            t0 = k * c.present_ms
-            t1 = (k + 1) * c.present_ms
-            # D072: window POSITION within the presentation. 'trailing' = the inherited
-            # behaviour (read after ~4.5 tau_m of settling, when the previous stimulus is
-            # gone); 'leading' = read the onset, where the carryover still is.
-            if c.readout_pos == "leading":
-                lo, hi = t0, t0 + c.readout_window_ms
-            elif c.readout_pos == "trailing":
-                lo, hi = t1 - c.readout_window_ms, t1
-            else:
-                raise ValueError(f"readout_pos must be 'trailing' or 'leading', "
-                                 f"got {c.readout_pos!r}")
-            m = (t > lo) & (t <= hi)
-            if not m.any():
-                m = (t > t0) & (t <= t1)
-            win = r[:, m]
-            state[k] = win.mean(axis=1)
-            state_var[k] = win.var(axis=1)
+        # D078: windowing now lives in the shared _window_readout helper so the single-genome
+        # and batched paths cannot diverge.
+        state, state_var = _window_readout(r, t, n, c.N, c.present_ms,
+                                           c.readout_window_ms, c.readout_pos)
         return dict(rates=state[:, self.cfg.out_slice()], state=state, state_var=state_var)
+
+
+def behave_batch(genomes, cfg, E):
+    """Run a LIST of genomes as ONE block-diagonal network — the D068 population batching (D078).
+
+    ══════════════════════════════════════════════════════════════════════════════════════════
+    WHY A SEPARATE RUNNER, NOT A REWRITE OF EvoNet.behave (design decision, PJM 2026-07-18)
+    ══════════════════════════════════════════════════════════════════════════════════════════
+    The single-genome `EvoNet.behave` is the VALIDATED reference path — diagnostics, Gate C, the
+    positive control all call it. This runner is a SEPARATE, ADDITIVE path used only by the GA
+    loop. Consequences, all deliberate:
+      * A bug in batching can NEVER silently corrupt the diagnostics — they do not call this.
+      * The equivalence check is permanent and trivial: batched block k MUST equal
+        EvoNet(genomes[k]).behave(E) exactly. `verify_batch_equivalence` below is that check.
+      * Windowing is shared via `_window_readout`, so the ONLY thing this runner adds is the
+        block-diagonal assembly and the single run() — not a second copy of the readout logic.
+
+    ══════════════════════════════════════════════════════════════════════════════════════════
+    WHAT IS AND IS NOT BATCHED
+    ══════════════════════════════════════════════════════════════════════════════════════════
+    * WITHIN one genome, the n_env environments stream through ONE continuous run with sequential
+      carryover — the network state persists env k -> k+1. **That carryover is D048's context
+      mechanism and MUST be preserved.** It already was, in single-genome behave; this runner
+      keeps it per block.
+    * ACROSS genomes, the `pop_size` networks run SIMULTANEOUSLY as independent diagonal blocks
+      of one big (pop*N)-neuron network. No cross-block synapses (guarded below). Every block sees
+      the SAME environment sequence E, driven into its own input neurons. One run() replaces
+      pop_size runs -> the ~15-25x.
+
+    THREE HAZARDS, each guarded:
+      1. Cross-block contamination — the worst failure, and silent. Synapses are assembled with
+         per-block offsets so i,j never cross a block boundary; asserted before the run.
+      2. Per-neuron noise — Brian2's `xi` is per-neuron, so each block gets an independent noise
+         realisation automatically (same as pop_size separate runs with distinct RNG draws). NOT
+         common-random-numbers across blocks; that is a separate open question (D077 tier-2).
+      3. Memory — pop*N neurons and (step 3) all-to-all-allocated synapses. At pop 30 x N 50 =
+         1500 neurons this is small; the ceiling grows with pop*N^2. Flagged, not yet a limit.
+
+    Returns: list of per-genome dicts, each {rates, state, state_var} identical in shape to
+    EvoNet.behave's output, in the same order as `genomes`.
+    """
+    P = len(genomes)
+    N = cfg.N
+    NT = P * N
+    n = E.shape[0]
+
+    # ---- assemble the block-diagonal synapse lists (post, pre in GLOBAL indices) --------
+    all_i = []; all_j = []; all_wf = []; all_ws = []
+    f = cfg.nmda_frac
+    charge_scale = cfg.tau_syn / cfg.tau_slow
+    for b, g in enumerate(genomes):
+        W = g.W
+        off = b * N
+        post, pre = np.nonzero(W)
+        if len(pre) == 0:
+            continue
+        w = W[post, pre]
+        pre_exc = (g.signs[pre] > 0) if g is not None else (w > 0)
+        w_slow = np.where(pre_exc, f * w * charge_scale, 0.0)
+        w_fast = np.where(pre_exc, (1.0 - f) * w, w)
+        all_i.append(pre + off); all_j.append(post + off)
+        all_wf.append(w_fast); all_ws.append(w_slow)
+    if all_i:
+        gi = np.concatenate(all_i); gj = np.concatenate(all_j)
+        gwf = np.concatenate(all_wf); gws = np.concatenate(all_ws)
+        # HAZARD 1 guard: every synapse must stay within one block.
+        assert np.all(gi // N == gj // N), "cross-block synapse detected — blocks would contaminate"
+    else:
+        gi = gj = gwf = gws = np.array([], dtype=int)
+
+    # ---- one big NeuronGroup, same equations as _build ----------------------------------
+    c = cfg
+    eqs = """
+    dv/dt = (v_rest - v + I_fast + I_slow + I_ext + bias)/tau_m + noise_sigma*sqrt(2/tau_m)*xi : 1 (unless refractory)
+    dI_fast/dt = -I_fast/tau_syn : 1
+    dI_slow/dt = -I_slow/tau_slow : 1
+    dr/dt = -r/tau_r : 1
+    I_ext = ta(t, i) : 1
+    """
+    ns = dict(v_rest=c.v_rest, tau_m=c.tau_m * ms, tau_syn=c.tau_syn * ms,
+              tau_slow=c.tau_slow * ms, tau_r=c.tau_r * ms, bias=c.bias,
+              noise_sigma=c.noise_sigma, v_thresh=c.v_thresh, v_reset=c.v_reset,
+              ta=b2.TimedArray(np.zeros((1, NT)), dt=b2.defaultclock.dt))
+    G = b2.NeuronGroup(NT, eqs, threshold="v > v_thresh", reset="v = v_reset; r += 1",
+                       refractory=c.refractory_ms * ms, method="euler", namespace=ns,
+                       name="evonet_batch")
+    G.v = c.v_rest
+    if c.seed is not None:
+        b2.seed(c.seed)
+    S = b2.Synapses(G, G, model="w_fast : 1\nw_slow : 1",
+                    on_pre="I_fast_post += w_fast\nI_slow_post += w_slow", name="rec_batch")
+    if len(gi):
+        S.connect(i=gi, j=gj)
+        S.w_fast = gwf; S.w_slow = gws
+
+    # ---- drive: same E into every block's input neurons ---------------------------------
+    drive = np.zeros((n, NT))
+    for b in range(P):
+        drive[:, b * N : b * N + c.n_in] = c.input_gain * E
+    G.namespace["ta"] = b2.TimedArray(drive, dt=c.present_ms * ms)
+
+    mon = b2.StateMonitor(G, "r", record=True, dt=c.sample_ms * ms, name="mon_batch")
+    net = b2.Network(G, S, mon)
+    net.run(n * c.present_ms * ms)
+    r_all = np.asarray(mon.r)            # (NT, samples)
+    t = np.asarray(mon.t / ms)
+
+    # ---- split back into per-genome results via the SHARED windowing helper -------------
+    out = []
+    for b in range(P):
+        r_b = r_all[b * N : (b + 1) * N, :]
+        state, state_var = _window_readout(r_b, t, n, N, c.present_ms,
+                                            c.readout_window_ms, c.readout_pos)
+        out.append(dict(rates=state[:, cfg.out_slice()], state=state, state_var=state_var))
+    return out
+
+
+def verify_batch_equivalence(genomes, cfg, E, rtol=1e-9, atol=1e-9, verbose=True):
+    """D078: the standing check. Batched block k MUST equal EvoNet(genomes[k]).behave(E).
+
+    Noise makes exact equality impossible UNLESS noise is off, so this is meaningful only at
+    noise_sigma=0 (deterministic). Returns True/False. Run it whenever the batched path or the
+    model equations change — 'a zero-weight synapse is inert' and 'blocks are independent' are
+    SHOULDs, and this project's should-be-fines have twice been bugs (the pool that never ran;
+    the 16x charge)."""
+    import numpy as _np
+    assert cfg.noise_sigma == 0, "equivalence check must run at noise_sigma=0 (else noise differs)"
+    batched = behave_batch(genomes, cfg, E)
+    ok = True
+    for k, g in enumerate(genomes):
+        single = EvoNet(g, cfg).behave(E)
+        for key in ("rates", "state", "state_var"):
+            if not _np.allclose(batched[k][key], single[key], rtol=rtol, atol=atol):
+                d = float(_np.abs(batched[k][key] - single[key]).max())
+                if verbose:
+                    print(f"  block {k} '{key}' MISMATCH: max|Δ|={d:.2e}")
+                ok = False
+    if verbose:
+        print("batch == single-genome:", ok)
+    return ok
