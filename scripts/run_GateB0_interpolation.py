@@ -95,7 +95,10 @@ def _arm(pl: dict) -> dict:
     task = T.hierarchical_environments(**pl["task_kw"])
     net = EvoNetConfig(**pl["net_kw"])
     cfg = EvolveConfig(**pl["ga_kw"])
-    hist, _ = run_evolution(task, net, cfg, n_workers=pl.get("workers", 1), verbose=False)
+    # D071: verbose=False was D066 fix 1, never implemented -- with `quick` being a single
+    # arm it meant ZERO output for 87 minutes. D066 fixes 2-3 (per-gen ETA, pool
+    # announcement) live in evolve.py and land with the D068 batching changeset.
+    hist, _ = run_evolution(task, net, cfg, n_workers=pl.get("workers", 1), verbose=True)
     h0, hN = hist[0], hist[-1]
     best = min(h["best_train"] for h in hist)
     return dict(pop_size=cfg.pop_size, n_generations=cfg.n_generations,
@@ -136,7 +139,12 @@ def main():
                    n_test=args.n_env, context_dwell=10, seed=args.seed)
     net_kw = dict(N=args.N, n_in=10, d=args.d, bias=0.6, input_gain=1.0, noise_sigma=1.0)
 
-    run = P.new_run("T0", "exp", project_root=args.project_root, runs_root=args.runs_root,
+    # D071: was P.new_run("T0", ...) -- "T0" is `tune_operating_point`, so the FLAGSHIP'S
+    # GATE was filing itself under tuning/prep. `CANONICAL` has had "E9": "evolve" since
+    # D021 created the stage; it was available and unused. Runs from here land in
+    # runs/E9_evolve/; the D067 run stays under runs/T0_tune_operating_point/ forever
+    # (NAMING.md sec.3: runs/ is never hand-edited). The split is permanent and recorded.
+    run = P.new_run("E9", "exp", project_root=args.project_root, runs_root=args.runs_root,
                     config=dict(preset=args.preset, control_only=args.control,
                                 task=task_kw, net=net_kw),
                     tag="gateB0-interpolation", seeds=[args.seed],
@@ -207,8 +215,16 @@ def main():
         print(f"\n=== (A) THE GATE: {len(payloads)} GA settings, deep in the overparameterized regime ===")
         # arms SERIAL; workers go to the population inside each arm (D064)
         est = sum(pl["ga_kw"]["pop_size"] * pl["ga_kw"]["n_generations"] for pl in payloads)
-        print(f"    {est:,} total evaluations ~ {est*2/max(args.workers,1)/60:.0f} min "
-              f"at ~2 s/eval on {args.workers} workers\n")
+        # D071/D068: the old formula divided by `workers` AND used a per-eval figure that was
+        # already 6-worker THROUGHPUT -- double-counting the parallelism. It printed 17 min for
+        # a run that took 87. D068's rule: NAME the quantity cost scales with. It is TIMESTEPS
+        # (n_env * present_ms / dt, x2 for train+test) -- NOT |W|, and NOT N. So this estimate
+        # is ~flat in network size, and shrinking N does not move it.
+        SEC_PER_EVAL_6W = 1.7        # MEASURED throughput on 6 workers (D067). Not serial cost.
+        hrs = est * SEC_PER_EVAL_6W / 3600
+        print(f"    {est:,} total evaluations ~ {hrs:.1f} h at {SEC_PER_EVAL_6W} s/eval")
+        print(f"    (measured THROUGHPUT on 6 workers -- do NOT divide by n_workers again;")
+        print(f"     cost is timestep-dominated, so it is ~flat in N and |W| -- D068)\n")
         rows = []
         for i, pl in enumerate(payloads):
             t0 = __import__("time").time()
