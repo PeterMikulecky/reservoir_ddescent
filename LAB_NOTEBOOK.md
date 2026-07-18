@@ -381,3 +381,8 @@ substrate. See QUEUE.md.
 - type `exp` · stage `E9` · git `g16039fd` (rung 1: readout_pos knob (trailing default unchanged) to separate 'memory absent' from 'memory unread'; readout position as a diagnostics grid axis; correct the PR verdict - compression did not transfer and prediction was never tested) · status **complete**
 - result: rung1: best mem_d1 trailing=1.000 leading=0.531; E|state=0.225 E|rates=0.730; PR_in=5.86 PR_mean_min=6.95; MC=0.47; ord/noise=6.09; ctx=0.32/0.25
 - _interpretation:_ 
+
+## 2026-07-18 05:13 — `E9-evolve__20260718-051032__exp__gf82d585__nmda-sweep`  <!-- auto -->
+- type `exp` · stage `E9` · git `gf82d585` (D074: slow NMDA-like excitatory current (tau_slow=100ms, exc-only, no Mg gate), inert at nmda_frac=0 default; diagnostics sweep nmda_frac at present_ms=50, gate on d2-d3 movement) · status **complete**
+- result: rung1: best mem_d1 trailing=0.826 leading=nan; E|state=0.316 E|rates=0.884; PR_in=5.86 PR_mean_min=1.01; MC=0.18; ord/noise=3.61; ctx=0.33/0.25
+- _interpretation:_ 
