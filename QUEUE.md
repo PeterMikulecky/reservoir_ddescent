@@ -1,200 +1,216 @@
 # Queue
 
-Updated 2026-07-17 (D072/D073). Claims → `DECISIONS.md` · framing → `FRAMING.md` ·
-chain → `BRIDGE.md` · narrative → `LAB_NOTEBOOK.md`.
+Updated 2026-07-19 (D082–D084). Claims → `DECISIONS.md` · framing → `FRAMING.md` ·
+chain → `BRIDGE.md` · narrative → `LAB_NOTEBOOK.md` · citations → `REFERENCES.md`.
 
 ---
 
-# ⛔ THE BLOCKING QUESTION: can a slow SYNAPTIC timescale reach `mem_d10`? (D073)
+# ⛔ THE BLOCKING RESULT: Gate A FAILED — selection on BIRTH-fitness routes nothing (D082)
 
-**THE DIAGNOSTICS ARE DONE AND THE ANSWER IS ARITHMETIC. The network holds ~30 ms. Context needs
-1,500 ms.**
+**The full 4,900-gen Gate A arm ran and is a pre-registered FAIL (D081 criterion).**
+- **E|rates: 0.995 (gen 0) → 0.999 (gen 4899). Fell −0.003.** Champion output neurons carry no more
+  information about E than at random init. `best_train` flat at ~0.92 throughout.
+- **E|state ceiling 0.413** — the state holds E (encoder works); it never reaches the output slice.
+- **Selection did not route E.** Not "hadn't converged" — 4,900 generations produced no gradient.
 
-- **`mem_d1` = 1.000 in all 8 trailing cells** — not 0.99, exactly 1.0, at every gain and noise.
-  **`order/noise` = 0.98–1.16.** Two independent measures, same answer: **memoryless.**
-- **Rung 1** (read the onset, not the settled response) recovers d1 → **0.531**, MC → 0.47,
-  order/noise → 6.09. **But `mem_d2` = 1.000 in EVERY leading cell.** A **cliff, not a decay**:
-  d1's window has a **zero gap** from the previous presentation's end; d2 is 150 ms back =
-  e^(−150/30) = **0.7%**. ⇒ **window overlap catching `r`'s filter tail, NOT a collective mode.
-  There is no hidden long memory.**
-- **And rung 1 is not adoptable:** `E|state` 0.225 → 0.492, `E|rates` 0.730 → **0.931**. It halves
-  encoding and starves what fitness reads.
+**THE DIAGNOSIS (D083): we are scoring UNDEVELOPED genotypes.** `evaluate()` instantiates exactly
+the genome's weights, runs one forward pass, scores. **No within-life tuning.** But fitness — in
+Frank's own population-genetics framing — is measured on the *developed* organism (genome →
+development + experience → phenotype → fitness). A generation of kangaroos sharing a gene-connection
+count are *developed adults* when scored. **We score them at birth.** If the capability to route/infer
+only expresses after development, birth-fitness is flat **by construction** — every genome looks
+equally unfit because the distinguishing behaviour never develops.
 
-**⇒ GATE B0 COULD NOT HAVE PASSED AT ANY N, ANY POPULATION, ANY NUMBER OF GENERATIONS.** D067's
-~40× evaluation shortfall was **real and not binding**. *We diagnosed the wrong constraint twice:
-not the budget (D067), not a broken encoder (D069).*
+**⇒ THE FIX IS THE DEVELOPMENT REDESIGN (D083), NOW THE CRITICAL PATH.** Everything downstream of
+Gate A — Gate B, the map, the coordinate sweeps — is blocked behind it, because all of it
+presupposes selection can produce functional networks, which D082 shows it cannot on birth-fitness.
 
-**THE ENCODER WORKS.** `E|state` = **0.225** (1.0 = blind). `E|rates` = **0.730** — E is in the
-state and barely reaches the output neurons. **Gate A is a ROUTING problem, and routing is exactly
-what selection is for.** *Not a broken network. Gate A was answerable all along; D067 declared it
-"unanswerable until Gate B0 passes" and that was wrong.*
+---
 
-**⇒ THE NEXT MEASUREMENT — 4 min, NO GA, and the gate is `mem_d10`:**
+# THE CRITICAL PATH: build & test the development redesign (D083)
 
-| change | why |
-|---|---|
-| **τ_syn per-neuron**, bimodal **AMPA(~5 ms) / NMDA(~100 ms)**-like, **DRAWN not evolved** | D073. The only knob that spans 1,500 ms. **τ_m = 200 ms is NOT physiological** (cortical τ_m is 10–50 ms); `dI_syn/dt = -I_syn/tau_syn` is already in the equations at 5 ms = AMPA. Only the SCOPE changes. |
-| **`present_ms` 150 → 50**, `readout_window_ms` reduced below it | D073: **neither knob works alone.** τ=200 alone → e^(−1500/200) = 0.06%. `present_ms`=50 alone → e^(−500/30) ≈ 0%. **Both → e^(−500/200) = 8%.** τ=300 → **19%.** *And it is D068's **3× compute win** — the one lever that is both a scientific fix and a speedup.* |
-| **gate = `mem_d10`**, not `mem_d1` | d1 is free (window overlap). d10 is the task. |
+**Settled (D083):** fitness reduces the DEVELOPED distribution, not the birth one. Development =
+**Kind A** (strength-tuning within FIXED synaptic support, so P = non-zero synapse count is
+invariant). Rule = **Hebbian + homeostatic, standard/interpretable, UNSUPERVISED** (blind to Y).
+Placement = **inside every fitness eval** (nested loop; forced by D082 — "develop only at readout"
+would select on the flat birth landscape). Duration = **scales with task structure (r₁, dwell),
+constant across the P-sweep**, with an expected window.
 
-**Validated WITHOUT evolution** — which is why it comes before the batching work, not after.
+**The ordered build (each step gates the next):**
+
+1. **Prototype Hebb+homeostasis as a development phase in `evaluate()`.** Greenfield — *no plasticity
+   machinery exists yet* (confirmed). Insertion is clean: `EvoNet(genome) → develop(net, stimuli) →
+   behave → score`. One phase, one place. The D077/D081 test + routing machinery reads the developed
+   network unchanged.
+   - **HARD INVARIANT (Kind A): the support mask is frozen at birth; plasticity operates only within
+     it.** Assert `(developed.mag != 0) == (birth.mag != 0)` bit-for-bit. If a Hebbian rule zeroes a
+     weight or homeostasis revives one, P changes during development and the clean-axis argument
+     collapses. This is a checkable invariant, not an assumption — enforce it.
+2. **FIRST EMPIRICAL QUESTION — does Hebb+homeostasis CONVERGE?** (D083 sub-decision 3.) Everything
+   forks here. **If it converges** to a stable fixed point → "developed" = "matured" is definable by
+   convergence, and the T-confound dissolves (T set by dynamics, not by us). **If it cycles / diverges
+   / converges to a degenerate state** → convergence-based maturity is unavailable, fall back to
+   demonstrating T-robustness (run the sweep at several T, report T-dependence). *Check this before
+   anything downstream.*
+3. **THE D082 REMATCH — does development route E where birth-fitness could not?** Re-run the Gate A
+   question with development in the loop. **This is the load-bearing test of the whole redesign.**
+   PASS (E|rates falls) → the diagnosis was right, birth-fitness was the wrong measurement, proceed.
+   FAIL (still flat) → the problem is *not* missing development; it is the memory/substrate problem
+   (D076) or N too small (Brunel: working memory needs larger N than 50). Either way, informative.
+4. **COST-MEASURE before any full sweep** (D068 discipline — four runtime estimates were wrong). Every
+   eval now includes a plasticity run; the ~2 h/arm figure (D079) was WITHOUT development. Measure the
+   real per-generation cost. **Consider the probabilistic-development compromise** (D083 sub-decision
+   2): develop a random SUBSET each generation — a stochastic-approximation of developed-fitness,
+   noisy but unbiased, at a fraction of the cost, with selection averaging over generations.
+
+**Open sub-decisions (D083), to settle during the build, not before:**
+- **Distribution-reduction statistic (sub-decision 1).** Base hypotheses on ONE metric, collect many
+  for post-hoc. Champion defeats the purpose of collecting a distribution → lean to a summary
+  statistic — but characterize the distribution TYPE first (Gaussian? Poisson?), then use its
+  expectation, OR a distance-from-ideal (KL, Wasserstein).
+- **Bookend controls for the T-window (sub-decision 3, strictly scoped):** random-weight pool
+  convergence time = the LONG end (or the non-convergence deadline); engineered encoding+memory pool
+  convergence time = the SHORT end. **HARD QUARANTINE:** the engineered net contributes only a
+  convergence-time scalar — never a template, seed, or comparison. Regulation is scored ONLY by task
+  performance. (Protects the D038 emergence claim.)
+
+---
+
+## DEFERRED EXTENSION (scoped, NOT committed): the interneuron-hierarchy gene (D084)
+
+**Ordered strictly AFTER D083** — because SST's slow rate-control overlaps functionally with
+homeostatic plasticity, so development must be prototyped first to see how much of "SST's job" it
+already does. **Do not build yet.**
+
+The insight: PV/SST/VIP proportions trace a 1-D trajectory sensory→association. **ONE bounded scalar
+gene** (hierarchy position h ∈ [0,1]) maps to a composition; both PV/(PV+SST) and the disinhibitory
+index VIP/(PV+SST) fall out of it. Brings V1-like AND association-like regimes under one model.
+**Simplified single-compartment proxy — multi-compartment consciously declined.** The VIP→SST→pyr
+disinhibitory motif is a candidate biological instantiation of H-C regulation — so it must be a
+**CAPABILITY, not an installed circuit** (D074 rule): h sets proportions, selection must build the
+loop. P is unaffected (h is compositional like Dale's-law identity, orthogonal to synapse count).
+**Widens the central thesis** toward "the interneuron gradient unifies cortical regions" — chosen,
+flagged, revisitable.
 
 ---
 
 ## Where the project stands
 
 **THE FRAME (D056 — `FRAMING.md` §0).** Not "test Frank in a spiking network." **Map a REPERTOIRE
-of learning behaviours in spiking networks under varying constraints and stimuli.** **Frank's
-insight — the parameter axis is where to look — is our INSTRUMENT. Double descent is the
-DIAGNOSTIC, not the phenomenon.** Three coordinates: **environment structure** (learnable
-fraction) · **cost** (`c_syn`; 0 = Frank's assumed regime) · **dynamical regime** (tonic vs
-balanced). **REGULARIZATION ≠ REGULATION (D055).** **The constructive question: why did regulatory
-hierarchy evolve? Candidate answer: because encoding saturates.**
+of learning behaviours in spiking networks under varying constraints and stimuli.** Frank's insight
+— the parameter axis is where to look — is our INSTRUMENT. Double descent is the DIAGNOSTIC, not the
+phenomenon. **REGULARIZATION ≠ REGULATION (D055).** Constructive question: *why does regulatory
+hierarchy emerge? Candidate: because encoding saturates.*
 
-### THE TWO LEVELS — the structure that organises everything (D048; sharpened by D072)
-- **Level 1** = *given this stimulus, what is the right response?* **Needs no memory.** `f_c(E)`,
-  rank r₁.
-- **Level 2** = *which map applies right now?* **Needs memory**, because context lives in the
-  statistics across `context_dwell`=10 stimuli — never in any single one, and never in the mean
-  (D048/D057).
+**STANCE CORRECTION (D083, this round).** Frank's premise is **CONDITIONAL** — double descent appears
+in systems that *don't penalize complexity*. So the stance is **test the conditional at its critical
+case** (a neural substrate that plausibly DOES penalize complexity, with a within-life inner loop his
+examples lack) — **not "refute Frank."** His parameter is the **regulatory CONNECTION** (edge, not
+node), which is what unifies deep-nets/GRNs/SNNs and justifies **P = non-zero synapse count**.
 
-**The hypotheses split cleanly on it, and so does the blocker:**
+### THE TWO LEVELS (D048; sharpened D072)
+- **Level 1** — given this stimulus, what response? **No memory.** `f_c(E)`, rank r₁.
+- **Level 2** — which map applies? **Needs memory** (context lives in statistics across dwell=10,
+  never a single stimulus, never the mean).
 
 | | needs memory? | status |
 |---|---|---|
-| **H-A** error vs **P=\|W\|** peaks at **P\*** | **no** — level 1 | **unaffected** |
-| **H-B** **P\* is set by r₁, NOT n** ← *what distinguishes us from ML* | **no** — level 1 | **unaffected** |
-| **H-C** past P\*, error descends **only if** modulating (not driving) structure emerges | yes — level 2 | **blocked** |
-| **H-D** no fluctuation-driven regime ⇒ no second descent ← *the spiking test* | yes — level 2 | **blocked** + confounded (below) |
-| **H-E** variance is where the second-level regularity lives; past the waist its **role changes** — *a LOOP, not an hourglass* | yes — level 2 | **blocked** |
+| **H-A** error vs **P=\|W\|** peaks at **P\*** | no — level 1 | live once routing works |
+| **H-B** **P\* set by r₁, NOT the constraint count** ← *what distinguishes us from ML* | no — level 1 | live once routing works; r₁-independent-of-n_env CONFIRMED in tasks.py |
+| **H-C** past P\*, error descends **only if** modulating (not driving) structure emerges | yes — level 2 | blocked on development |
+| **H-D** no fluctuation-driven regime ⇒ no second descent ← *the spiking test* | yes — level 2 | blocked + confounded (below) |
+| **H-E** variance is the medium of regulation — a LOOP, not an hourglass | yes — level 2 | blocked on development |
 
-**Layering is an ORDERING, not an escape: D056's frame is level 2.** The memory gap must close.
+**WHY THE GA AT ALL (D083 stance session).** For H-A/H-B (curve SHAPE) random-sample-and-develop is
+arguably CLEANER than the GA — selection biases which networks you sample. **The GA's essential job is
+H-C: emergence UNDER SELECTION** (a sample shows regulation is *possible*, not that selection *drives
+toward* it — Frank's actual claim). ⇒ probable design: **sample-and-develop for H-A/H-B and as the
+H-C baseline; GA on top for H-C.** Sampling is a needed CONTROL, not a replacement.
 
-**What is BUILT and VALIDATED:**
-- `evonet.py` — W is the genome; Dale's law with **evolvable per-neuron identity** (D038);
-  **inh_gain** for E/I balance (D058); no trained readout; phenotype = behaviour (D036);
-  **`readout_pos`** trailing|leading (D072, default unchanged).
-- `tasks.hierarchical_environments` — **context in the COVARIANCE, never the mean** (D048/D057);
-  rank-r₁ level-1 maps; `learnable_frac` = the D051 axis. **`headroom()` required before any run**
-  (D057). *The oracle is a ridge-LINEAR per-context fit against a `tanh` target, so it does NOT cap
-  a nonlinear network — `best_train < 0.05` was never forbidden. At `learnable_frac`=1.0,
-  `noise_sd`=0: targets are DETERMINISTIC given (E, context).*
-- `evolve.py` — **selection scheme is an ARM** (replicator has the Occam factor; tournament does
-  not — *Friedlander used tournament, R&N used replicator*); **density mode is an ARM**;
-  product-rule mutation (D043); crossover OFF (competing conventions).
-- `provenance.py` — **`run.start_log()`** finally writes `logs/run.log` (D072). *NAMING.md §3
-  specified it since the scaffold and nothing ever wrote to it.*
-- ⚠️ **GATE C PASSED ON CV_ISI ONLY (D058) — D030's error one level up (D069).** Its operating
-  point (bias 0.6, **gain 1.0**, w0 0.6) is the **worst cell** in the gain × σ grid: `E|state`
-  0.605, `E|rates` **1.001** — the output neurons carry *nothing*. **Gate C needs a v2 gated on
-  skill AND CV_ISI jointly.**
-- ✅ **POSITIVE CONTROL PASSES (D061/D063)** — peak at **M/n = 1.00**, second descent 202 → 2.50.
-  **The apparatus can express double descent** ⇒ a later null is attributable to the evolutionary
-  setting, not broken plumbing. *But the DD lives entirely in the **readout over random features**
-  (Belkin's setting) — it says nothing about the network.*
+**REGIONAL GRADIENT (this round).** DD-propensity ordered cerebellum > sensory > association.
+- **cerebellum** — feedforward random expansion; DD-equivalent (expansion-coding) is ESTABLISHED
+  (Marr-Albus → Litwin-Kumar → Xie 2023). **Cite it; outside our recurrent apparatus's range.** Our
+  positive control may already instantiate it (verify).
+- **primary sensory (V1)** — biologically-grounded models exist (Allen); **DD never analyzed on
+  them** — genuinely open.
+- **association** — **ours.** The apparatus (recurrent + regulated inhibition) spans V1→association;
+  the environment-structure axis plausibly moves it along that span. Cerebellum is the one region it
+  cannot reach.
 
-## ⚠️ H-D IS CONFOUNDED FOUR WAYS
-`noise_sigma` does not change only gain-control availability. Tonic (0.2) vs balanced (1.0) differ in:
-1. **gain-control availability** — the intended manipulation (D039).
-2. **fitness signal-to-noise** — `EvoNetConfig.seed=None` ⇒ **fresh noise every eval** ⇒ the
-   balanced arm is noisier **by construction**. *Fix: **common random numbers** — one seed shared
-   within a generation, varying across generations. Free; standard for noisy ES.*
-3. **encoding fidelity** — measured. *Fix, one line: at **gain=30** the arms read `E|state`
-   **0.228 vs 0.239** — an **iso-encoding tonic/balanced pair**. Run H-D there.*
-4. **slow-mode retention** — σ=1.0 kicks any slow collective mode every timestep.
+**BUILT & VALIDATED:**
+- `evonet.py` — W is the genome; Dale's law, evolvable identity (D038); `inh_gain` E/I balance
+  (D058); slow NMDA-like current `nmda_frac` charge-conserved (D074/D075); `readout_pos` (D072); no
+  trained readout; phenotype = behaviour (D036). **`behave_batch` block-diagonal runner, bit-for-bit
+  verified (D078).**
+- `evolve.py` — selection scheme & density are ARMS; product-rule mutation (D043); crossover off;
+  **three-tier test capture (D077); batched default (D078); routing metric `_routing_nmse` on a fixed
+  200-env probe (D081); progress+ETA+mode announcement (D066, finally).**
+- `tasks.hierarchical_environments` — context in COVARIANCE not mean (D048/D057); rank-r₁ maps;
+  **r₁ independent of n_env CONFIRMED**; `headroom()` required (D057).
+- `provenance.py` — `run.start_log()` writes `logs/run.log` (D072).
+- ✅ **POSITIVE CONTROL PASSES (D061/D063)** — apparatus can express DD ⇒ a later null is the biology,
+  not broken plumbing. *(DD lives in the random-feature readout — Belkin's setting — says nothing
+  about the network yet.)*
+- ⚠️ **GATE C PASSED ON CV_ISI ONLY (D058/D069)** — worst-cell operating point; needs a v2 gated on
+  skill AND CV_ISI jointly.
+- ⛔ **GATE A FAILED (D082)** — routing not established on birth-fitness; the current blocker.
 
-**But (3)'s fix must be RE-GATED:** gain=30 is strong mean drive, pushing CV_ISI **down** in both
-arms and possibly collapsing the contrast. **Encoding and fluctuation-drivenness are in
-opposition.** ⇒ **GATE C v2 = a 2D sweep over (gain × σ) measuring BOTH E-decode skill AND
-CV_ISI**, looking for a region where both hold. **If it is empty, H-D is unrunnable — a finding
-about the substrate, not a design failure.** *(CV_ISI needs a SpikeMonitor in `behave()`; the skill
-axis already exists in `run_E9_diagnostics.py`.)*
+## ⚠️ H-D IS CONFOUNDED FOUR WAYS (unchanged; still live for when H-D runs)
+`noise_sigma` (tonic 0.2 vs balanced 1.0) changes: (1) gain-control availability — intended (D039);
+(2) fitness signal-to-noise — fresh noise every eval makes the balanced arm noisier by construction
+(*fix: common random numbers*); (3) encoding fidelity — *fix: gain=30 gives an iso-encoding pair,
+E|state 0.228 vs 0.239*; (4) slow-mode retention — σ=1.0 kicks slow modes every step.
+**(3)'s fix RE-GATES:** gain=30 pushes CV_ISI down, may collapse the contrast. ⇒ **Gate C v2 = 2D
+(gain × σ) sweep on BOTH skill AND CV_ISI**; if empty, H-D is unrunnable — a finding, not a failure.
 
-## D030's OPPOSITION, FOUR APPEARANCES — watch this
-| | the level-2 property | costs the level-1 property |
+## D030's OPPOSITION — now FOUR appearances, but D076 found the BREAK
+| | level-2 property | costs level-1 encoding |
 |---|---|---|
-| D030 | PR responsiveness | input encoding |
-| D069 | CV_ISI (fluctuation-driven) | input encoding |
-| **D072** | **memory (carryover)** | **input encoding** |
+| D030 | PR responsiveness | ✓ |
+| D069 | CV_ISI | ✓ |
+| D072 | memory (carryover) | ✓ |
+| **D076** | **slow current (memory)** | **✗ — encoding-NEUTRAL via charge conservation** |
+*The opposition was buying level-2 by cranking a knob that also floods level-1. A charge-neutral knob
+(D075) does not pay the tax. This is a point FOR the substrate framing — worth a measurement.*
 
-*Every knob that buys a level-2 property costs level-1 encoding.* **Candidate explanation
-(SPECULATIVE — recorded to be tested, not leaned on):** the state has finite capacity, and current
-input / recurrent dynamics / noise / history compete for it. **If true this is not an annoyance but
-the precondition for D056's frame** — encoding saturates, which is *why* leveling up needs new
-structure rather than more of the same.
-
-## After `mem_d10`
-1. **Gate C v2** — gain × σ, jointly gated on skill and CV_ISI.
-2. **The performance work (D068)** — see below. **Nothing conclusive runs without it.**
-3. **Gate A** — does evolution route E to the output neurons? (per density arm; D030)
-4. **Gate B** — does a peak appear at all? *Where the project lives or dies.*
-5. **The map** — three curves on one axis (D046/D050): error · **regulatory emergence** (D040's
-   three stages) · **sloppiness** (Bartlett's condition — a **rival mechanism with independent
-   support**).
-6. **The discriminating sweep (D051):** vary the **learnable fraction** of unexplained variance.
-   Corners are **literature-replication controls**; **mixed + no cost is THE EXPERIMENT.**
-7. **Graded controls (D052):** each control is a **dial** — native SNN+selection → +gradient →
-   +linear readout. **Wherever the phenomenon first appears names its precondition.**
-
-## The performance work (D068) — PARKED, and this is what un-parks it
-Batching · common random numbers · drop the discarded test eval · pre-allocated synapses (absent = weight 0), built once ·
-hoist the StateMonitor. **~17×, all of it still on paper.**
-**The parking was right for a reason we could not have known:** the diagnostics cost 4 minutes and
-showed Gate B0 could not have passed at any speed — building the 17× first would have made an
-impossible run 17× faster.
-**⇒ UN-PARKS THE MOMENT `mem_d10` COMES BACK POSITIVE.** The next step after that is a GA run, and
-that run is **~69 h unbatched, ~4 h batched**. *Projected: pop30×100gens 85 min → ~5 min; Gate B's
-6-arm sweep ~17 h. **MEASURE the per-generation time before believing any of it** (D068: four
-consecutive runtime estimates were wrong).*
-*Also lands with it: **D066 fixes 2–3** (per-gen ETA, pool announcement), never implemented (D071),
-and `run.start_log()` in `run_GateB0_interpolation.py`.*
-
-## Open
-- **`FRAMING.md` §3 NEEDS REWRITING (D072).** It justifies the spiking substrate on **one** finding
-  of our own — PR_mean compresses, PR_var expands, PR_var predicts generalization. That is
-  D028/D033: **N=1000 reservoir, K=20, `anisotropic_regression`, trained readout — all four retired
-  by D032/§2c, in the SAME SESSION §3 was written.** Measured on `evonet`: **PR_input 5.86 →
-  PR_mean 6.95–7.18 — mild EXPANSION. Compression does NOT transfer.** And PR_var **tracks σ**
-  (12.67 → 26.67 as σ goes 0.2 → 1.0); read the onset and it collapses to **8.4–9.4 regardless of
-  σ**, next to PR_mean ≈ 7. **The dissociation largely evaporates.** *§3's real claim is about
-  PREDICTION, which remains untested — it needs generalization measured across conditions.*
-- **`tasks.py` dead code:** the `learnable_frac < 1.0` branch has a `for ...: pass` no-op and
-  applies the blend **after** the noise is added (so noise is scaled by `blend`). Harmless at 1.0;
-  **a live bug for the D051 sweep, which is the study's main axis.**
-- **Is the H-E loop predictive coding rediscovered?** Rao & Ballard / Friston. **Ours would be:** it
-  emerges **under selection**, and its emergence **IS the second descent** (search found **zero**
-  hits linking DD to PC). *`c_syn` is our energy cost — the same lever.*
-- **Is PR the wrong measure?** **Interference vs abstraction both lower PR and PR cannot tell them
-  apart.** Feature-recovery (sparse coding) may be right.
-- **r₂** — contexts are drawn independently, so level 2 has **no rank structure**. If the hierarchy
-  is real, **r₂ should be a knob** — the natural place to look for a *second* waist.
-- **Arm 2 genome (D059):** + τ / v_thresh. **D073 flips the signature:** if τ is regulation's
-  PREREQUISITE rather than its alternative, Arm 2 should show **long τ AND regulatory motifs —
-  both, not either.** Bimodality would be a step toward regulation, not a substitute.
-- **N as a gene** — next study; needs high per-node cost.
+## Open (non-blocking; address as they become relevant)
+- **`FRAMING.md` §3 NEEDS REWRITING (D072)** — banner added; the PR_mean/PR_var substrate
+  justification is reservoir-era and does not transfer. Rewrite pending generalization measured on
+  evonet (needs the GA, i.e. needs development first).
+- **`tasks.py` dead code:** `learnable_frac < 1.0` branch has a `for…: pass` no-op and applies the
+  blend AFTER noise (noise scaled by blend). Harmless at 1.0; **live bug for the D051 sweep.**
+- **Deck (`CLL_double_descent.pptx`)** — fold in the corrected stance and the interneuron direction at
+  its NEXT revision (after development work; fine to present as-is meanwhile — it's a project-in-
+  progress).
+- **Is the H-E loop predictive coding rediscovered?** (Rao & Ballard / Friston.) Ours emerges under
+  selection and its emergence IS the second descent (search: zero DD↔PC hits).
+- **r₂** — contexts drawn independently ⇒ level 2 has no rank structure. If the hierarchy is real, r₂
+  should be a knob — the natural place for a *second* waist.
+- **N as a gene** — next study; needs high per-node cost. *(Also: is N=50 large enough for a
+  slow-reverberation memory attractor? Brunel suggests maybe not — a live question for the D082
+  rematch.)*
 
 ## Standing rules (earned the hard way)
-- **Search before building.** Six times a PJM-requested search overturned my reasoning: D014, D031,
-  D034, D039, D043, D053.
-- **Name the quantity your cost model assumes cost scales with, and MEASURE it before deciding on
-  it** (D068). Four consecutive runtime estimates — D060 (arms), D064 (nesting), D065 (workers),
-  D067 (parameters) — each wrong because of an unnamed scaling assumption.
-- **Watch the process count, not just the wall clock** (D065). **Any run > a few minutes must print
-  progress, an ETA, and its parallelism state** (D066) — *still unimplemented*.
-- **Prove the system beats a trivial baseline before interpreting any representational metric**
-  (D030) — **and check what the baseline IS: if it is an identity, it is not a gate** (D069).
-  **Check the environment PERMITS the phenomenon before concluding it is absent** (D045).
-  **`headroom()` before any run** (D057).
-- **Docstrings state RULES; results carry a D-number or run_id** (D070). **And the reverse: a
-  decision that specifies code is NOT DONE until the code exists — cite the D-number in the commit
-  that implements it** (D071: D066 was never built; D067 planned around it anyway).
-- **Measure the substrate before blaming the optimizer** (D072). *Four minutes of diagnostics
-  overturned a decision that was about to shrink the network.*
-- **Log-transform heavy-tailed outcomes; treat convergence warnings as results** (D028).
-- **Don't raise structural alarms from smoke-preset numbers** (D033).
+- **Search before building.** Repeatedly a PJM-requested search overturned my reasoning: D014, D031,
+  D034, D039, D043, D053, and the Brunel/Wang search behind D074.
+- **Name the quantity your cost model assumes cost scales with, and MEASURE it before deciding**
+  (D068). Four runtime estimates in a row were wrong (D060/D064/D065/D067). The 27× batching win was
+  measured, not assumed (D079).
+- **Watch the parallelism state, not just the wall clock** (D065/D066).
+- **Prove the system beats a trivial baseline before interpreting a metric** (D030); **check what the
+  baseline IS — an identity is not a gate** (D069); **measure the baseline at the EXACT operating
+  point before gating on it** (D081: the 0.73 "baseline" was a grid-min artifact). **`headroom()`
+  before any run** (D057).
+- **Docstrings state RULES; results carry a D-number/run_id** (D070). **A decision that specifies code
+  is NOT done until the code exists** (D071).
+- **Measure the substrate before blaming the optimizer** (D072).
 - **Don't bolt on mechanisms; make the architecture capable and let selection build them** (D038).
-  **And the corollary (D073): withholding a CAPABILITY does not force the mechanism if the
-  capability is the mechanism's PREREQUISITE — it just removes both.**
-- **Geometry does not imply mechanism** (D040).
-- **Minimal genome = maximum attribution** (D059). **`noise_sigma` is NEVER a gene** — it is H-D's
-  treatment variable.
+  Corollary (D073): withholding a CAPABILITY doesn't force the mechanism if the capability is its
+  PREREQUISITE. Corollary (D074): don't install a ready-made instance of the mechanism under test (the
+  NMDA Mg-gate; the wired VIP→SST loop).
+- **E/I balance (incl. temporal balance) is a PRECONDITION, not a hypothesis** (D075).
+- **Verify equivalence (bit-for-bit) before trusting any speedup** (D078) — should-be-fines have twice
+  been bugs (the pool that never ran D065; the 16× charge D075).
+- **Fitness must reduce the DEVELOPED distribution, not the birth one** (D083) — the newest rule, and
+  the reason Gate A was flat.
+- **Minimal genome = maximum attribution** (D059). **`noise_sigma` is NEVER a gene.**
