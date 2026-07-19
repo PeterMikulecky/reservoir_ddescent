@@ -1,6 +1,6 @@
 # Queue
 
-Updated 2026-07-19 (D082–D084). Claims → `DECISIONS.md` · framing → `FRAMING.md` ·
+Updated 2026-07-19 (D082–D087). Claims → `DECISIONS.md` · framing → `FRAMING.md` ·
 chain → `BRIDGE.md` · narrative → `LAB_NOTEBOOK.md` · citations → `REFERENCES.md`.
 
 ---
@@ -27,52 +27,66 @@ presupposes selection can produce functional networks, which D082 shows it canno
 
 ---
 
-# THE CRITICAL PATH: build & test the development redesign (D083)
+# THE CRITICAL PATH: build & test the development redesign (D083→D087)
 
-**Settled (D083):** fitness reduces the DEVELOPED distribution, not the birth one. Development =
-**Kind A** (strength-tuning within FIXED synaptic support, so P = non-zero synapse count is
-invariant). Rule = **Hebbian + homeostatic, standard/interpretable, UNSUPERVISED** (blind to Y).
-Placement = **inside every fitness eval** (nested loop; forced by D082 — "develop only at readout"
-would select on the flat birth landscape). Duration = **scales with task structure (r₁, dwell),
-constant across the P-sweep**, with an expected window.
+**Settled:** fitness reduces the DEVELOPED distribution, not the birth one (D083). Development =
+**Kind A** (strength-tuning within FIXED synaptic support; nominal-P invariant). Placement = **inside
+every fitness eval** (forced by D082 — "develop only at readout" selects on the flat birth landscape).
+**Design freedom is bounded ONLY by (a) support-invariance and (b) cross-P process-uniformity** — same
+development instrument at every P (D087). Within that, use the biologically-standard rule.
 
-**The ordered build (each step gates the next):**
+**THE RULE (D086/D087 — empirically forced):** naive Oja was tried and **blew up** (one-step NaN
+runaway on the recurrent substrate — Oja's feedforward normalizer is unstable here). **Lesson: do NOT
+hand-roll plasticity numerics; adapt a tested implementation.** ⇒ **Vogels-Sprekeler 2011 inhibitory
+plasticity** (canonical, homeostatic setpoint, official Brian2 reference + ModelDB 143751), run
+**inside `net.run()`** (no Python-side weight write-back — that fragility caused half the Oja trouble).
+Paired system: **inhibitory = stabilizer, excitatory = learner** (Oja failed trying to learn without
+stabilizing; the literature says you need both).
 
-1. **Prototype Hebb+homeostasis as a development phase in `evaluate()`.** Greenfield — *no plasticity
-   machinery exists yet* (confirmed). Insertion is clean: `EvoNet(genome) → develop(net, stimuli) →
-   behave → score`. One phase, one place. The D077/D081 test + routing machinery reads the developed
-   network unchanged.
-   - **HARD INVARIANT (Kind A): the support mask is frozen at birth; plasticity operates only within
-     it.** Assert `(developed.mag != 0) == (birth.mag != 0)` bit-for-bit. If a Hebbian rule zeroes a
-     weight or homeostasis revives one, P changes during development and the clean-axis argument
-     collapses. This is a checkable invariant, not an assumption — enforce it.
-2. **FIRST EMPIRICAL QUESTION — does Hebb+homeostasis CONVERGE?** (D083 sub-decision 3.) Everything
-   forks here. **If it converges** to a stable fixed point → "developed" = "matured" is definable by
-   convergence, and the T-confound dissolves (T set by dynamics, not by us). **If it cycles / diverges
-   / converges to a degenerate state** → convergence-based maturity is unavailable, fall back to
-   demonstrating T-robustness (run the sweep at several T, report T-dependence). *Check this before
-   anything downstream.*
-3. **THE D082 REMATCH — does development route E where birth-fitness could not?** Re-run the Gate A
-   question with development in the loop. **This is the load-bearing test of the whole redesign.**
-   PASS (E|rates falls) → the diagnosis was right, birth-fitness was the wrong measurement, proceed.
-   FAIL (still flat) → the problem is *not* missing development; it is the memory/substrate problem
-   (D076) or N too small (Brunel: working memory needs larger N than 50). Either way, informative.
-4. **COST-MEASURE before any full sweep** (D068 discipline — four runtime estimates were wrong). Every
-   eval now includes a plasticity run; the ~2 h/arm figure (D079) was WITHOUT development. Measure the
-   real per-generation cost. **Consider the probabilistic-development compromise** (D083 sub-decision
-   2): develop a random SUBSET each generation — a stochastic-approximation of developed-fitness,
-   noisy but unbiased, at a fraction of the cost, with selection averaging over generations.
+**THE ORDERED BUILD (each step gates the next; one tested piece at a time — the Oja lesson):**
 
-**Open sub-decisions (D083), to settle during the build, not before:**
-- **Distribution-reduction statistic (sub-decision 1).** Base hypotheses on ONE metric, collect many
-  for post-hoc. Champion defeats the purpose of collecting a distribution → lean to a summary
-  statistic — but characterize the distribution TYPE first (Gaussian? Poisson?), then use its
-  expectation, OR a distance-from-ideal (KL, Wasserstein).
-- **Bookend controls for the T-window (sub-decision 3, strictly scoped):** random-weight pool
-  convergence time = the LONG end (or the non-convergence deadline); engineered encoding+memory pool
-  convergence time = the SHORT end. **HARD QUARANTINE:** the engineered net contributes only a
-  convergence-time scalar — never a template, seed, or comparison. Regulation is scored ONLY by task
-  performance. (Protects the D038 emergence claim.)
+1. **Vogels inhibitory plasticity, validated in ISOLATION.** Plastic I→E synapses (presyn inhibitory,
+   postsyn excitatory — a subset of W), tuned to a target rate; event-driven, in-simulation. Warm-up
+   run eta=0, then development run eta>0. **Verdict = converges + Kind-A holds + network stays ALIVE**
+   (the thing Oja failed). This is the convergence probe, redone with a rule that has a setpoint.
+   - **Guards (assert in code, don't assume):** support-freeze `(developed.mag!=0)==(birth.mag!=0)`
+     bit-for-bit (Kind A); **not-zero epsilon** on the weight clip (`clip(w, w_eps, gmax)`) so an
+     existing synapse can weaken but never leave the support — but **NO magnitude floor** (development
+     runs unconstrained; effective-P is measured at analysis, D087); **NaN tripwire** (abort loud on
+     non-finite — never grind on garbage, the Oja lesson); network activity finite/non-collapsed.
+   - **D086 forward-compat:** declare `alpha`/`tau_stdp`/`eta` as PER-NEURON state variables (Brian2
+     idiom, ~free), so D084's interneuron gene later differentiates by subtype without a rewrite.
+2. **Add the excitatory learner** (tested STDP/Hebbian Brian2 example) on E→E/E→I, stabilized by the
+   now-working Vogels inhibition. Re-validate convergence + Kind-A with both active (the pairing is the
+   point). This is the half that builds representation (encoding/memory); Vogels alone only balances.
+3. **Integrate into `evaluate()`** — `EvoNet → develop → behave → score`; routing/test machinery
+   (D077/D081) reads the developed net unchanged. **THE D082 REMATCH: does development route E where
+   birth-fitness could not?** The load-bearing test. PASS (E|rates falls) → diagnosis right, proceed.
+   FAIL (still flat) → not missing-development; it's the memory/substrate problem (D076) or N too small
+   (Brunel: WM needs N>50). Either way informative.
+4. **COST-MEASURE before any full sweep** (D068 — four runtime estimates were wrong). Development adds
+   in-sim time per eval; the ~2 h/arm figure (D079) was WITHOUT it. **Probabilistic/subset development**
+   for cost (D083 sub-decision 2) must use **distributional evaluation** — average draws, not a single
+   noisy draw (overestimation bias, D085 c).
+
+**P BOOKKEEPING IS ANALYSIS-TIME (D087):** record BOTH nominal-P (support count, the controlled input)
+and effective-P (count of |w| above a magnitude threshold, the developed phenotype's functional count).
+**Bin the aggregate by EITHER; learn from the difference** (PJM). Threshold-robustness is a REQUIRED
+check (pattern must hold across cutoffs, else it's an artifact). Sample nominal-P widely/densely
+(effective-P coverage is emergent, not designed). Log nominal→effective compression (possible finding).
+
+*(Superseded: the Oja prototype scripts `run_dev_convergence_probe.py` / `_probe_silence_check.py` —
+kept only as the record of the failure that forced Vogels. `DEVELOPMENT_BUILD_SPEC.md` was folded into
+this section and removed.)*
+
+**Open sub-decisions (D083, settle during the build):**
+- **Distribution-reduction statistic:** collect the developed-fitness distribution; base hypotheses on
+  mean AND variance (selection acts on tails the mean discards — D085 c), not the mean alone.
+- **Duration:** scales with task structure (r₁, dwell), constant across P — OR, better, defined by
+  CONVERGENCE now that Vogels has a setpoint that should converge (D083 3a).
+- **Bookend controls (T-window calibration only):** random pool = long-end/non-convergence deadline;
+  engineered pool = short-end. **HARD QUARANTINE** — engineered net contributes only a convergence-time
+  scalar, never a template/seed/comparison (protects the D038 emergence claim).
 
 ---
 

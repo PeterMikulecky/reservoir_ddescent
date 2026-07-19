@@ -345,6 +345,36 @@ RULE CHOICE, not automatic — the bookend controls double as a check that the c
 converges on our networks. *The prune-not-replant payoff: the obvious implementation would not have
 converged.*
 
+### The chosen rule — Vogels-Sprekeler inhibitory plasticity (D086/D087; empirically forced 2026-07-19)
+
+**🔴🟢🟢 THE RULE WE ARE ACTUALLY BUILDING.** Naive Oja was tried first and **blew up empirically** —
+one-step runaway to NaN on the recurrent spiking substrate (activity 1.39 → NaN by epoch 2; the
+standard recurrent-Hebbian positive-feedback instability the literature documents universally). Oja's
+`-y²W` stabilizer is a FEEDFORWARD normalizer; applied to a recurrent matrix with rates ~1.4 it is
+outside its stability regime. **Lesson (D086): do not hand-roll plasticity numerics — adopt a
+published, tested implementation with known constants.**
+
+**Vogels, T. P., Sprekeler, H., Zenke, F., Clopath, C., Gerstner, W. (2011).** Inhibitory plasticity
+balances excitation and inhibition in sensory pathways and memory networks. *Science* 334(6062),
+1569–1573. doi:10.1126/science.1211095. — 🔴🟢🟢 **The canonical inhibitory synaptic plasticity rule,
+and our development stabilizer.** Plasticity on I→E synapses tunes inhibition to a target postsynaptic
+rate (setpoint `alpha`), establishing/maintaining E/I balance in an experience-dependent way. The
+built-in target-rate setpoint IS the co-timescale homeostatic stabilizer the Zenke/Gerstner result says
+recurrent Hebbian learning requires. **OFFICIAL TESTED IMPLEMENTATIONS EXIST — adapt these, do not
+re-derive:** Brian2 docs `examples/frompapers.Vogels_et_al_2011` (≈6-line event-driven synapse rule,
+maintained across Brian2 versions); ModelDB 143751 (implemented by Zenke & Vogels themselves). Runs
+INSIDE `net.run()` — eliminates the Python-side weight write-back that caused half the Oja trouble
+(development = "turn eta on, run, turn off"). The rule's weight-update logic attaches to our
+current-based synapse (its conductance formulation is not required). **Fits our substrate like a glove:
+we already have an inhibitory population and E/I balance is already a precondition (D075); D084's
+interneuron gene later differentiates this same inhibitory plasticity by subtype.**
+
+**⇒ D087 BUILD: Vogels-inhibitory (stabilizer) FIRST, then a tested excitatory STDP/Hebbian rule
+(learner) on top.** Inhibitory plasticity = stability; excitatory = learning; the standard picture
+needs both (Oja failed trying to learn without stabilizing). P handled by MEASURING effective-P at
+analysis, not by constraining development (D087) — so development runs unconstrained (only a
+not-exactly-zero numerical guard).
+
 ### Develop-then-select — this IS the Baldwin effect (D085 question b — ANSWERED, and it reframes D082)
 
 **🔴🟢 THE RICHEST FINDING OF THE REVIEW.** The D083 structure — GA at genotype level + a within-life
