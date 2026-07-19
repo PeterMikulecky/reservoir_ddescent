@@ -2971,3 +2971,134 @@ build. **Then: build the development phase, informed by (a)/(b)/(c).**
    probabilistic development, average draws (avoid overestimation bias).
 None of these overturn D083's framing; all three PRUNE the implementation. This is the prune-not-
 replant payoff PJM argued for — three implementation choices corrected before a line was written.
+
+### D086 — Build development's inhibitory-plasticity layer PER-NEURON-ADDRESSABLE, so D084's interneuron gene is later ADDITIVE, not a rewrite.
+**2026-07-19 · Accepted (build directive)** · arises where D083 (development) and D084 (interneuron gene) physically touch — the inhibitory synapses · *forward-compatibility, decided before writing the plasticity code*
+
+**THE JUNCTION.** The Oja hand-roll blew up (one-step runaway to NaN — the standard recurrent-Hebbian
+positive-feedback instability the literature documents universally). The canonical fix is a Hebbian
+term + an explicit homeostatic/inhibitory stabilizer; the natural choice for THIS substrate is
+**inhibitory synaptic plasticity (Vogels-Sprekeler 2011)** — plasticity on INHIBITORY synapses that
+maintains E/I balance while excitatory Hebbian learning proceeds. It fits because the model already has
+an inhibitory population and E/I balance is already a precondition (D075).
+
+**WHY THIS IS THE MOMENT TO THINK ABOUT D084.** Vogels stabilization and D084 (the PV/SST/VIP
+interneuron-hierarchy gene) act on the SAME synapses — the inhibitory ones. How the inhibitory
+plasticity is built now determines whether D084 later slots in additively or requires tearing out the
+inhibitory layer. **Decision: build D084-COMPATIBLE now; do NOT build D084 now.**
+
+**THE DOOR-OPENER (three cheap structural choices; implement all three):**
+1. **Per-inhibitory-neuron parameters, not global scalars.** Vogels' target rate ρ₀, learning rate η,
+   and trace timescale τ are stored as PER-NEURON arrays (length = # inhibitory neurons), even though
+   today every entry is identical. D084 later just writes different values per neuron via the h gene —
+   no structural change. Global scalars would force surgery.
+2. **Inhibitory synapses indexed by presynaptic identity**, so a future type label (PV/SST/VIP) can
+   gate the rule via a lookup that already exists — widening it, not rewiring.
+3. **Timescale τ as a per-population field, not a constant** — because the PV-fast / SST-slow
+   distinction (D084) IS a timescale difference; D084 then sets different τ per type = data, not
+   structure.
+
+**EXPLICITLY NOT NOW (stays D084, hard-ordered after development works):** three actual populations,
+the h→composition map, the VIP→SST→pyr disinhibitory motif. Building the HOMOGENEOUS Vogels stabilizer
+shaped for D084 ≠ building D084.
+
+**THE HONEST CALCULus (premature-generalization guard).** D084 is scoped-not-committed, so "build
+extensibly" must be cheap or it's a trap. It IS cheap here: Brian2's idiom is per-neuron state
+variables, so per-neuron parameters are the PATH OF LEAST RESISTANCE, not an added abstraction. The
+alternative (global scalars) has a KNOWN refactor cost if D084 proceeds. Cheap door-opener + known
+future cost for the closed version ⇒ open the door. **Caveat to verify:** confirm the canonical Vogels
+Brian2 reference is already written per-neuron (likely). If it is, the door-opener costs nothing (just
+don't collapse to scalars). If it uses globals, keep the deviation minimal and TESTED — do not
+improvise the way the Oja hand-roll was improvised (that's what caused the blowup).
+
+**METHODOLOGICAL LESSON FROM THE OJA FAILURE (standing rule addendum).** Do NOT hand-roll plasticity
+update equations. Recurrent Hebbian instability is the most-studied problem in this subfield; adapt a
+PUBLISHED, TESTED implementation (ideally with reference Brian2 code — Vogels-Sprekeler 2011), with
+known-working constants. The Oja blowup was improvised arithmetic hitting a documented wall. *(Adds to
+"search before building": also "adopt tested reference code before building numerics.")*
+
+**NEXT:** search for the canonical Vogels-Sprekeler Brian2 implementation; inspect its parameterization
+(per-neuron vs global) to confirm the door-opener is free; adapt THAT into develop(), not a hand-roll.
+
+### D087 — Development-phase design: free within support-invariance + cross-P uniformity; use a stabilized paired plasticity (inhibitory-first); and MEASURE effective-P rather than constrain development to protect nominal-P.
+**2026-07-19 · Accepted (design)** · resolves the plasticity-rule fork (D083 sub-decision 1), D086's inhibitory floor, and the Oja-failure lesson into one principle · PJM's framing
+
+**THE GOVERNING PRINCIPLE (PJM).** The two loops are separable. The development phase has design
+FREEDOM; the ONLY hard constraints come from the outer-loop ("at given P") interpretation, and there
+are exactly two:
+1. **Support-invariance** — development must not change WHICH synapses exist (Kind A). P is the support
+   of W; development tunes strengths within a frozen support.
+2. **Cross-P process-uniformity** — the development process must be IDENTICAL at every P (same rule,
+   same hyperparameters, same convergence criterion). Development is part of the measurement
+   apparatus, so it must be the same instrument at every P, or "P's effect" confounds with
+   "development-process's effect."
+**Within those two, plasticity design is free to be biologically sensible.**
+
+**THE PLASTICITY RULE (biologically-standard, tested, not hand-rolled — the Oja lesson, D086).**
+- **Paired excitatory-learner + inhibitory-stabilizer**, the standard picture: inhibitory plasticity
+  provides STABILITY, a separate excitatory Hebbian/STDP rule provides the LEARNING. The Oja blowup was
+  trying to do learning without stability; the literature (Zenke & Gerstner; Vogels et al.) says you
+  need both.
+- **Inhibitory half = Vogels-Sprekeler 2011** — the canonical inhibitory synaptic plasticity rule,
+  with an OFFICIAL tested Brian2 reference implementation (brian2 docs frompapers.Vogels_et_al_2011;
+  ModelDB 143751, implemented by Zenke & Vogels). ~6 lines, event-driven, target-rate homeostatic
+  setpoint (alpha). Runs INSIDE net.run() — no Python-side weight write-back (eliminates the fragile
+  _reload_W that caused half the Oja trouble; development = "turn eta on, run, turn off").
+- **Excitatory half = a tested STDP/Hebbian rule** (also a canonical Brian2 example), added AFTER
+  Vogels is validated.
+- **Substrate fit (checked, evonet.py):** LIF with real spikes, one recurrent Synapses object over W,
+  current-based (I_syn += w). Vogels' conductance formulation is not required — its WEIGHT-UPDATE logic
+  attaches to the current-based synapse. Event-driven on_pre/on_post works (it's spiking Brian2).
+- **BUILD ORDER (one-at-a-time, the Oja lesson): Vogels-inhibitory FIRST** (validate in-sim plasticity
+  stabilizes the net without blowup on this substrate), THEN add the excitatory learner on top. End
+  state is the paired system; path there is one tested piece at a time.
+
+**THE P-BOOKKEEPING — MEASURE effective-P, do NOT constrain development (PJM, supersedes D086's
+floor).** Rather than impose a magnitude floor that clamps development to protect nominal-P (backwards
+— distorting the process to protect the measurement), let development run UNCONSTRAINED (only a
+not-exactly-zero numerical guard) and move the P-question to ANALYSIS time:
+- **nominal-P** = support count = the genome's parameter count = the controlled INPUT (set via density;
+  what selection acts on).
+- **effective-P** = count of synapses above a meaningful-magnitude threshold = the developed
+  phenotype's functional parameter count = a measured OUTPUT.
+- **RECORD BOTH for every developed network.** Bin the grand aggregate by EITHER, and learn from any
+  DIFFERENCE (PJM). Effective-P is arguably the more Frank-faithful axis (his parameter count is the
+  functional-connection count), and error-vs-effective-P is error vs what the matured network actually
+  uses. But nominal-P is the controlled quantity; comparing the two binnings is itself informative.
+
+**WHY effective-P is better than a floor (the reasoning).** A synapse at w≈1e-5 is "not zero" but
+contributes nothing — so a not-zero guard alone lets NOMINAL and EFFECTIVE P silently diverge,
+smuggling the genotype/phenotype-P gap back in through MAGNITUDE (the exact thing Kind-A prevents via
+support). A floor fixes that but distorts development (too high clamps the natural dynamics Vogels
+needs to reach balance; too low permits effective-vanish anyway — a Goldilocks problem with no a-priori
+right value). Measuring effective-P dissolves the Goldilocks problem: no floor during development, and
+the threshold appears only at analysis where several can be tried cheaply.
+
+**REQUIRED DISCIPLINES for the effective-P route (the costs of a measured vs controlled axis):**
+1. **Threshold-robustness is a RESULT, not an assumption.** Compute effective-P at several magnitude
+   cutoffs; show the binned pattern is robust across them. If the double-descent pattern appears only
+   at one lucky cutoff, that is a threshold artifact, not a result. (Cheap: recompute + re-bin.)
+2. **Coverage is emergent, not designed.** With nominal-P you CHOOSE the arm values; with effective-P
+   you sample nominal-P and development SCATTERS it into an effective-P distribution you don't control.
+   Risks: effective-P values may CLUSTER (x-axis collapses) or bins may be unevenly populated (sparse
+   near the interpolation peak). Mitigation: sample nominal-P WIDELY and DENSELY so the induced
+   effective-P range is covered with adequately-populated bins.
+3. **First-development-run diagnostic:** look at the weight distribution development produces. Clean gap
+   (meaningful vs crashed-to-tiny, nothing between) → threshold placement trivial, effective-P
+   unambiguous. Continuous smear to near-zero → effective-P threshold is a real judgment call, made
+   explicit and robustness-checked per (1).
+
+**BONUS QUANTITY unlocked (the floor would have hidden it).** nominal→effective COMPRESSION — how much
+of the nominal support development prunes to effective-zero, and whether the pruning fraction tracks
+nominal-P / environment / dynamical regime. Possibly nothing, possibly a finding; now observable
+because both P's are logged.
+
+**H-B UNDER effective-P.** H-B predicts the interpolation peak sits at r₁ (structural rank), not the
+constraint count. With both P's recorded, H-B is tested against BOTH: the peak should track r₁ in
+whichever P is the functional one — expected to be effective-P (the matured network's actual
+dimensionality). Recording both lets the data say which P the peak tracks, rather than presupposing it.
+
+**SUPERSEDES:** D086's magnitude-floor mechanism (the per-neuron-addressable inhibitory-layer directive
+in D086 STANDS — it is about D084-compatibility, unaffected). The Kind-A support-invariance (D083)
+stands and is now the ONLY hard development constraint on W's support, with effective-P as the analysis
+-time honesty check that magnitude hasn't recreated the genotype/phenotype-P gap.
