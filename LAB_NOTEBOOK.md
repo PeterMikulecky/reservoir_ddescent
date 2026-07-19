@@ -391,3 +391,8 @@ substrate. See QUEUE.md.
 - type `exp` · stage `E9` · git `ga6d1c98` (D075: charge-conserving fast/slow split (w_slow = f*w*tau_fast/tau_slow) - validated no collapse across nmda_frac axis, PR_mean stays ~7; fix diagnostics control check to test PR-collapse not hardcoded d1) · status **complete**
 - result: rung1: best mem_d1 trailing=0.766 leading=nan; E|state=0.311 E|rates=0.893; PR_in=5.86 PR_mean_min=7.28; MC=0.29; ord/noise=2.14; ctx=0.32/0.25
 - _interpretation:_ 
+
+## 2026-07-19 02:09 — `E9-evolve__20260718-195534__exp__g46960f0__gatea-routing`  <!-- auto -->
+- type `exp` · stage `E9` · git `g46960f0` (Gate A pre-registered (D080) and corrected before running (D081): metric = champion E|rates on fixed 200-env probe, true random baseline 0.99/0.43 not the 0.73 grid-min artifact; two decode bugs fixed; PASS = E|rates falls below 0.80. Runner + routing instrumentation in evolve.py) · status **complete**
+- result: Gate A: E|rates 0.995->0.999 (fell -0.003); FAIL
+- _interpretation:_ 
