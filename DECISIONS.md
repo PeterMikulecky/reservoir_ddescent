@@ -2886,3 +2886,88 @@ Adding to standing rules.
 **⇒ HARD ORDERING: D083 (development) is prototyped FIRST; D084 is designed AFTER, informed by how much of "SST's job" homeostatic plasticity already does.** Do not build D084 yet.
 
 **SCOPE ACKNOWLEDGEMENT (explicit, per PJM's "recognize you're choosing it" concern).** Recording this widens the project's central thesis from "does double descent appear in a spiking network" toward **"the interneuron-composition gradient is the axis that unifies cortical regions under one learning model, and the regional gradient may be an evolved consequence of environmental regulatory demand."** This is a bigger, more distinctive, more CAS-flavored claim — well-suited to the lab — but it is a deliberate widening, chosen, not drifted into. Marked SCOPED so the commitment is visible and revisitable.
+
+### D085 — Sequencing: related-work review BEFORE the development build, broad in SCOPE, narrow in ACTION. Pre-committed to prevent the positioning spiral.
+**2026-07-19 · Accepted (process)** · governs the ordering of D083's implementation · *PJM's call, sharpened from CLM's over-narrow version*
+
+**THE DECISION.** The development build (D083) has ≥3 load-bearing design choices the literature may
+already have settled: **(a) Hebbian+homeostatic CONVERGENCE conditions** (the load-bearing unknown of
+D083 step 2 — does the rule reach a stable fixed point or cycle/diverge? decades of plasticity-
+stability work bear on this); **(b) the structure of the develop-then-select inner loop** (the
+Baldwin-effect / learning-and-evolution literature — Hinton & Nowlan 1987 onward — has done
+genotype-develops-before-fitness; we risk reinventing it, possibly wrong); **(c) the fitness-
+distribution summary statistic** (D083 sub-decision 1 — surely standard somewhere in evo-bio /
+evo-computation). Building before checking risks the replant-from-seed failure this session opened by
+worrying about. **⇒ review FIRST.**
+
+**THE DISCIPLINE — scope the ACTION, not the search (PJM's key refinement).** CLM proposed scoping the
+*search* narrowly to three questions. PJM corrected: scope the *action* instead. **Search BROADLY**
+(searches are cheap; findings are durable; a narrow search just forces re-searching the same territory
+later, fighting the purpose of REFERENCES.md as an accumulating asset). **Act NARROWLY** — at THIS
+juncture, act only on D083-relevant outcomes.
+
+**Why this is the right cut:** the positioning spiral (see REFERENCES.md Positioning; the "pilot is
+largely a re-derivation" near-death) was NOT caused by reading too much — it was caused by *acting on
+everything read*. Each finding re-opened the whole project. The discipline belongs at the ACTION
+boundary, not the input boundary. You can read that someone partially pre-empted H-B, note it, and NOT
+re-open H-B today.
+
+**THE PRE-COMMITMENT (binding; recorded BEFORE searching so the first juicy off-scope finding can't
+erode it in real time — which is how the last spiral began):**
+1. **Search broadly** across development-adjacent territory: plasticity stability, Baldwin/
+   learning-and-evolution, fitness-distribution summarization, and whatever adjacent work surfaces.
+2. **Annotate everything into REFERENCES.md** in its existing grammar (what-it-does / how-it-relates /
+   🔴🟡🟢), INCLUDING findings that touch H-A/H-B/H5/H-C or re-raise positioning — **flagged**
+   ("relevant to H-B; revisit when H-B comes off the shelf").
+3. **Act, now, ONLY on D083 outcomes** — the three design choices for the development build. Every
+   non-D083 finding is recorded-and-flagged, NOT acted on. It becomes future-you's pre-loaded context,
+   not present-you's rabbit hole.
+4. **Explicitly deferred as a SEPARATE later pass:** the existing Positioning priority reads
+   (Clark/Abbott/Litwin-Kumar 2023, Cayco-Gajic, Dambre) — they serve H-A/H-B/H5, downstream of
+   development, off the current critical path. Do NOT fold them in now.
+
+**TERMINATION.** The review ends when the three D083 questions (a/b/c) have literature-informed answers
+(or a confirmed "genuinely open"). Broad annotation continues opportunistically but does not gate the
+build. **Then: build the development phase, informed by (a)/(b)/(c).**
+
+**RESULT SLOT (fill as the review runs):**
+- (a) plasticity convergence: **ANSWERED — naive Hebbian + SLOW homeostatic scaling does NOT converge
+  (the "temporal paradox", Zenke & Gerstner 2017): fast Hebbian + slow homeostasis oscillates/runs
+  away. Stability needs a RAPID, co-timescale stabilizer — Oja / BCM / heterosynaptic term. DIRECTIVE
+  for D083: pick a convergent rule from the start; convergence-based maturity (sub-decision 3) is then
+  available but contingent on that choice; bookends double as the convergence check. Would have cost
+  an empirical cycle to rediscover.**
+- (b) develop-then-select structure: **ANSWERED — this IS the Baldwin effect (Hinton & Nowlan 1987).
+  A named 40-yr framework; build on it explicitly, strictly Baldwinian (learned changes not
+  inherited). REFRAMES D082: their demo was a NEEDLE-IN-A-HAYSTACK landscape (flat, no gradient) —
+  exactly our flat Gate A — and learning SMOOTHS such landscapes into navigable ones. Strong support
+  that D083 will WORK. **On the "unsupervised inner loop" caveat (RETRACTED after PJM):** the inner
+  loop being blind to Y is not a defect — it is how biology works. Real within-life learning IS
+  unsupervised; the whole system is supervised AT THE OUTER LOOP (selection retains genomes whose
+  blind-learning machinery produces fitness-relevant structure). The Baldwin guarantee needs only that
+  the inner loop's product VARIES in a fitness-relevant way across genomes, so selection has variance
+  to grade — which unsupervised development satisfies. And our fitness apparatus is NOT level-2-blind:
+  Y = tanh(E @ Q @ Wc) is context-dependent, and the memoryless-floor↔oracle-ceiling gap is exactly
+  the level-2 reward region. So the caveat collapses.
+  **The REAL open question (H-C's actual content, not a supervision worry):** the DIVISION OF LABOR
+  between the two loops. Does unsupervised development alone build context-inference (⇒ regulation is
+  DEVELOPMENTAL, H-C's "emerges under selection" weakened), or does development do little and selection
+  find the rare genomes whose developed substrate routes context (⇒ regulation is SELECTED, H-C
+  supported)? Both are "evolution shapes circuitry"; WHICH is the result. **Measured by the control we
+  already designed: sample-and-develop (development alone) vs the full GA (selection on top) — the
+  reason sampling is a NEEDED CONTROL for H-C, not just a cleaner instrument for H-A/H-B.**
+- (c) fitness-distribution statistic: **ANSWERED — do NOT default to the mean. It's a named topic
+  (Kaznatcheev); with stochastic fitness, selection acts on TAILS the mean discards, and complexity×
+  fitness is where tails live. Collect the distribution; base hypotheses on mean AND variance (≥1st
+  two cumulants). And (sub-decision 2): distributional evaluation beats single-draw — probabilistic
+  development must average draws, not select on one lucky draw (overestimation bias).**
+
+**REVIEW COMPLETE (termination condition met: a/b/c answered).** Net effect on the build:
+1. **Plasticity rule:** use Oja / BCM / heterosynaptic — NOT naive Hebbian + slow scaling (won't
+   converge). Convergence-based maturity is then available but contingent on this choice.
+2. **Structure:** frame explicitly as Baldwinian; check that unsupervised development is
+   fitness-relevant (the load-bearing assumption the Baldwin literature exposes).
+3. **Statistic:** collect the developed-fitness distribution; hypotheses on mean+variance; if using
+   probabilistic development, average draws (avoid overestimation bias).
+None of these overturn D083's framing; all three PRUNE the implementation. This is the prune-not-
+replant payoff PJM argued for — three implementation choices corrected before a line was written.

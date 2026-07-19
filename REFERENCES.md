@@ -318,6 +318,72 @@ plausibly lives, and the least crowded part of the landscape.
 *Context: D082's flat Gate A + the population-genetics argument (genome→development→phenotype→fitness)
 motivated adding a within-life plasticity phase before scoring. These ground the design.*
 
+### Plasticity stability / convergence — the D083-step-2 fork (D085 question a — ANSWERED)
+
+**🔴🟢 DIRECTLY CHANGES THE BUILD.** The naive pairing we would have reached for first —
+**Hebbian + slow homeostatic synaptic scaling — is KNOWN NOT TO CONVERGE.** It oscillates or runs
+away: the "temporal paradox."
+
+**Zenke, F., Gerstner, W. (2017).** Hebbian plasticity requires compensatory processes on multiple
+timescales. *Phil. Trans. R. Soc. B* 372, 20160259. — 🔴🟢 The load-bearing reference. Hebbian is fast
+(seconds), homeostatic scaling slow (hours–days); the **separation of timescales causes instability** —
+models using homeostatic scaling to stabilize Hebbian had to speed homeostasis to orders of magnitude
+faster than experiment to get stability. **Stability requires RAPID compensatory processes on the SAME
+timescale as the Hebbian term.** Their triplet-STDP + heterosynaptic-term model DOES converge to stable
+weights.
+**Zenke & Gerstner (2017), "The temporal paradox of Hebbian learning and homeostatic plasticity"**
+(*Curr. Opin. Neurobiol.*; bioRxiv 116400) — the paradox and its candidate resolutions.
+**Heterosynaptic plasticity as stabilizer** (PMC4500102, models+experiments): changes at NON-active
+synapses, same timescale as Hebbian, "robustly provide stability and competition."
+**Classic convergent rules:** Oja's rule, BCM — stabilization built INTO the rule (postsynaptic-
+activity-driven), not a separate slow process.
+
+**⇒ D083 DIRECTIVE (the action, per D085 scope):** do NOT use naive Hebbian + slow synaptic scaling.
+Use fast, co-timescale stabilization — **Oja / BCM / Hebbian-with-heterosynaptic-term.** Convergence
+(the "develop-to-maturity" definition, D083 sub-decision 3) is then AVAILABLE but is a property of the
+RULE CHOICE, not automatic — the bookend controls double as a check that the chosen rule actually
+converges on our networks. *The prune-not-replant payoff: the obvious implementation would not have
+converged.*
+
+### Develop-then-select — this IS the Baldwin effect (D085 question b — ANSWERED, and it reframes D082)
+
+**🔴🟢 THE RICHEST FINDING OF THE REVIEW.** The D083 structure — GA at genotype level + a within-life
+learning phase modifying the phenotype before fitness, learned changes NOT inherited — is exactly the
+**Baldwin effect**, a named 40-year-studied framework. We instantiate a known nested loop, not a new
+one.
+
+**Hinton, G. E., Nowlan, S. J. (1987).** How learning can guide evolution. *Complex Systems* 1,
+495–502. — 🔴🟢🟢 The founding instance, and it **recasts D082's flat Gate A.** Their demonstration was
+a **"needle-in-a-haystack" landscape — one high-fitness spike, NO gradient, where evolution alone is
+ineffective.** Result: **learning smooths the landscape, creating a basin of attraction pure selection
+cannot find** — "learning gives value to a partial, otherwise useless, subset of the required genes."
+**Our flat Gate A IS a needle-in-a-haystack. The Baldwin literature says that is PRECISELY where a
+within-life learning phase has its largest documented effect.** ⇒ theoretical support that D083 will
+*work*, not just that it is faithful — development is the textbook fix for exactly D082's failure mode.
+
+**CAVEAT (RESOLVED after PJM).** The inner loop being UNSUPERVISED (blind to Y) is not a defect — it
+is how biology works: real within-life learning is unsupervised; the system is supervised AT THE OUTER
+LOOP (selection retains genomes whose blind-learning machinery yields fitness-relevant structure). The
+Baldwin guarantee needs only that the inner loop's product VARIES fitness-relevantly across genomes so
+selection has variance to grade — which unsupervised development satisfies. And the fitness apparatus
+is NOT level-2-blind: Y = tanh(E @ Q @ Wc) is context-dependent; the memoryless-floor↔oracle-ceiling
+gap is exactly the level-2 reward region. **The real open question is not supervision but the DIVISION
+OF LABOR between loops:** development-alone builds context-inference (regulation is developmental, H-C
+weakened) vs selection-finds-it (regulation is selected, H-C supported). Both are "evolution shapes
+circuitry"; which is the result — **measured by sample-and-develop vs full-GA, the reason sampling is a
+needed CONTROL for H-C.**
+
+**Baldwinian vs Lamarckian (fork to name).** Ours is strictly **Baldwinian** — learned strengths tune
+the phenotype, are NOT written to the genome, discarded each generation; only birth topology+weights
+inherited. Keeps P clean, matches biology. Lamarckian is often faster in EC (someone will ask) — we
+decline it for faithfulness to Frank's genotype→phenotype→fitness structure. *(Refs:
+arXiv:2605.28703 Lamarckian-vs-Baldwin; Ackley & Littman 1991; Bull 1999 on learning rate/amount;
+LaSER arXiv:2505.17309.)*
+
+**Watson & Szathmáry (2016); Kouvaris et al. (2017)** *(cited below under Evolvability)* — the
+evolution-as-learning lineage connecting Baldwin to Frank. 🟡 Relevant to the overall stance and H-C;
+per D085 **noted, not acted on now.**
+
 **[Sample-complexity / generalization scaling — required exposure vs task complexity, not parameter
 count]** *(citations to be pinned when leaned on — flagged in D083.)* Candidates: **Favero et al.**
 and the **diffusion-model generalization-then-memorization timing** work (2025); the classic **XOR
@@ -328,6 +394,31 @@ with task structure (r₁, context-dwell), held **constant across the P-sweep** 
 matches our own H-B (the relevant scale is r₁, not P or n). Also: over-exposure → **memorization
 onset** = epoch-wise double descent on the *time* axis (ties to Nakkiran, D077) — a principled reason
 to expect a developmental *window*, not a monotone "more is better."
+
+### Fitness-distribution summary statistic (D085 question c — ANSWERED: don't default to the mean)
+
+**🟢🔴 Bears on D083 sub-decisions 1 AND 2.**
+**Kaznatcheev, A. "Fitness distributions versus fitness as a summary statistic" (algorithmic
+Darwinism; egtheory 2019, after Valiant & Xue et al.).** — 🔴 Our sub-decision 1 is a named topic.
+Key: with **stochastic fitness** (ours — noisy development, sampled environments), reducing to a single
+summary (the mean) can mislead, because **selection acts on the TAILS, not just the center** — a
+higher-complexity type with a larger neutral set samples further into its tail and can win even with a
+LOWER mean. Since our core question is complexity (P) × fitness, that is exactly where tail effects
+live. **⇒ the mean may be the wrong reduction; track the distribution, not just its center.**
+**Cavill/Watson et al. "Distributional Fitness Evaluation" (arXiv:2110.13609).** — 🔴 **Direct warning
+for our probabilistic-development cost mechanism (D083 sub-decision 2).** With stochastic evaluation
+the standard GA **overestimates and retains anomalously high sampled values** (noisy-fitness
+overestimation bias) — scoring each genome on ONE noisy developed-fitness draw preferentially retains
+LUCKY draws, not good genomes. *Distributional* evaluation (whole sampled distribution, not one draw)
+achieves significantly higher TRUE fitness. **⇒ if we develop a random subset for cost (sub-decision
+2), average multiple draws / use the distribution — do not select on a single draw.**
+**Good, B. H., Desai, M. M. (travelling-wave / fitness-class formalism); Prügel-Bennett & Shapiro
+(1994) noisy-fitness GA cumulants.** — 🟢 The principled object is the fitness distribution's
+**cumulants** (mean = 1st, variance = 2nd); a Gram-Charlier expansion around Gaussian parameterizes it
+if near-normal. **⇒ D083 directive: collect the developed-fitness distribution; base hypotheses on
+mean AND variance (at least), with an explicit check on whether tail/variance effects matter — not the
+mean alone.** *(Confirms PJM's "collect many, base hypotheses on one" — but the "one" is probably
+mean+variance, not mean.)*
 
 **Brunel, N., Wang, X.-J. (2001); Wang, X.-J. (2002).** Probabilistic decision making by slow
 reverberation in cortical circuits. *Neuron* 36, 955–968.
