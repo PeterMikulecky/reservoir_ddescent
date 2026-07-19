@@ -22,6 +22,13 @@ dimensionality drove evolutionary transitions. Our E1 tests his claim H (dimensi
 *Note:* Frank's "parameterization" is a **parameter count**; our PR is a property of the
 **representation**. That mapping (D002) is an interpretive commitment, not a neutral
 measurement — see Positioning.
+*Stance correction (D083–D084, 2026-07-19):* Frank's parameter is explicitly the **regulatory
+CONNECTION** (edge), not the node — *"regulatory connections are parameters, selection is the
+learning optimizer"* — which is exactly what licenses the deep-net↔GRN↔SNN unification, and what
+justifies our **P = non-zero synapse count**. His premise is **CONDITIONAL** ("systems that don't
+penalize complexity experience the full double-descent curve"), so the corrected project stance is
+**test the conditional at its critical case** (a neural substrate that plausibly *does* penalize
+complexity, and has a within-life inner loop his examples lack) — **not "refute Frank."** See D083.
 
 ## Double descent / generalization theory (all cited by Frank)
 
@@ -305,6 +312,95 @@ learns to generalise. *PLOS Comput Biol* 13(4), e1005358.
 **Gavrilets, S. (2004).** *Fitness landscapes and the origin of species.* PUP.
 — Frank's evolutionary scaffolding. 🟢 The framing space where our contribution most
 plausibly lives, and the least crowded part of the landscape.
+
+## Development / within-life plasticity — the genotype≠phenotype inner loop (searched 2026-07-19, D083)
+
+*Context: D082's flat Gate A + the population-genetics argument (genome→development→phenotype→fitness)
+motivated adding a within-life plasticity phase before scoring. These ground the design.*
+
+**[Sample-complexity / generalization scaling — required exposure vs task complexity, not parameter
+count]** *(citations to be pinned when leaned on — flagged in D083.)* Candidates: **Favero et al.**
+and the **diffusion-model generalization-then-memorization timing** work (2025); the classic **XOR
+sample-complexity** result. — 🟢 **Grounds D083's development-duration rule:** the modern
+overparameterized-generalization literature finds required exposure scales with **task complexity**,
+roughly independent of (or decreasing in) parameter count. So developmental duration T should scale
+with task structure (r₁, context-dwell), held **constant across the P-sweep** — which independently
+matches our own H-B (the relevant scale is r₁, not P or n). Also: over-exposure → **memorization
+onset** = epoch-wise double descent on the *time* axis (ties to Nakkiran, D077) — a principled reason
+to expect a developmental *window*, not a monotone "more is better."
+
+**Brunel, N., Wang, X.-J. (2001); Wang, X.-J. (2002).** Probabilistic decision making by slow
+reverberation in cortical circuits. *Neuron* 36, 955–968.
+— 🟢 **Two loads.** (1) Slow-reverberation working memory in E/I-balanced LIF networks;
+NMDA-dominated recurrent excitation, *"NMDA critical for stability."* Basis for D073/D074 (the slow
+current) and for the D083 claim that **working memory is achievable with plain LIF units at
+large-enough N** — i.e. the "does memory need special structure" risk is mostly an *N* question, not
+a "need fancier neurons" question. (2) The **engineered-ceiling bookend** (D083 sub-decision 3): a
+competent memory backbone whose *convergence time* (only) calibrates the short end of the
+development-duration window. *Quarantine:* its wiring is never a template/seed/comparison — only a
+convergence-time scalar.
+
+## Regional gradient — cerebellum (anchored) → sensory (open) → association (ours) (searched 2026-07-19)
+
+*Context: our framing orders DD-propensity cerebellum > primary sensory > association. Do the ends
+already exist in the literature? Cerebellum: YES (as expansion-coding, not "double descent"). V1: NO.
+This bounds our onus — cite the cerebellum end, study the association end. NB: cerebellum is
+feedforward, OUTSIDE our recurrent apparatus's range — it anchors the CONCEPTUAL gradient, not our
+instrument's reach.*
+
+**Xie, M., et al. (2023).** Task-dependent optimal representations for cerebellar learning.
+*eLife* 12, e82914.
+— 🟢 The modern statement of the cerebellar expansion–generalization tradeoff. Low coding level
+raises granule-cell representation dimension & generalization, but too sparse hurts — a peak/tradeoff
+curve. **This is the double-descent phenomenon in the cerebellum, in Marr-Albus vocabulary rather than
+Belkin's.** Anchors the "easy end" of our regional gradient. *(Litwin-Kumar 2017 and Cayco-Gajic 2017,
+already cited above under E1, are part of this same lineage — the cerebellum end is thoroughly
+established.)*
+
+**Sanger, T. D., Yamashita, O., Kawato, M. (2020).** Expansion coding and computation in the
+cerebellum: 50 years after Marr–Albus. *J. Physiol.* 598, 913–928.
+— Review extending Marr-Albus to continuous (non-Boolean) functions. Cite for "cerebellar
+expansion-coding is settled theory."
+
+**[Allen Institute large-scale V1 models — Billeh et al.; the gradient-trained V1 variant.]**
+*(pin exact citations when leaned on.)*
+— 🔴 **The open middle.** Sophisticated, data-constrained, sometimes gradient-trained V1 models exist
+— but **no double-descent analysis has been run on them.** They study efficient coding / robustness /
+receptive fields. So the DD diagnostic is unopened even where the substrate is most built-out — which
+*strengthens* our contribution rather than threatening it (deck A9).
+
+*Note:* our **positive control (random-feature readout) is essentially a Marr-Albus expansion model in
+disguise** — verify before leaning on it, but it may mean we already instantiate the cerebellum anchor.
+
+## Cortical interneuron gradient — the D084 hierarchy gene (backgrounds compiled 2026-07-19)
+
+*Context: PV/SST/VIP proportions shift monotonically sensory→association along a 1-D trajectory
+(T1w/T2w myelin gradient). This is the empirical basis for D084's single scalar "hierarchy-position"
+gene, from which both PV/(PV+SST) and the disinhibitory index VIP/(PV+SST) fall out. Primary citations
+below are TO BE PINNED — currently held as compiled background, flagged honestly.*
+
+**[Interneuron subclass proportions across the cortical hierarchy.]** *(primary citation TBD — a
+transcriptomic atlas + a hierarchy-gradient paper.)*
+— 🟢🔴 ~85–90% of cortical GABAergic cells are three non-overlapping classes (PV, SST, VIP). Their
+composition traces a **1-D trajectory** through the simplex: PV-dominant at sensory poles (fast
+perisomatic gating, gamma), SST/VIP-elevated at association poles (disinhibitory gating, persistent
+activity, beta). **Enables D084's key economy: ONE bounded scalar gene, not three free proportions.**
+
+**[VIP→SST→pyramidal disinhibitory motif.]** *(pin canonical reference — likely Pi et al. 2013,
+Pfeffer et al. 2013 — CONFIRM.)*
+— 🔴 The motif that expands toward association cortex; enables top-down gating and sustained recurrent
+activity. **A candidate biological instantiation of exactly the "regulation" (a level modulating
+another level) H-C predicts should emerge (D055/D084).** *Must be a CAPABILITY, not installed (D074
+rule) — providing the cell types ≠ wiring the loop.*
+
+**[Allen Human Brain Atlas / macaque transcriptomic atlases — primate CR/CB substitution for VIP.]**
+— For calibrating the h→composition map to primate data (VIP↔CR, SST↔CB). D084 watch-out 3: state
+which species' gradient the trajectory is calibrated to.
+
+**Carandini, M., Heeger, D. J. (2012).** Normalization as a canonical neural computation.
+*Nat. Rev. Neurosci.* 13, 51–62. *(confirm — held from background.)*
+— 🟢 The canonical divisive-normalization / gain-control computation; the functional target of
+"regulation." Relevant to both H-C and the PV-mediated gain control at the sensory pole.
 
 ---
 
