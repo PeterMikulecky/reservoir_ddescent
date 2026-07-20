@@ -3216,3 +3216,118 @@ adapted to w_fast/w_slow and the shared helper.
 **NEXT (unchanged): step 2a** — the context-persistence probe, now on a substrate that ACTUALLY HAS the
 slow current (my earlier "this substrate can't carry context" prediction was against the stale file; the
 real base has the 100ms slow current D074 added precisely for carry).
+
+### D090 — CARRYING ≠ REGULATING: context-carrying (memory) is necessary but NOT sufficient for regulatory structure (H-C's target). Two different measurements test the two.
+**2026-07-19 · Accepted (conceptual)** · *PJM caught a conflation creeping into how CLM described the step-2 chain*
+
+**THE DISTINCTION (do not blur again).**
+- **Context-carrying** = the network HOLDS context-distinguishable information across time. It is
+  MEMORY: a persistent state separable by context. Measurable DIRECTLY as raw-state-separability
+  (can a linear decoder recover the context label from the state, above chance, and does that survive
+  the inter-stimulus gap).
+- **Regulatory structure (H-C's actual target, D055)** = one part of the network MODULATES another --
+  held context CHANGES HOW stimuli are processed (gain modulation / routing / a level acting on a
+  level), not merely adds a context-dependent bias to the output.
+
+**CARRYING IS NECESSARY BUT NOT SUFFICIENT FOR REGULATION.** A network can carry context WITHOUT
+regulating: hold a persistent context-distinguishable state that just sits there as extra activity,
+adding a context-dependent OFFSET to the output without changing the stimulus->response MAPPING. That
+is memory, not regulation. Regulation is when carried context MULTIPLICATIVELY/STRUCTURALLY alters the
+mapping -- the same stimulus computed differently, not just offset.
+
+**WHY THE TASK ALREADY DISTINGUISHES THEM (the reassuring part).** Y = tanh(E @ Q @ W_ctx[c]): context
+c selects WHICH weight matrix maps stimulus->response. Context is NOT an additive bias in the target --
+it MULTIPLICATIVELY reconfigures the mapping. So to beat the memoryless floor, a network cannot merely
+HOLD context as extra activity; it must USE context to change how it maps E->response. **Beating the
+floor requires REGULATION, not just carrying.** A mere-carrier (holds context, adds it as bias) stays
+stuck near the floor. ⇒ the floor/ceiling gap (D088) measures REGULATION; raw-state-separability
+measures mere CARRYING. Two different measurements, two different capabilities.
+
+**CONSEQUENCE FOR THE STEP CHAIN (sharpened):**
+- **2a — does the substrate CARRY context?** RAW-STATE-SEPARABILITY probe (linear decode of context
+  label from state; check it persists across the inter-stimulus gap), sweep nmda_frac (0 = no slow
+  current = negative control; rising = the D074 carry mechanism). **SELF-VALIDATING: needs NO engineered
+  ceiling** -- "linearly decodable" is a direct property of the state vectors, not an inference about
+  task performance. This BREAKS the readout<->carrier circularity for the probe (D088's circularity was
+  about the TASK-PERFORMANCE readout; the raw-separability measure sidesteps it). Tests the NECESSARY
+  precondition only -- passing 2a does NOT mean H-C is testable, only that regulation's prerequisite
+  (memory) exists.
+- **2b [if 2a passes] — build the engineered ceiling** = a network that both CARRIES and USES context
+  (regulates); the known-positive for the TASK-PERFORMANCE readout.
+- **2c — validate the task-performance readout** (below-floor detection = regulation) against the
+  ceiling (D088).
+- **3 — the D082 rematch:** does DEVELOPMENT produce networks that carry (state-separable) and, the real
+  prize, REGULATE (beat the floor)?
+
+**THE CORRECTION BEING RECORDED.** CLM had been letting "context-carrying" stand in for "regulatory
+structure" across the step-2 discussion. They are different; carrying is the necessary precondition,
+regulating is the H-C claim; below-floor task performance (not state-separability) is the regulation
+signature, and the task's MULTIPLICATIVE context structure is what makes below-floor a genuine
+regulation signature rather than a memory signature.
+
+### D091 — The fitness task is constrained by the DOUBLE-DESCENT SHAPE, which keeps it distinct from the (memory-requiring) diagnostic protocol; "regulation" must be disambiguated (switch vs inferential); and regularizers smooth the interpolation peak.
+**2026-07-19 · Accepted (conceptual, re-anchors fitness to the hypotheses)** · *PJM caught measurement-convenience (the clean cue-delay-probe protocol) starting to redefine the scientific target*
+
+**THE DRIFT BEING CORRECTED.** The delayed-discrimination (cue->delay->probe) protocol scores carrying
+and regulating cleanly and separately, and it was tempting to make it THE task. PJM caught that this
+lets a measurement convenience redefine the target. The fitness task's shape must be derived from the
+double-descent framework, NOT from what is clean to score.
+
+**"REGULATION" DISAMBIGUATED (PJM).** Not one thing:
+- **Switch-regulation** — context is CONTINUOUSLY PRESENT and directly gates the stimulus->output map
+  (the document's feedforward-shunting Architecture B). Mechanistically regulation, but needs NO memory,
+  and is the "context signalled by the mean -> a SWITCH not regulation" case D048 EXPLICITLY EXCLUDES as
+  too easy. Gameable, trivial.
+- **Inferential regulation (the TARGET)** — context must be INFERRED from history and HELD, then used to
+  modulate the mapping. Requires memory + modulation. This is what H-C is about and what the task must
+  reward without being gameable by the switch case.
+
+**THE FITNESS TASK IS CONSTRAINED BY THE DOUBLE-DESCENT SHAPE (PJM's derivation).** For the curve to
+exist at all, the fitness task must be:
+1. **Significantly achievable WITHOUT memory/regulation** = the FIRST DESCENT (adding parameters
+   improves the memoryless stimulus->response encoding, error falls). If the task were ONLY solvable
+   with regulation there would be NO first descent -- just failure until regulation appears.
+2. **Further improvable WITH memory/regulation, once enough parameters support DEVELOPING those
+   capabilities** = the SECOND DESCENT (excess parameters past interpolation enable the memory+
+   regulation machinery that beats the memoryless ceiling).
+3. **An interpolation region between** where a mid-sized net overfits the memoryless map (memorizes
+   training stimuli without capturing general structure) -> the error peak.
+**⇒ the floor/ceiling framing IS the operationalization of the two-descent structure:** memoryless
+floor = first-descent-achievable; below-floor = second-descent, regulation-dependent; the gap = the
+regulation-dependent improvement. This is why floor/ceiling was right all along -- not a scoring
+convenience, the two-descent shape itself.
+
+**WHY THE PROTOCOL CANNOT BE THE FITNESS (the key consequence).** The cue-delay-probe protocol's
+enforced SILENT DELAY makes memory a HARD REQUIREMENT -- a memoryless network scores ZERO, not
+"significantly achievable." So the protocol has NO FIRST DESCENT: it destroys the memoryless-achievable
+component double descent requires. The very thing that makes it a clean DIAGNOSTIC (isolates memory by
+forcing it) makes it a BAD FITNESS TASK (removes the first-descent gradient). ⇒ **FITNESS STAYS ON THE
+GRADED NATURALISTIC TASK (current D048 design); the cue-delay-probe protocol is DIAGNOSTIC-ONLY** -- a
+mechanistic audit of HOW a network achieves below-floor performance (genuine held-context inferential
+regulation vs a switch-y shortcut), run on selected/developed nets as ANALYSIS, never as selection
+pressure. (Parallels the routing probe D081: a fixed diagnostic separate from fitness.)
+
+**CARRYING vs REGULATING, scored separately BY THE PROTOCOL (diagnostic use, D090):**
+- Carrying = does context-distinguishing activity survive the enforced silent delay (persistence-
+  through-silence). Clean, high-contrast -- fixes the under-powered linear-context-decode problem
+  (context-label decode was ~0.046 even from oracle covariance features; too weak an instrument).
+- Regulating = for IDENTICAL probe stimuli, does the response differ across contexts IN THE WAY THE
+  TASK DEMANDS: response(E_probe|c) - response(E_probe|c') vs tanh(E_probe Q W_c) - tanh(E_probe Q W_c').
+  Same-response-regardless-of-context = no regulation; matching-the-demanded-difference = regulation.
+- **Three-way diagnostic the aggregate floor/ceiling gap CANNOT provide:** carries+regulates (full);
+  carries+doesn't-regulate (memory-as-bias, D090); doesn't-carry (regulation untestable). Tells us WHICH
+  STAGE is the bottleneck, not just "near floor."
+
+**REGULARIZERS SMOOTH THE INTERPOLATION PEAK (PJM -- closes the D055 loop into the fitness picture).**
+The overfitting hump between descents is DEEPENED by lack of regularization, SMOOTHED by its presence
+-- Frank's conditional (biology doesn't penalize complexity -> experiences the FULL double descent)
+made concrete. The regularizers (homeostasis, E/I balance, the developmental plasticity itself) are what
+determine whether first->second descent is a treacherous valley or a gentle slope. **Testable second-
+order prediction:** vary the regularization machinery, watch the interpolation peak sharpen vs smooth.
+D055's regularization-vs-regulation now enters the FITNESS picture, not just the framing.
+
+**DECISIONS SETTLED:** (1) fitness = graded naturalistic task (first+second descent shape), NOT the
+protocol; (2) protocol = diagnostic-only, auditing carrying + inferential-regulation separately; (3)
+"regulation" = inferential (target), not switch (excluded, D048); (4) regularizers smooth the peak =
+a testable prediction linking D055 to the curve. Re-anchors the fitness question to the hypotheses
+after measurement-convenience pulled at it.
