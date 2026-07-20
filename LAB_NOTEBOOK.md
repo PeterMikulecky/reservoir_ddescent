@@ -396,3 +396,8 @@ substrate. See QUEUE.md.
 - type `exp` · stage `E9` · git `g46960f0` (Gate A pre-registered (D080) and corrected before running (D081): metric = champion E|rates on fixed 200-env probe, true random baseline 0.99/0.43 not the 0.73 grid-min artifact; two decode bugs fixed; PASS = E|rates falls below 0.80. Runner + routing instrumentation in evolve.py) · status **complete**
 - result: Gate A: E|rates 0.995->0.999 (fell -0.003); FAIL
 - _interpretation:_ 
+
+## 2026-07-20 05:09 — `E9-evolve__20260720-050929__exp__g9894167__ceiling-validation`  <!-- auto -->
+- type `exp` · stage `E9` · git `g9894167` (Add scripts/run_ceiling_validation.py: runnable, provenanced validation of the engineered ceiling (D092b). Imports ddescent.engineered_ceiling, runs the silent-delay carry test, persists a run directory + parquet table + LAB_NOTEBOOK stub. Verified end-to-end: ceiling is cue-selective (A-cue lights cluster A, B silent) and decays gracefully through silence (selectivity 3.95->1.66 over 100-600ms) - the validated memory signature (decay-across-delay), distinct from the random-net flat confound. Confirms the carry measure on the known-positive; trustworthy for step-3 developed-net testing) · status **complete**
+- result: Engineered-ceiling carry validation (nmda=0.7, P=1080): selectivity 4.14(100ms)->1.70(600ms); selective=True, graceful_decay=True. VALIDATED known-positive. Carry measure = decay-across-delay (D092b).
+- _interpretation:_ 
