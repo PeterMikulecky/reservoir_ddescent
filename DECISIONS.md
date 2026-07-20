@@ -3102,3 +3102,72 @@ dimensionality). Recording both lets the data say which P the peak tracks, rathe
 in D086 STANDS — it is about D084-compatibility, unaffected). The Kind-A support-invariance (D083)
 stands and is now the ONLY hard development constraint on W's support, with effective-P as the analysis
 -time honesty check that magnitude hasn't recreated the genotype/phenotype-P gap.
+
+### D088 — The engineered-ceiling bookend has a SECOND load-bearing role: known-positive control for validating the readout. And the readout/development/context-carry unknowns must be resolved in a specific non-circular order.
+**2026-07-19 · Accepted (method)** · arises from the readout-design work (D087 follow-on); amends D083 sub-decision 3 · *PJM caught the circularity*
+
+**THE CIRCULARITY (PJM).** Three intertwined unknowns cannot be resolved in the naive order:
+1. **Does development RUN correctly?** (build, plasticity, Kind-A, no blowup) — ✓ ESTABLISHED this
+   session (evonet split-synapse + develop() verified: 183 plastic I→E, no NaN blowup, P invariant,
+   commit correct, net fires MORE after dev).
+2. **Does development produce a network that CARRIES CONTEXT** across the inter-stimulus interval?
+3. **Does the READOUT correctly capture context when present?**
+(2) and (3) are **mutually circular**: can't validate the readout without a context-carrying network;
+can't confirm a network carries context without a working readout. PJM's catch: you CANNOT "just check
+whether context carries first" — an UNDEVELOPED network almost certainly can't carry context (that is
+the whole premise of the redesign — the kangaroo-at-birth problem one level down). So the context-carry
+check requires a developed network AND a validated readout — both prerequisites gate it.
+
+**THE WAY OUT — the engineered ceiling as the known-positive control.** The D083 bookend "engineered
+encoding+memory network" (scoped there only for convergence-time calibration) has a SECOND role that
+breaks the 2⇄3 circularity: **it is a network that BY CONSTRUCTION carries context**, so it is the
+known-positive that validates the readout. If the readout detects context in the engineered network
+(which definitely has it), the readout works; only then is the readout's verdict on DEVELOPED networks
+trustworthy. Without a known-positive, "readout reads no context" is uninterpretable (readout broken vs.
+network can't do it — the exact Gate A ambiguity, D082).
+
+**This does NOT violate the D083 hard quarantine.** Using the engineered net to CALIBRATE THE READOUT
+(a measurement instrument) is not seeding it into evolution, not templating from it, not comparing
+evolved networks against its structure. The quarantine (contributes only scalars — a convergence time,
+and now a readout-validation pass/fail — never a template/seed/comparison for the evolved population)
+stands intact. The engineered ceiling now earns its place TWICE: convergence-time bracket (D083 3) AND
+readout known-positive control (here).
+
+**⇒ THE NON-CIRCULAR ORDER OF OPERATIONS (supersedes the naive "check context-carry first"):**
+1. **BASELINE readout fix (the immediate unblocker, non-circular).** Make behave() correctly report the
+   firing rate of a network that is demonstrably firing — fix the post-development artifact (reads
+   activity 0.000 despite 4931 spikes; a sampling/timing-alignment problem, NOT silence, NOT context-
+   blindness). This gates everything downstream: can't validate against the ceiling or measure
+   developed nets until behave reads ANY developed network correctly. Just "report the rate of a firing
+   network."
+2. **BUILD + VALIDATE the context-sensitive readout against the engineered ceiling.** The readout must
+   capture the context-MODULATED per-stimulus response (context expresses DURING presentation as
+   modulation, not only post-stimulus — D088 note below), scored against the context-dependent Y with
+   the floor/ceiling decomposition (floor = encoding/Level-1; below-floor = context/Level-2). Validate
+   it detects context in the engineered ceiling (known-positive) before trusting it. Persistence/
+   complexity = analysis-time diagnostics of HOW context is carried, extracted from the already-recorded
+   continuous r-trajectory (no new recording, no presentation-structure change).
+3. **THEN measure context-carry on DEVELOPED networks** — the real D082 rematch, now meaningful because
+   both readout (validated on ceiling) and development (functional) are established.
+
+**READOUT FACTS SETTLED (this session, from reading behave + PJM's correction):**
+- behave() does **ONE continuous run**, `restore("init")` once then `net.run(n*present_ms)`, TimedArray
+  switches drive every present_ms. **It does NOT reset between stimuli** → context activity carried in
+  state DOES survive across stimulus boundaries → **Level-2 carry is architecturally possible** (the
+  precondition is met; not the root cause of anything).
+- **Level-2 is NOT strictly post-stimulus (PJM correction).** Context must PERSIST across the inter-
+  stimulus interval, but its EFFECT appears DURING the next presentation as context-modulation of the
+  stimulus response (same stimulus → different response under different context). So context is readable
+  in the SAME per-stimulus response window as encoding — it is not blind to the current window. The
+  temporal profile (persistence/complexity) is the MECHANISTIC diagnostic of how context is carried, not
+  a separate fitness channel and not requiring post-stimulus gaps.
+- **Fitness stays SINGLE-channel:** NMSE to the context-dependent Y. Encoding credit = reaching the
+  memoryless floor; context credit = beating it (below-floor). The two capabilities are in the TARGET +
+  floor/ceiling reference, not in two separate readout channels. The readout must be temporally
+  inclusive enough that context-modulation is in the measured response.
+- **behave already records the FULL r-trajectory** (`mon.r`, (N, samples) across the whole run); the
+  per-stimulus windowing just REDUCES it. So persistence/complexity diagnostics need a richer REDUCTION
+  of data already in hand — no extra sim cost, no gaps.
+
+**NEXT: step 1 — the baseline readout fix.** Then step 2 (context readout + ceiling validation), then
+step 3 (developed-network context-carry = the rematch).
