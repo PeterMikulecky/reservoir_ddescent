@@ -3476,3 +3476,64 @@ demonstrating it is built from gating). Try b-via-a first.
 measured against the memoryless floor (below-floor = regulation). Its expected MECHANISM is gating/
 interneuron machinery (a) whose parameter-cost is the reason its emergence associates with the SECOND
 descent. Switch-regulation (context present, direct gate, no memory) remains EXCLUDED (D048/D091).
+
+### D094 — The fitness function: additive encoding + carrying, plus a MULTIPLICATIVE carrying×regulation bonus. Three terms mapping onto first/second descent and enforcing the capability hierarchy.
+**2026-07-19 · Accepted (defines the GA fitness) · PJM** · resolves the ceiling-wiring question and the graded-vs-threshold assay tension
+
+**THE FUNCTION.**
+    fitness = w_e * encoding  +  w_c * carrying  +  w_r * (carrying * regulation)
+Three components, each earning its place against an established requirement:
+- **encoding** — memoryless stimulus->response performance. The FIRST-DESCENT term (D091): available
+  to any network, rewards parameters up to interpolation. The floor.
+- **carrying** — short-term memory (state held through a delay), credited ON ITS OWN. Gives the GA a
+  slope toward memory BEFORE regulation exists -> prevents the Gate-A flat-landscape failure (D082) at
+  this level. Also the prerequisite the bonus term multiplies.
+- **carrying * regulation** — working memory: the regulation BONUS. The SECOND-DESCENT term -- the
+  parameter-expensive capability (D093) that switches on only when the network both HOLDS context and
+  USES it. Multiplicative because regulation is meaningless without something to regulate.
+
+**WHY MULTIPLICATIVE FOR THE BONUS (PJM's insight, correctly placed).** The regulation reward is a
+PRODUCT with carrying, so it is genuinely CONTINGENT on holding context -- you cannot collect the
+regulation bonus by "regulating" a signal you are not holding. This encodes the biological truth
+(working memory = memory + control) and is the mechanism that makes regulation land in the SECOND
+descent rather than being cheaply available: the bonus is only accessible ON TOP OF carrying. The
+product enforces the capability HIERARCHY (encoding < carrying < working-memory) in the landscape
+itself.
+
+**WHY NOT A PURE PRODUCT (the corrected worry).** CLM initially worried a product zeros out until BOTH
+capabilities exist, recreating the Gate-A cliff. PJM corrected: the product is only the THIRD TERM;
+encoding and carrying are ADDITIVE and credited independently. So a network with carrying-and-no-
+regulation still scores on encoding + carrying; it only forgoes the bonus. **Gradient is intact in
+every regime** (encoding slope, then carrying slope, then regulation-on-carrying slope) -- a climbable
+curriculum, not a cliff. This satisfies BOTH the graded-assay requirement (detect/reward rudimentary
+progress toward regulation) AND the double-descent structure (D091) at once.
+
+**MAPPING TO DOUBLE DESCENT.** encoding = first descent (memoryless-achievable). carrying*regulation =
+second descent (parameter-expensive, emerges late, D093). The additive structure IS the first/second-
+descent decomposition; the multiplicative bonus being the second-descent term is the D093 story
+(regulation is the expensive late capability) made QUANTITATIVE.
+
+**CONSEQUENCE FOR THE CEILING (resolves the wiring fork).** The regulation term is carrying*regulation,
+evaluated on HELD context (carrying = held-through-delay). So the ceiling validating this term MUST
+demonstrate regulation operating on HELD context = the INTEGRATED carry-and-regulate version, NOT a
+config where context is supplied directly (that would make the carrying factor meaningless -- context
+given, not held -- so it could not validate the term as fitness actually computes it). The scoring
+structure DECIDED the wiring: the ceiling is the integrated version.
+
+**COMPONENT MEASURES.**
+- encoding: performance toward the memoryless floor (existing).
+- carrying: cue-selective state that persists AND decays through a silent delay (D092b validated
+  measure; decay-across-delay is the discriminator vs the flat confound).
+- regulation: GRADED, continuous "how well does the identical-probe response differ by HELD context
+  in the way the task demands" (D091/D093 map-selection signature) -- continuous so it gives partial
+  credit (the gradient WITHIN the bonus term).
+
+**OPEN (tuning, not structure): the weights w_e, w_c, w_r.** They shape how sharp the second descent is;
+too much on the bonus -> near-cliff again, too little -> regulation never worth climbing to. A tuning
+question for later, with a real connection to REGULARIZERS-SMOOTH-THE-PEAK (D091): the weighting is
+itself part of what makes the interpolation region a cliff vs a slope. Flag, do not solve now.
+
+**FITNESS INTEGRATES; DIAGNOSTICS SEPARATE.** This fitness is the INTEGRATED quantity selection acts on
+(one number per network, a distribution at each P). The carry/regulation DIAGNOSTICS (silent-delay,
+identical-probe) separate the capabilities for ANALYSIS. Same relationship as state(mean, fitness) vs
+state_var(metric) in D028/D033 -- extended to the capability hierarchy.
