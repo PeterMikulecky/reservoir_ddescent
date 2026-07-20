@@ -3415,3 +3415,64 @@ the regulation measure too.
 
 **QUARANTINE HOLDS (D083/D092):** ceiling is a tested genome / measurement-instrument calibration,
 never seeded into evolution.
+
+### D093 — "Regulation" = context-selects-the-map (READOUT), built from gating primitives (MECHANISM). The b-via-a resolution maximizes detectability of the second-descent<->regulation hypothesis and unites the task, the comp-neuro definition, and the D084 interneuron thread.
+**2026-07-19 · Accepted (defines regulation for the study)** · PJM reframed the ceiling-wiring choice into "which maximizes our chance of detecting the hypothesis"
+
+**THE CHOICE (not really about the ceiling -- about what REGULATION operationally MEANS).** Two ways a
+held context can change a probe response:
+- **(a) Gating/shunting** — context controls WHETHER a signal passes (a valve). Held context opens/
+  blocks the probe->output path. Disinhibition/attention flavor; the VIP->SST->pyr motif (D084); the
+  document's Architecture B; Ardid & Wang 2013.
+- **(b) Context-selects-the-map** — context controls WHICH transformation is applied (a switchable
+  function). Same probe mapped to output through a DIFFERENT function per context. Mante/Sussillo/
+  Newsome 2013 context-dependent-computation flavor; matches the task's Y = tanh(E @ Q @ W_ctx[c])
+  EXACTLY (context selects the weight matrix).
+
+**PJM's framing that dissolved the tradeoff.** (1) Either choice supports the double-descent MEASUREMENT
+(fitness integrates encoding + memory + regulation, so a fitness distribution exists at every P
+regardless). The choice is not about measurability -- it is about what a second descent, if seen, would
+MEAN. (2) The real question: which choice maximizes the chance of detecting the hypothesis *second
+descent (or smoothed passage into it) <-> emergence of REGULATION*?
+
+**THE ANSWER (b-via-a), from two requirements for the association to be DETECTABLE:**
+- **Req 1 — regulation must be the capability the second-descent parameters actually buy, not a
+  confound.** Below-floor performance must come from regulation, not from memory-as-bias or a near-
+  switch shortcut. **(a) gating is CLOSE to switching** -> a second descent driven by gating is hard to
+  distinguish from a switch-shortcut (the D048/D091 triviality) -> WEAKER attribution. **(b) map-
+  selection CANNOT be a switch** (the W_ctx structure demands different transformations a switch can't
+  give) -> a second descent driven by map-selection is CONFIDENTLY regulation -> CLEAN attribution.
+  ⇒ **(b) is the confound-resistant READOUT.**
+- **Req 2 — regulation must be EXPENSIVE (need excess parameters), or it joins the FIRST descent and
+  there is no late association.** What does building map-selection (b) COST in parameters? The machinery
+  to hold context and route it into reconfiguring the computation = the gating/interneuron machinery
+  (a). ⇒ **(a) is the MECHANISM whose parameter-cost places regulation in the SECOND descent.**
+
+**⇒ b-via-a: MEASURE regulation as (b) map-selection; expect it BUILT FROM (a) gating primitives.**
+(b) gives the clean readout (Req 1); (a) gives the parameter-cost and late emergence (Req 2). This is
+not a compromise -- it is the version that matches the hypothesis, because the hypothesis is precisely
+"a capability that COSTS parameters (a-machinery) to build enables a NON-TRIVIAL improvement (b-readout)
+past interpolation."
+
+**WHAT THIS UNIFIES (the payoff).** The apparent tension -- (a) maps to the D084 interneuron gradient,
+(b) is what a comp-neuro audience accepts as "regulation" and matches the task -- DISSOLVES. You get
+both: the READOUT is (b) (audience-accepted, task-matched, confound-resistant); the MECHANISM is (a)
+(the D084 interneuron/gating machinery, providing the parameter-cost). The interneuron thread (D084) and
+the regulation readout are not competitors -- they are the MECHANISM and the READOUT of one phenomenon.
+Regulation-as-map-selection is HOW the interneuron gating machinery pays off on the task; the interneuron
+machinery is WHY regulation is expensive enough to emerge in the second descent.
+
+**CEILING CONSEQUENCE (2b regulation half).** Wire the ceiling as CONTEXT-SELECTS-AMONG-SUB-PATHWAYS-
+VIA-GATING: held context gates WHICH of several probe->output sub-pathways is active; the sub-pathways
+implement DIFFERENT maps. That is (b)-regulation (different map per context) built from (a)-primitives
+(gating selects the pathway) -- the known-positive for EXACTLY the hypothesized phenomenon, and a preview
+of how evolved interneuron machinery (D084) would produce task-relevant map-selection.
+**Caveat (honest):** more elaborate to wire (multiple sub-pathways + gating); if it proves fiddly,
+fall back to (b)-readout with simpler mechanism (demonstrates map-selection is achievable, without
+demonstrating it is built from gating). Try b-via-a first.
+
+**STANDING DEFINITION (for the whole study):** REGULATION = context-dependent selection of the stimulus
+->response MAP (b), operationalized as the identical-probe-different-context-response signature (D091),
+measured against the memoryless floor (below-floor = regulation). Its expected MECHANISM is gating/
+interneuron machinery (a) whose parameter-cost is the reason its emergence associates with the SECOND
+descent. Switch-regulation (context present, direct gate, no memory) remains EXCLUDED (D048/D091).
