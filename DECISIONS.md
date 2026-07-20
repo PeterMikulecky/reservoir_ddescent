@@ -3171,3 +3171,48 @@ readout known-positive control (here).
 
 **NEXT: step 1 — the baseline readout fix.** Then step 2 (context readout + ceiling validation), then
 step 3 (developed-network context-carry = the rematch).
+
+### D089 — REGRESSION + RECONCILIATION: STEP 1 development was built on a STALE evonet (pre-slow-current); re-applied onto the current base (old_b) with all infrastructure verified intact.
+**2026-07-19 · Accepted (correction)** · *the uploaded evonet.py was stale; building on it dropped D074/D075/D078 — caught and fixed*
+
+**WHAT HAPPENED.** The `evonet.py` uploaded this session was an OLD version predating the D074 slow
+current. STEP 1 development (synapse split + Vogels develop() + D088 clock-rebase) was built on it and
+COMMITTED — which regressed the repo: the committed version had development but LACKED the slow current
+(D074), charge conservation (D075), the batched runner (D078), and the shared _window_readout helper.
+I.e. it traded the memory mechanism (and batching) for the development mechanism, when both are needed.
+**Caught when** starting the context-persistence probe (step 2a): grepping for the slow current found
+it ABSENT — which also explained a stale-file symptom (nmda_frac was silently ignored all session).
+
+**ROOT CAUSE + STANDING FIX.** Built on an uploaded core file without diffing it against what the
+decisions say should be there. **New discipline: before building on an uploaded core file, verify it
+contains the mechanisms recent decisions added (grep for the relevant D-number features).** Uploads are
+often stale (the project has always warned this); core-file edits must confirm the base first.
+
+**THE RECONCILIATION (a, per the two options considered).** Took `old_b` (the current, most-complete
+base: slow current D074, charge-conservation D075, batched runner + verify_batch_equivalence D078,
+shared _window_readout, readout_pos D072) and re-applied the STEP 1 development work onto IT, adapting
+to its idioms:
+- Plastic I->E block uses **w_fast** (I->E is inhibitory -> w_slow=0 anyway; Vogels tunes fast
+  inhibition) -- a clean mapping onto the two-current model.
+- Static block (E->E, E->I, I->I) keeps the **charge-conserved w_fast/w_slow split (D075)** untouched.
+- Clock-rebase (D088) applied in BOTH single (`behave`) and batched paths at the point `t` is read.
+- develop() resets I_fast/I_slow/r (not the old single I_syn) before re-storing "init".
+
+**VERIFIED (sandbox, on the reconciled file):**
+1. **verify_batch_equivalence PASS** — the synapse split did NOT break the single-vs-batch invariant
+   (D078). This was the biggest graft risk; it's clean.
+2. **Slow current active** — builds with nmda_frac=0.5/tau_slow=100 alongside the split; fresh behave
+   healthy.
+3. **Development end-to-end** — converges, no NaN blowup, net alive after, **Kind-A preserved (P
+   1204->1204, support intact)**.
+⇒ the reconciled evonet has slow current + charge conservation + batching + shared readout +
+development + clock-rebase, all coexisting and checked.
+
+**ACTION FOR THE REPO:** the currently-committed evonet (regressed) must be REPLACED by this reconciled
+version. The rescued STEP 1 work is intact; only its base was wrong. NONE of the development logic
+changed in the re-application — same split, same Vogels rule, same commit-back, same clock fix — only
+adapted to w_fast/w_slow and the shared helper.
+
+**NEXT (unchanged): step 2a** — the context-persistence probe, now on a substrate that ACTUALLY HAS the
+slow current (my earlier "this substrate can't carry context" prediction was against the stale file; the
+real base has the 100ms slow current D074 added precisely for carry).
