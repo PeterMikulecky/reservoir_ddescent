@@ -40,7 +40,6 @@ treatment variable (if evolution controlled it, the population would choose its 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-import time
 import numpy as np
 
 from .evonet import EvoNetConfig, EvoNet, Genome, random_genome, mutate
@@ -52,27 +51,6 @@ class EvolveConfig:
     pop_size: int = 50
     n_generations: int = 200
     elite: int = 2                      # copied unchanged each generation
-
-    # --- test-error capture cadence (D077) ---------------------------------------------
-    # Selection never reads test error; it is REPORTING only. Three tiers:
-    #   * champion (best individual) test error: EVERY generation  -> the epoch-wise DD
-    #     trajectory (a champion-RELAY, not a fixed-model curve; and generation-axis, NOT the
-    #     P-axis the study's headline DD lives on -- see D077).
-    #   * whole-population test (mean + spread): every `test_every` gens, AND the final gen
-    #     -> D059's class-level Occam signal, at 1/test_every the cost.
-    # test_every=0 disables the periodic population sweep (champion + final only).
-    test_every: int = 20
-
-    # --- Gate A routing metric (D080) --------------------------------------------------
-    # When True, log the CHAMPION's E_from_rates and E_from_state per generation: NMSE
-    # reconstructing the stimulus E from the output-neuron rates (vs the full state). Gate A
-    # asks whether selection ROUTES E into the output slice (E|rates falls toward E|state).
-    # Off by default — it adds a decode per generation, wanted only for Gate A / routing runs.
-    track_routing: bool = False
-    # A fixed, well-posed probe {E_train, E_test} for the routing decode (D081: ~200 env so the
-    # decode is over-determined). Set by the Gate A script; None disables routing even if
-    # track_routing is on. Not a scientific parameter — a measurement probe.
-    _routing_probe: dict = None
 
     # --- ARM 1: selection scheme (D060) ------------------------------------------------
     selection: str = "replicator"       # 'replicator' (Occam factor lives) | 'tournament'
@@ -91,19 +69,34 @@ class EvolveConfig:
     mutation_rule: str = "product"      # 'product' | 'sum'  (sum is a D052 contrast arm)
     crossover: bool = False             # OFF: competing conventions
 
-    # --- fitness ------------------------------------------------------------------------
+    # --- fitness (D094 three-term) ------------------------------------------------------
     c_syn: float = 0.0                  # metabolic cost per synapse. 0 = FRANK'S ASSUMED REGIME
+    w_e: float = 1.0                    # weight on encoding (first descent)
+    w_c: float = 1.0                    # weight on carrying (short-term memory)
+    w_r: float = 2.0                    # weight on carrying*regulation bonus (second descent)
     w0: float = 0.6
     ei_split: float = 0.8
+
+    # --- development inner loop (D083/D087) --------------------------------------------
+    dev_ms: float = 1500.0              # development duration per eval; 0 disables (birth scoring)
+    dev_eta: float = 1e-3               # Vogels plasticity learning rate
 
     seed: int = 0
 
 
-def _fitness(err: float, n_params: int, cfg: EvolveConfig) -> float:
-    """-error - c_syn*|W|.  c_syn=0 is Frank's assumed regime (D054): biology does not
-    penalize complexity. c_syn>0 is the regularized one. **This sweep asks whether Frank's
-    assumed regime is even reachable.**"""
-    return -err - cfg.c_syn * n_params
+def _fitness(comp: dict, n_params: int, cfg: EvolveConfig) -> float:
+    """D094 three-term fitness on the DEVELOPED phenotype:
+        w_e*encoding + w_c*carrying + w_r*(carrying*regulation)  -  c_syn*|W|
+    - encoding   = memoryless-achievable task performance (first descent).
+    - carrying   = short-term memory: context-distinguishability of state (credited alone).
+    - carrying*regulation = working memory BONUS (second descent): regulation is contingent on
+      holding context (multiplicative), so it is only accessible on top of carrying (D094).
+    c_syn is the metabolic complexity penalty: 0 = Frank's assumed regime (D054); >0 regularized.
+    All components are read through the CAPACITY-CONSTRAINED designated-slice readout (D095)."""
+    base = (cfg.w_e * comp["encoding"]
+            + cfg.w_c * comp["carrying"]
+            + cfg.w_r * (comp["carrying"] * comp["regulation"]))
+    return base - cfg.c_syn * n_params
 
 
 def _select(fits: np.ndarray, n: int, cfg: EvolveConfig, rng) -> np.ndarray:
@@ -144,10 +137,11 @@ def _structural_mutate(g: Genome, cfg: EvolveConfig, rng) -> Genome:
     return Genome(signs=g.signs.copy(), mag=mag)
 
 
-def _nmse_affine(Y, R):
-    """Align the network's arbitrary rate units to the demanded profile via a per-output affine
-    map, then NMSE. NOT a trained readout — d scalars (gain+offset per output neuron), not a
-    mixing matrix; it cannot mix neurons (D036)."""
+def _affine_nmse(Y, R):
+    """D095 capacity-constrained readout: per-output AFFINE map (gain+offset per output neuron).
+    NOT a mixing matrix -- d scalars, cannot mix neurons, cannot adapt to individual networks
+    beyond scale/offset. This is the population-constant, non-cheating readout (D095): all real
+    task performance must come from the network's dynamics routing signal to the output slice."""
     out = np.empty_like(Y)
     for j in range(Y.shape[1]):
         A = np.vstack([R[:, j], np.ones(len(R))]).T
@@ -156,48 +150,67 @@ def _nmse_affine(Y, R):
     return float(np.mean((Y - out) ** 2) / (np.var(Y) + 1e-12))
 
 
-def evaluate(genome: Genome, task, net_cfg: EvoNetConfig, with_test: bool = True) -> dict:
-    """Behaviour → phenotype → error. Fitness reads OUTPUT RATES (D036).
+def _context_carry(state_tr, C_tr, state_te, C_te):
+    """Carrying = context-distinguishability of the DEVELOPED state (D090/D092b). 1 - decode-NMSE
+    of the context label from state, floored at 0. (Decode uses the same capacity-constrained
+    spirit; it is a MEASURE, not the fitness readout.)"""
+    from .baseline import best_nmse
+    nc = int(max(C_tr.max(), C_te.max())) + 1
+    Ytr = np.eye(nc)[C_tr]; Yte = np.eye(nc)[C_te]
+    nmse = best_nmse(state_tr, Ytr, state_te, Yte, standardize=True)[0]
+    return max(0.0, 1.0 - float(nmse))
 
-    **`with_test` (D077).** Selection (`_fitness`) reads ONLY `train_err`, so test is never needed
-    to evolve — only to REPORT. A full test `behave()` is a second simulation per genome, and at
-    30 genomes × every generation that was ~half the GA's runtime, thrown away: the population-mean
-    test trajectory it produced is read by NO hypothesis (BRIDGE Level 5: the study's double
-    descent is error-vs-P ACROSS ARMS at convergence, not a per-generation curve within one arm).
-    With `with_test=False` we skip the test `behave()` entirely. The caller (run_evolution) then
-    computes test only where it is actually used: the champion every generation (the epoch-wise
-    trajectory — kept dense, one extra behave/gen) and the whole population every `test_every`
-    generations + the final generation (D059's class-level Occam signal). `test_err` is np.nan
-    when skipped, which pandas carries cleanly.
+
+def evaluate(genome: Genome, task, net_cfg: EvoNetConfig, cfg: "EvolveConfig | None" = None) -> dict:
+    """DEVELOP then score the DEVELOPED phenotype (D083). Returns the three D094 components read
+    through the capacity-constrained designated-slice readout (D095).
+
+    - encoding   = 1 - (developed task NMSE), floored at 0: memoryless-achievable performance.
+    - regulation = max(0, memoryless_floor - developed_NMSE): below-floor excess REQUIRES using
+      context (D091/D040), so it is the regulation signal.
+    - carrying   = context-distinguishability of the developed state (D092b).
     """
     net = EvoNet(genome, net_cfg)
+
+    # --- development (D083): mature the phenotype before scoring -----------------------------
+    if cfg is None or cfg.dev_ms > 0:
+        eta = 1e-3 if cfg is None else cfg.dev_eta
+        dev_ms = 1500.0 if cfg is None else cfg.dev_ms
+        net.develop(task.E_train, eta=eta, dev_ms=dev_ms, warmup_ms=200.0, n_checkpoints=4)
+
     B_tr = net.behave(task.E_train)
-    err_tr = _nmse_affine(task.Y_train, B_tr["rates"])
-    err_te = _nmse_affine(task.Y_test, net.behave(task.E_test)["rates"]) if with_test else float("nan")
+    B_te = net.behave(task.E_test)
+
+    err_tr = _affine_nmse(task.Y_train, B_tr["rates"])
+    err_te = _affine_nmse(task.Y_test, B_te["rates"])
+
+    floor = task.headroom()["memoryless_floor"]
+    encoding = max(0.0, 1.0 - err_te)
+    regulation = max(0.0, floor - err_te)
+    carrying = _context_carry(B_tr["state"], task.C_train, B_te["state"], task.C_test)
+
     return dict(train_err=err_tr, test_err=err_te, n_params=genome.n_params(),
-                exc_frac=genome.exc_fraction(), state=B_tr["state"], state_var=B_tr["state_var"])
+                exc_frac=genome.exc_fraction(), state=B_tr["state"], state_var=B_tr["state_var"],
+                encoding=encoding, carrying=carrying, regulation=regulation)
 
 
 _WORKER = {}
 
 
-def _init_worker(task, net_cfg):
-    """Set the task/net_cfg ONCE per worker (D064).
+def _init_worker(task, net_cfg, cfg=None):
+    """Set the task/net_cfg/cfg ONCE per worker (D064).
 
     Without this, `pool.map` re-pickles the task (E/Y arrays + W_ctx) and net_cfg for **every
     individual, every generation** — real overhead that ate most of the parallel speedup.
     """
     _WORKER["task"] = task
     _WORKER["net_cfg"] = net_cfg
+    _WORKER["cfg"] = cfg
 
 
 def _eval_payload(genome):
-    """TOP-LEVEL, picklable — Windows spawn (D007). One individual; task comes from the worker.
-
-    D077: TRAIN-ONLY. Population evaluation never needs test (fitness reads train), so the worker
-    skips the test `behave()`. Test is computed back in run_evolution for the champion + periodic
-    population sweeps only."""
-    r = evaluate(genome, _WORKER["task"], _WORKER["net_cfg"], with_test=False)
+    """TOP-LEVEL, picklable — Windows spawn (D007). One individual; task comes from the worker."""
+    r = evaluate(genome, _WORKER["task"], _WORKER["net_cfg"], _WORKER.get("cfg"))
     r.pop("state", None); r.pop("state_var", None)   # do not ship big arrays back
     return r
 
@@ -210,50 +223,13 @@ def run_evolution(task, net_cfg: EvoNetConfig, cfg: EvolveConfig,
     (Gate B0) asks whether **any** genome can fit exactly; R&N's Occam factor is a
     **class-level** effect.
     """
-def _errs_from_behave(B_list, task, which):
-    """NMSE per genome from a list of behave outputs (batched or single). which: 'train'|'test'."""
-    Y = task.Y_train if which == "train" else task.Y_test
-    return np.array([_nmse_affine(Y, B["rates"]) for B in B_list])
-
-
-def _routing_nmse(genome, net_cfg, probe):
-    """Gate A metric (D080/D081). NMSE reconstructing the stimulus E from the OUTPUT-neuron rates
-    (E_from_rates) and from the full state (E_from_state), using SEPARATE train/test behave runs
-    on a FIXED probe set — exactly the diagnostics' method (best_nmse, standardized), so the
-    numbers are comparable to the measured random baseline (E|rates≈0.99, E|state≈0.43).
-
-    `probe` is a dict {E_train, E_test} of held-out stimuli, sized for a well-posed decode
-    (>= ~3x the state dim; D081 uses 200). Two behave runs on the champion — NOT free, so this is
-    logged sparsely (endpoints + cadence), never every generation (would ~double runtime, D081)."""
-    from .baseline import best_nmse
-    net = EvoNet(genome, net_cfg)
-    Btr = net.behave(probe["E_train"]); Bte = net.behave(probe["E_test"])
-    er = float(best_nmse(Btr["rates"], probe["E_train"], Bte["rates"], probe["E_test"],
-                         standardize=True)[0])
-    es = float(best_nmse(Btr["state"], probe["E_train"], Bte["state"], probe["E_test"],
-                         standardize=True)[0])
-    return er, es
-
-
-def run_evolution(task, net_cfg: EvoNetConfig, cfg: EvolveConfig,
-                  eval_fn=None, n_workers: int = 1, verbose: bool = True,
-                  batched: bool = True) -> tuple:
-    """Evolve W. Returns (history_rows, final_population).
-
-    Records BOTH best-individual and population-mean training error (D059): interpolation
-    (Gate B0) asks whether **any** genome can fit exactly; R&N's Occam factor is a
-    **class-level** effect.
-
-    **`batched=True` (D078, default).** The whole population runs as ONE block-diagonal network
-    per generation (`evonet.behave_batch`) — the ~15× measured speedup. The per-genome pool path
-    (`n_workers>1`) is retained for `batched=False` / `eval_fn` overrides but is now the SLOW
-    path: batching makes multiprocessing redundant (step 4). Train/selection are identical to the
-    single-genome path — verified bit-for-bit at noise=0 by `verify_batch_equivalence` (D078).
-    """
-    from .evonet import behave_batch
     rng = np.random.default_rng(cfg.seed)
-    use_pool = (not batched) and (n_workers > 1) and (eval_fn is None)
-    eval_fn = eval_fn or (lambda g: evaluate(g, task, net_cfg, with_test=False))
+    # BUG FIX (D065): decide about the pool BEFORE overwriting eval_fn.
+    # The old order set `eval_fn` to a lambda first, then tested `eval_fn is None` — which was
+    # therefore ALWAYS FALSE, so the pool was NEVER created and every run was silently SERIAL
+    # (one process, ~1 core). Caught by PJM watching Task Manager: "only 1 Python process at 12%".
+    use_pool = (n_workers > 1) and (eval_fn is None)
+    eval_fn = eval_fn or (lambda g: evaluate(g, task, net_cfg, cfg))
 
     pop = [random_genome(net_cfg, cfg.density, w0=cfg.w0, ei_split=cfg.ei_split,
                          seed=cfg.seed + i) for i in range(cfg.pop_size)]
@@ -262,102 +238,34 @@ def run_evolution(task, net_cfg: EvoNetConfig, cfg: EvolveConfig,
     if use_pool:
         import multiprocessing as mp
         pool = mp.get_context("spawn").Pool(n_workers, initializer=_init_worker,
-                                            initargs=(task, net_cfg))
-
-    # ---- D066/D071: announce mode + start the wall clock (progress reporting was SPEC'd in
-    # D066 and never implemented — a 2 h arm printed nothing, so you could not tell a live run
-    # from a hung one, or batched from silently-serial. Fixed here.) ------------------------
-    if batched:
-        _mode = "BATCHED (one block-diagonal network/gen, D078)"
-    elif pool is not None:
-        _mode = f"PARALLEL ({n_workers} workers)"
-    else:
-        _mode = "SERIAL (1 process)"
-    _t_start = time.perf_counter()
-    if verbose:
-        print(f"[run_evolution] {_mode} | pop={cfg.pop_size} gens={cfg.n_generations} "
-              f"density={cfg.density} N={net_cfg.N} test_every={cfg.test_every}", flush=True)
+                                            initargs=(task, net_cfg, cfg))
     try:
       for gen in range(cfg.n_generations):
-          # ---- TRAIN: whole population (fitness reads train) -----------------------------
-          if batched:
-            B_tr = behave_batch(pop, net_cfg, task.E_train)          # one run, all genomes
-            errs = _errs_from_behave(B_tr, task, "train")
-            nps = np.array([g.n_params() for g in pop])
-            excf = np.array([g.exc_fraction() for g in pop])
-          elif pool is not None:
-            res = pool.map(_eval_payload, pop)
-            errs = np.array([r["train_err"] for r in res])
-            nps = np.array([r["n_params"] for r in res])
-            excf = np.array([r["exc_frac"] for r in res])
+          if pool is not None:
+            res = pool.map(_eval_payload, pop)      # only the genome is shipped
           else:
             res = [eval_fn(g) for g in pop]
-            errs = np.array([r["train_err"] for r in res])
-            nps = np.array([r["n_params"] for r in res])
-            excf = np.array([r["exc_frac"] for r in res])
-          fits = np.array([_fitness(e, p, cfg) for e, p in zip(errs, nps)])
+          errs = np.array([r["train_err"] for r in res])
+          tests = np.array([r["test_err"] for r in res])
+          nps = np.array([r["n_params"] for r in res])
+          fits = np.array([_fitness(r, r["n_params"], cfg) for r in res])
+
           order = np.argsort(-fits)
-
-          # ---- D077: selective TEST evaluation (batched too) -----------------------------
-          is_final = (gen == cfg.n_generations - 1)
-          do_pop_test = is_final or (cfg.test_every > 0 and gen % cfg.test_every == 0)
-          if do_pop_test:
-            # whole population — D059's class-level Occam signal + the final-gen P-point that
-            # enters the cross-arm double-descent curve (the STUDY's headline DD, BRIDGE L5).
-            if batched:
-                B_te = behave_batch(pop, net_cfg, task.E_test)
-                tests = _errs_from_behave(B_te, task, "test")
-            else:
-                tests = np.array([evaluate(pop[i], task, net_cfg, with_test=True)["test_err"]
-                                  for i in range(len(pop))])
-            best_test = float(tests[order[0]]); mean_test = float(np.nanmean(tests))
-            std_test = float(np.nanstd(tests))
-          else:
-            # champion only — the epoch-wise DD trajectory, kept dense (one extra behave/gen).
-            champ = pop[order[0]]
-            if batched:
-                best_test = float(_errs_from_behave(behave_batch([champ], net_cfg, task.E_test),
-                                                    task, "test")[0])
-            else:
-                best_test = evaluate(champ, task, net_cfg, with_test=True)["test_err"]
-            mean_test = float("nan"); std_test = float("nan")
-
-          # ---- D080/D081: Gate A routing metric (champion; sparse — endpoints + cadence) --
-          # Two extra behave runs per logged gen, so NOT every gen (would ~double runtime, D081).
-          # Logged at gen 0, the final gen, and every test_every gens — the endpoints are what
-          # D080's pass criterion actually reads (fall from gen 0 to final).
-          want_routing = cfg.track_routing and (gen == 0 or is_final or
-                          (cfg.test_every > 0 and gen % cfg.test_every == 0))
-          if want_routing and cfg._routing_probe is not None:
-            e_rates, e_state = _routing_nmse(pop[order[0]], net_cfg, cfg._routing_probe)
-          else:
-            e_rates = e_state = float("nan")
-
           history.append(dict(
             gen=gen,
-            # best individual — Gate B0's convention (can ANY genome interpolate?) + epoch-wise DD
-            best_train=float(errs[order[0]]), best_test=best_test,
+            # best individual — the right convention for Gate B0 (can ANY genome interpolate?)
+            best_train=float(errs[order[0]]), best_test=float(tests[order[0]]),
             best_params=int(nps[order[0]]),
-            # D080 Gate A: does selection route E into the output slice? (NaN unless track_routing)
-            e_from_rates=e_rates, e_from_state=e_state,
-            # population mean — R&N's class-level Occam factor; test is NaN on non-sweep gens
-            mean_train=float(errs.mean()), mean_test=mean_test, std_test=std_test,
+            # population mean — the right convention for R&N's class-level Occam factor
+            mean_train=float(errs.mean()), mean_test=float(tests.mean()),
             mean_params=float(nps.mean()), std_params=float(nps.std()),
-            mean_exc_frac=float(excf.mean()),
+            mean_exc_frac=float(np.mean([r["exc_frac"] for r in res])),
             fit_mean=float(fits.mean()), fit_std=float(fits.std()),
-            pop_test=bool(do_pop_test),      # provenance: was mean_test a real sweep or NaN?
           ))
-          # ---- D066: progress with elapsed + ETA + flush, every 10 gens (and gen 0 + final) --
-          if verbose and (gen % 10 == 0 or gen == cfg.n_generations - 1):
+          if verbose and (gen % 20 == 0 or gen == cfg.n_generations - 1):
             h = history[-1]
-            done = gen + 1
-            elapsed = time.perf_counter() - _t_start
-            per_gen = elapsed / done
-            eta = per_gen * (cfg.n_generations - done)
-            print(f"  gen {gen:>4}/{cfg.n_generations}: best_train={h['best_train']:.3f} "
-                  f"best_test={h['best_test']:.3f} |W|={h['mean_params']:.0f}±{h['std_params']:.0f} "
-                  f"exc={h['mean_exc_frac']:.2f} | {elapsed:5.0f}s elapsed, "
-                  f"~{eta/60:4.1f} min ETA ({per_gen:.2f} s/gen)", flush=True)
+            print(f"  gen {gen:>4}: best_train={h['best_train']:.3f} best_test={h['best_test']:.3f} "
+                  f"|W|={h['mean_params']:.0f}±{h['std_params']:.0f} exc={h['mean_exc_frac']:.2f}")
 
           if gen == cfg.n_generations - 1:
             break

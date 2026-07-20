@@ -3596,3 +3596,44 @@ gets no early credit -- penalized for a routing/bookkeeping mismatch, not a comp
 genes); D072 (the designated output slice this reads); D094 (the fitness whose components this readout
 computes); the interface-efficiency penalty (gamma * n_io) from the literature is NOT needed since we do
 not discover/co-evolve I/O -- the interface is fixed.
+
+### D096 — Step 3 GA assembled and running: develop + D094 three-term fitness + D095 readout + selection, end-to-end. First observation of fitness CLIMBING under selection.
+**2026-07-20 · Accepted (milestone) · executes D083/D094/D095**
+
+**BUILT.** evolve.py evaluate() now DEVELOPS the phenotype (D083 inner loop) before scoring, and returns
+the three D094 components read through the D095 capacity-constrained designated-slice readout:
+- encoding = 1 - developed task NMSE (floored) -- via the per-output AFFINE readout (gain+offset per
+  output neuron, NOT a mixing matrix -- the D095 non-cheating readout, which evolve.py ALREADY used).
+- regulation = max(0, memoryless_floor - developed NMSE) -- below-floor excess = using context (D091).
+- carrying = context-distinguishability of the developed state (D092b).
+_fitness() is now the D094 three-term: w_e*encoding + w_c*carrying + w_r*(carrying*regulation) - c_syn*P.
+EvolveConfig gains w_e/w_c/w_r and dev_ms/dev_eta. cfg threaded through evaluate + workers.
+**Pleasant surprise:** the codebase ALREADY did D095 right (per-output affine readout on the designated
+out_slice, explicitly "cannot mix neurons"); the experiment-A full-state ridge fit was CLM's deviation,
+now discarded. Less to change than feared.
+
+**FIRST RESULT (tiny smoke: pop 8, 3 gens, development ON).** FITNESS CLIMBS under selection:
+fit_mean 0.0445 -> 0.0593 -> 0.0635; best_test (task error) FALLS 0.940 -> 0.908 -> 0.884; fit_std
+RISES 0.007 -> 0.023 (population spreading = the gradient selection acts on). **This is the first time
+in the project fitness has climbed under selection -- the thing Gate A (D082) failed to produce.** Not
+over-read (3 gens, tiny pop, smoke only), but the machinery does what the redesign intended: development
+creates scoreable capability, the three-term fitness gives it a gradient, selection climbs it.
+
+**OBSERVATION TO WATCH (not yet a decision).** In the smoke run, encoding registers (~0.05) and
+regulation registers (~0.085) but carrying reads ~0. Since regulation enters fitness ONLY through the
+carrying*regulation product (D094), regulation is currently earning NOTHING (carrying=0 zeroes the
+bonus) -- the early climb is driven by ENCODING. This is EXACTLY what the multiplicative structure
+intends (no working-memory credit until carrying exists), and it is gen 0-2 with no time to build
+carrying. BUT if carrying stays ~0 over a real run, the second-descent term never switches on and we
+would see no regulation emergence. So: **watch whether carrying rises over a full GA run.** If it stays
+zero, revisit either the carrying MEASURE (context-decode may be too weak, cf. the D090/D092 saga -- the
+validated carry measure was decay-across-delay, NOT context-label-decode, so evaluate()'s carrying via
+context-decode may be the weak instrument again) or development duration/strength. Flag, not yet fixed.
+
+**KNOWN NEXT ISSUES (ordered).** (1) evaluate()'s carrying uses context-LABEL-decode, but D092b
+validated the DECAY-ACROSS-DELAY measure instead -- likely need to swap in the validated measure (label-
+decode was the confounded/weak one). (2) development duration is short (smoke used 800ms); real runs
+need the D083 convergence-based or task-scaled duration. (3) cost of development per eval (D068) -- a
+full GA develops every individual every generation; measure before a big sweep. (4) then the real
+experiment: fitness-vs-P across the double-descent range (Gate B), watching for encoding first-descent +
+carrying*regulation second-descent.
