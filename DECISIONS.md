@@ -3537,3 +3537,62 @@ itself part of what makes the interpolation region a cliff vs a slope. Flag, do 
 (one number per network, a distribution at each P). The carry/regulation DIAGNOSTICS (silent-delay,
 identical-probe) separate the capabilities for ANALYSIS. Same relationship as state(mean, fitness) vs
 state_var(metric) in D028/D033 -- extended to the capability hierarchy.
+
+### D095 — Capability assays use a CAPACITY-CONSTRAINED, POPULATION-CONSTANT readout on the DESIGNATED output slice (not a per-network full-state fit). The fixed output slice is a SELECTION PRESSURE, not just a measurement choice.
+**2026-07-20 · Accepted (method) · PJM** · fixes an experiment-A error and the interface-discovery problem for a WEIGHT-evolving GA
+
+**THE ERROR THIS FIXES (experiment A, first attempt).** Measuring encoding/carrying/regulation, CLM fit
+a per-network ridge over the FULL 50-dim state (best_nmse, uncapped alpha sweep). That is exactly the
+cheat the interface-discovery literature warns against: **an uncapped readout lets the GA score well by
+evolving rich-but-unstructured state that a flexible linear readout can decode -- measuring the READOUT's
+power, not the network's DYNAMICS.** Fitness would then optimize readout-extractability, not computation.
+
+**THE INTERFACE PROBLEM, AND WHY IT'S EASY FOR US.** Topology-evolving systems (NEAT/CPPN) face a
+chicken-and-egg: can't evaluate function without a defined input/output interface, can't define the
+interface without knowing where function resides. Four known fixes: (1) functional node attribution
+(probe to discover I/O), (2) interface co-evolution (interface genes), (3) spatial anchoring, (4)
+virtual/frozen full-state readout. **BUT we evolve WEIGHTS on a FIXED architecture with a DESIGNATED
+input slice and output slice (D072) -- we do NOT evolve topology or node roles.** So we already HAVE
+designated sensors/actuators; the discovery problem mostly does not apply. The right fit is option-4-lite:
+read the DESIGNATED OUTPUT SLICE with a FROZEN, population-constant readout.
+
+**THE DECISION (option a, PJM).** The capability/fitness readout is a FIXED map from the designated
+output-slice activity to the task response, **trained/chosen ONCE and held CONSTANT across the entire
+population and all generations** -- NO per-network fitting. This obeys the interface-literature's KEY
+RULE (readout capacity must be constrained + population-constant or the GA evolves a classifier on top
+of a random net). With zero per-network readout capacity, ALL task performance must come from the
+network's dynamics routing the right signal, in readable form, to the output slice.
+- Leaning: a single FROZEN LINEAR MAP (fit once on something neutral, then held constant) over PURE
+  IDENTITY -- population-constant and non-cheatable, but doesn't demand the network emit the response in
+  exact raw form (an unreasonable bookkeeping burden on top of the computation). Tuning within the
+  decision, not the decision.
+
+**THE FIXED OUTPUT SLICE IS A SELECTION PRESSURE (PJM's reframe -- the load-bearing insight).** A fixed
+designated slice means a network computing the task correctly but ROUTING its answer to DIFFERENT nodes
+gets no early credit -- penalized for a routing/bookkeeping mismatch, not a computational failure. So:
+- **Early generations: the fixed slice UNDERSTATES misrouted-but-good networks.** Early fitness is a
+  LOWER BOUND on capability; low early fitness != low capability (some is unresolved routing mismatch).
+- **But using the designated slice CONFERS A SCORING ADVANTAGE**, so once any lineage routes to it, that
+  lineage is selected, and the population CONVERGES onto the designated output. After convergence the
+  slice distorts nothing (everyone uses it). The transient cost is paid once and self-corrects; the
+  benefit (population-constant, cheat-proof readout) is permanent. Output location becomes a SELECTED
+  trait, not a discovered one -- which is why (a) beats the discovery-based options: we IMPOSE the
+  output and let selection DRIVE networks to use it, rather than discover per-network I/O (which would
+  reintroduce readout variability + the cheat).
+
+**METHODOLOGICAL CONSEQUENCES.**
+- Do NOT read low EARLY-generation fitness as low capability -- it understates until the population
+  converges on the output slice. Watch convergence directly: fraction of network output-energy landing
+  in the designated slice should RISE over generations (a trackable diagnostic of the transient
+  resolving).
+- Redo experiment A with the frozen designated-slice readout, NOT the full-state per-network fit.
+- Flat developed-from-random at GEN 0 is EXPECTED (PJM): the Baldwin premise is development+selection
+  ITERATED, not development alone on random nets. Gen-0 flatness falsifies nothing; signal accumulates
+  over GA rounds. (And the first descent comes from the network's EVOLVED dynamical encoding capacity,
+  not from the task being memorylessly easy -- the memoryless floor being ~chance is BY DESIGN, D048,
+  not a missing first descent.)
+
+**CONNECTS TO:** D059 (minimal genome -- imposing rather than co-evolving the interface avoids interface
+genes); D072 (the designated output slice this reads); D094 (the fitness whose components this readout
+computes); the interface-efficiency penalty (gamma * n_io) from the literature is NOT needed since we do
+not discover/co-evolve I/O -- the interface is fixed.
