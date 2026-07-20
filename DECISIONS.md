@@ -3331,3 +3331,87 @@ protocol; (2) protocol = diagnostic-only, auditing carrying + inferential-regula
 "regulation" = inferential (target), not switch (excluded, D048); (4) regularizers smooth the peak =
 a testable prediction linking D055 to the curve. Re-anchors the fitness question to the hypotheses
 after measurement-convenience pulled at it.
+
+### D092 — 2a RESULT + PIVOT: undeveloped random nets do NOT cleanly carry context (as predicted); build the engineered ceiling FIRST (Wang-grounded attractor) as the known-positive that validates the carry measure. Random-net null explained: slow current needs attractor TOPOLOGY, not just presence.
+**2026-07-19 · Accepted (result + design)** · two carry-probes on random nets both measured the wrong thing; pivot per PJM's earlier instinct
+
+**2a RESULT (two probes, both on UNDEVELOPED RANDOM nets, both non-viable as measures):**
+- **Linear context-label decode from state: ~0 separability** -- and a control showed context is only
+  ~0.046 decodable even from ORACLE covariance features, so linear-label-decode is too weak an
+  instrument (context is a weak, distributed, nonlinear statistical signal).
+- **Silent-delay separability: high (~4-5) but a CONFOUND** -- the control that matters (does
+  separability DECAY across delay length?) came back FLAT (nmda=0: 3.3->3.2->3.5->3.5 across
+  0/100/300/600 ms). Real memory decays; flat separability = a non-memory difference (the fixed network
+  relaxing to different context-driven states, not HOLDING a cue). Not carry.
+**⇒ 2a is effectively ANSWERED (the necessary-condition read, D090): undeveloped random networks do NOT
+spontaneously carry context.** This is exactly what the whole development premise predicts (carry is
+what development/selection BUILDS). Two elaborate measures on weak/absent signal both caught confounds
+-- the LESSON: a carry measure is only trustworthy when validated against STRONG KNOWN carry. You cannot
+develop the measurement on the population least likely to have the signal.
+
+**WHY RANDOM NETS FAIL (the mechanistic explanation, from the Wang search).** The Wang/Compte/Brunel
+working-memory attractor sustains persistent activity via SLOW recurrent excitation balanced by FAST
+inhibition -- EXACTLY our D074/D075 config (slow I_slow + fast inhibition). But slow current only
+produces a persistent MEMORY STATE when wired into an attractor TOPOLOGY (context-selective clusters
+with strong within-cluster recurrence). Random connectivity lacks that structure, so slow reverberation
+doesn't stabilize into memory. **So the random-net null is not "N too small" or "mechanism absent" -- it
+is "the TOPOLOGY that exploits the slow current isn't there."** Which is precisely what an ENGINEERED
+attractor supplies, and what development/selection must BUILD.
+
+**THE ENGINEERED CEILING DESIGN (Wang-grounded; = the document's Architecture A, now sourced).**
+Canonical Compte/Brunel/Goldman-Rakic/Wang 2000 + Brunel & Wang 2001 delayed-match circuit, minimal
+form at N=50:
+- Split 50 neurons into **context-selective excitatory clusters** (2 for the minimal case, N permitting
+  -- Wang uses thousands; 2 clusters + inhib pool + I/O fits 50, per the posted document's 15+15+5).
+- **Strong within-cluster recurrent excitation routed through the SLOW current (high nmda_frac)** --
+  slow reverberation is what sustains the attractor.
+- **Shared FAST inhibitory pool** -> winner-take-all between clusters (mutual exclusion of contexts).
+- A cluster ignited by its context's input stays active through the SILENT DELAY (persistent attractor)
+  = CARRYING. The held cluster then gates the probe response = REGULATING (Ardid & Wang 2013 "tweaking
+  principle" for rule-based switching is the context-gating version).
+
+**BUILD METHOD (a, chosen): hand-construct a W GENOME, run it through the EXISTING EvoNet at high
+nmda_frac.** NOT a separate network outside EvoNet. Rationale: the ceiling must live in EXACTLY our
+substrate (same LIF neurons, same slow current, same behave) to be a valid known-positive FOR OUR
+SYSTEM and to validate OUR measurements. Building it outside EvoNet would test a different substrate.
+Keeps the D083 quarantine clean: it is a GENOME we test, never seeded into evolution, never a template/
+comparison for evolved nets -- only a measurement-instrument calibration (D088).
+
+**FIRST TEST:** does the hand-wired attractor sustain context-distinguishing activity THROUGH the silent
+delay (carry), measured with the SAME silent-delay measure that gave confounds on random nets? Now, with
+STRONG known carry present, we see whether the measure tracks it -- and critically whether separability
+DECAYS appropriately when carry is real (vs the flat confound on random nets). This VALIDATES the carry
+measure against the known-positive (D088's whole point). If the measure works on the ceiling, it's
+trustworthy for developed nets (step 3).
+
+**REFS TO PIN:** Compte, Brunel, Goldman-Rakic, Wang (2000) Cereb Cortex 10:910 (visuospatial WM circuit);
+Brunel & Wang (2001) J Comput Neurosci 11:63; Wang (2002) Neuron (decision/attractor); Ardid & Wang
+(2013) J Neurosci 33:19504 (rule-based switching / context gating); Compte/Brunel delayed-match figure.
+
+### D092b — Engineered ceiling BUILT and VERIFIED; carry measure validated (decay-across-delay is the discriminator).
+**2026-07-19 · Accepted (result)** · executes D092
+
+**BUILT (build_engineered_ceiling.py):** hand-wired 2-cluster winner-take-all attractor as a Genome,
+run through the EXISTING EvoNet at nmda_frac=0.7. Layout: input[:5]->clusterA, input[5:]->clusterB
+(selective drive = symmetry-breaking); 2x15 exc clusters with strong within-cluster recurrence (slow
+current = attractor); 7 inh pool (winner-take-all); 3 output. w_rec=4, w_inh=6, w_drive=3 = verified
+working point.
+
+**VERIFIED CARRY:** A-cue lights cluster A NOT B (4.34 vs 0.03); B-cue lights B NOT A (4.35 vs 0.02) --
+clean winner-take-all context selection. Persists through silence and DECAYS gracefully: selectivity
+4.32 (100ms) -> 3.07 (300ms) -> 1.57 (600ms).
+
+**THE CARRY MEASURE IS NOW VALIDATED (D088's purpose fulfilled).** The discriminator between REAL carry
+and the random-net CONFOUND is DECAY-ACROSS-DELAY: real attractor memory decays gracefully (4.3->1.6);
+the random-net confound stayed FLAT (3.3->3.5, non-decaying, D092). We could not see this without the
+ceiling -- there was no real carry to contrast against. The known-positive supplied the signal that
+makes the measure trustworthy. ⇒ for step 3 (developed nets), CARRY = context-selectivity that PERSISTS
+AND DECAYS through the silent delay, NOT flat separability.
+
+**FIRST HALF OF THE CEILING DONE (carrying).** Regulation half (the held cluster GATES the probe
+response) is next: add probe input during the delay, check the OUTPUT differs by which cluster is held
+(identical probe, context-dependent response = D091 regulation signature). Then the ceiling validates
+the regulation measure too.
+
+**QUARANTINE HOLDS (D083/D092):** ceiling is a tested genome / measurement-instrument calibration,
+never seeded into evolution.

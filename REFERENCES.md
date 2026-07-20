@@ -461,6 +461,47 @@ competent memory backbone whose *convergence time* (only) calibrates the short e
 development-duration window. *Quarantine:* its wiring is never a template/seed/comparison — only a
 convergence-time scalar.
 
+### Engineered-ceiling circuit basis — the Wang/Compte/Brunel attractor lineage (searched 2026-07-19, D092)
+
+*Context: the engineered ceiling (D088/D092 known-positive control) is a hand-wired winner-take-all
+context-memory attractor. Its architecture is the canonical Wang-lineage working-memory circuit, run in
+OUR substrate (EvoNet at high nmda_frac). These are the sources the ceiling is built from. Quarantine
+(D083/D092): the ceiling is a measurement-instrument calibration / convergence-time bracket — NEVER a
+template/seed/comparison for evolved networks.*
+
+**Compte, A., Brunel, N., Goldman-Rakic, P. S., Wang, X.-J. (2000).** Synaptic mechanisms and network
+dynamics underlying spatial working memory in a cortical network model. *Cerebral Cortex* 10, 910–923.
+— 🔴🟢🟢 **The canonical WM attractor and the ceiling's direct basis.** Context-selective excitatory
+pools with strong within-pool recurrence sustain persistent activity (the memory); shared feedback
+inhibition enforces winner-take-all. Persistent activity survives the delay and is NMDA/slow-current
+dependent — **exactly our D074/D075 slow-excitation + fast-inhibition config.** Our ceiling is this
+circuit at N=50 (2 clusters + inhib pool). *(Confirm page/vol when pinned.)*
+
+**Brunel, N., Wang, X.-J. (2001).** Effects of neuromodulation in a cortical network model of object
+working memory dominated by recurrent inhibition. *J. Comput. Neurosci.* 11, 63–85.
+— 🟢 Object-WM attractor; the recurrent-inhibition-dominated regime. Part of the same lineage; informs
+the winner-take-all inhibitory pool strength (w_inh) in the ceiling.
+
+**Wang, X.-J. (2002).** Probabilistic decision making by slow reverberation in cortical circuits.
+*Neuron* 36, 955–968.
+— 🟢 The slow-reverberation-attractor mechanism: **slow recurrent excitation balanced by fast feedback
+inhibition** instantiates attractor states. This IS the mechanism our slow current (D074) supplies; the
+Wang-search's clearest statement of why the ceiling needs high nmda_frac (slow reverberation sustains
+the attractor). *(NB: this Neuron 36 ref is also cited above under plasticity — same lineage.)*
+
+**Ardid, S., Wang, X.-J. (2013).** A tweaking principle for executive control: neuronal circuit
+mechanism for rule-based task switching and conflict resolution. *J. Neurosci.* 33, 19504–19517.
+— 🟡🟢 The **context-gating / rule-switching** circuit: held context modulates which stimulus→response
+mapping is active. This is the REGULATION half of the ceiling (the held cluster gates the probe
+response) — the D091 inferential-regulation signature (identical probe, context-dependent output).
+*(Pin when the regulation-half of the ceiling is built.)*
+
+**Empirical note (D092):** random undeveloped nets do NOT carry context, because slow current only
+yields persistent memory when wired into an attractor TOPOLOGY (context-selective clusters); random
+connectivity lacks it. The ceiling supplies the topology → verified carry (cue selects matching cluster,
+persists+decays through silence: selectivity 4.32→1.57 over 100–600 ms). **The carry measure is
+validated by DECAY-ACROSS-DELAY: real memory decays; the random-net confound stayed flat (~3.3–3.5).**
+
 ## Regional gradient — cerebellum (anchored) → sensory (open) → association (ours) (searched 2026-07-19)
 
 *Context: our framing orders DD-propensity cerebellum > primary sensory > association. Do the ends
