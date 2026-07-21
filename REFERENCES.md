@@ -375,6 +375,44 @@ needs both (Oja failed trying to learn without stabilizing). P handled by MEASUR
 analysis, not by constraining development (D087) — so development runs unconstrained (only a
 not-exactly-zero numerical guard).
 
+### The MISSING HALF — eSTDP (learning) + competition (selectivity) (searched 2026-07-21, D103)
+
+The flat pilot (state carries no task-usable info, G3) traced to development having ONLY its stabilizer
+(Vogels) and neither the LEARNING engine nor the COMPETITION that build stimulus-selective
+representation. The search confirmed PJM's two-part development model and expanded it to the standard
+**trinity — Hebbian learning + competition + stability**. Rules/architectures to adopt (tested, NOT
+hand-rolled — the temporal-paradox blowup risk, Zenke/Gerstner above, makes this non-negotiable; Oja
+lesson D086):
+
+**Srinivasa, N., Cho, Y. (2014).** Unsupervised discrimination of patterns in spiking neural networks
+with excitatory and inhibitory synaptic plasticity. *Front. Comput. Neurosci.* 8:159.
+https://doi.org/10.3389/fncom.2014.00159 — **the closest reference architecture to ours:** source
+neurons → an E/I reservoir (generic cortical layer) → a readout/sink layer, STDP on all E and I
+synapses. States the division of labour exactly: **long-term eSTDP learns the salient input features
+(sparse, efficient); iSTDP makes that learning stable via per-neuron E/I balance.** ⇒ our Vogels rule
+is the STABILIZER FOR eSTDP, not standalone development — we built the safety mechanism without the
+engine. *(pin when we adopt the rule form.)*
+
+**Diehl, P. U., Cook, M. (2015).** Unsupervised learning of digit recognition using spike-timing-
+dependent plasticity. *Front. Comput. Neurosci.* 9:99. — canonical eSTDP + WTA-lateral-inhibition
+reservoir (MNIST). A tested eSTDP+competition recipe to borrow rule-forms from. *(pin when adopted.)*
+
+**Competition / selectivity via lateral inhibition (PJM's intuition — CONFIRMED):** PV vs SOM
+interneurons run DIFFERENT plasticity with DIFFERENT roles — **PV mediates homeostasis in excitatory
+rate (Vogels-like); SOM builds LATERAL inhibition providing COMPETITION between excitatory assemblies**
+(Lagzi et al., cited in the modularity-iSTDP paper, arXiv:2405.18587). Dual-STDP (Biomimetics 2025,
+doi:10.3390/biomimetics11070462): **FS-mediated lateral inhibition → winner-take-all competition →
+heterogeneous E→E differentiation** (forces neurons to become selective for DIFFERENT features; without
+it eSTDP collapses / LTD-bias washes out structure). ⇒ Vogels (global rate) and lateral-competition
+(selectivity) are DISTINCT mechanisms; we have the first, not the second — but competition may emerge
+through our EXISTING inhibitory structure once excitatory synapses can learn (test eSTDP alone first).
+
+**Excitatory STDP self-organizes stimulus-selective structure** (Biomimetics 2025 above; Representation
+Learning using event-based STDP, arXiv:1706.06699; unsupervised feature-learning SNNs, arXiv:1904.06269)
+— the Hebbian competitive rule that strengthens input-correlated pathways and builds selectivity. This
+is the missing engine (D103). Add as a GENERAL rule, let selectivity emerge from stimulus statistics —
+do NOT hand-wire features (D038/D074).
+
 ### Develop-then-select — this IS the Baldwin effect (D085 question b — ANSWERED, and it reframes D082)
 
 **🔴🟢 THE RICHEST FINDING OF THE REVIEW.** The D083 structure — GA at genotype level + a within-life
