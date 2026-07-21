@@ -3681,3 +3681,98 @@ selection. This operationalizes D085c and the standing "don't read small effects
 Serial determinism verified; parallel-vs-serial identity not yet checked (the D078 batch-equivalence
 runs at noise_sigma=0 to sidestep exactly this). Flag: verify parallel determinism before a big
 parallel sweep.
+
+### D098 — Carrying redefined: intrinsic persistence of the stimulus COVARIANCE structure (non-relational, whole-network reduction), NOT relational context-distinguishability. Resolves the measurement tangle and cleanly factors carrying from regulation.
+**2026-07-20 · Accepted (redefines carrying) · PJM** · supersedes the context-decode / cued-separability carry measures
+
+**THE PROBLEM THIS FIXES.** Every prior carry measure was RELATIONAL -- carrying = context-
+DISTINGUISHABILITY (A-cue vs B-cue state separability, or decode the context LABEL). That framing caused
+every difficulty: the label is weak (0.046 from oracle features, D090); the A-vs-B contrast needs a
+clean CUE (the input-overlap problem); and it needs a known-positive with matching cue structure (the
+engineered ceiling used explicit cues -> scored LOWER than random when fed task stimuli, because the
+measure and the ceiling's cue-protocol mismatched). All of it came from defining carrying relationally.
+
+**THE INPUT-OVERLAP DECISION (PJM, upstream of the redefinition).** Context-cue nodes and stimulus nodes
+OVERLAP (context is statistical, on the same inputs as stimulus, as the task delivers it -- D048). NOT
+separated cue vs stimulus nodes. Reasons: (1) biologically, MIXED SELECTIVITY is the rule, not clean
+cue/stimulus segregation -- and (Rigotti/Fusi) mixed high-dim representations are the MECHANISM enabling
+context-dependent computation, so separating them would pre-decide the representation against the very
+substrate that makes flexible computation work (a D038 "don't build in the mechanism" violation). (2)
+Overlap makes the intermediate CARRYING capability hard to measure in isolation, but the integrated
+total-fitness assay is what matters for the study's larger picture.
+
+**THE REDEFINITION (PJM).** Carrying = post-stimulus, the network PERSISTS a (decaying) signal that
+RETAINS THE STATISTICAL REGULARITIES of the stimulus distribution -- assessed via a REDUCTION OF WHOLE-
+NETWORK ACTIVITY. This is NON-RELATIONAL: a property of a single stimulus stream's aftermath measured
+against the stimulus distribution's own statistics -- NO context label, NO A-vs-B contrast, NO cue.
+Whether the network EXTRACTS USEFUL REGULATORY BEHAVIOR from the persisted statistics is a SEPARATE
+matter, measured by the REGULATION score. -> clean STORAGE (carrying) vs USE (regulation) factorization,
+which is exactly what D094's carrying*regulation wanted but the relational definition couldn't give.
+
+**WHY THIS IS MEASURABLE WHERE THE OLD ONE WASN'T.** (1) No label to decode -- measure whether the
+PERSISTING activity's statistics match the STIMULUS distribution's statistics (both in hand). (2) No cue
+-> the input-overlap question evaporates; drive with the normal task stream, measure the aftermath. (3)
+Whole-network reduction (intrinsic dynamical property, not an interface property) -- the interface-doc's
+"virtual readout / max capacity" idea applied correctly. (4) DECAY-ACROSS-DELAY remains the discriminator
+(D092b): real carrying persists AND decays; a flat fixed-point confound shows no structured persistence.
+
+**THE SPECIFIC REDUCTION (PJM chose): COVARIANCE-STRUCTURE RETENTION.** Measure how much of the
+persisting-state covariance aligns with the STIMULUS-DISTRIBUTION covariance -- because the task's context
+lives in COVARIANCE (D048), so this measures retention of the TASK-RELEVANT statistics specifically, not
+generic memory. Across increasing silent delays, requiring present-AND-decaying (D092b). (Chosen over
+generic subspace/dimensionality persistence, which would measure retention of ANY stimulus structure.)
+
+**VALIDATION (PJM chose): recurrence-on/off contrast, NOT the cue-based ceiling.** A network with slow-
+current/strong recurrence should RETAIN covariance structure and decay; one without should decay to
+structureless noise immediately. That contrast + the decay discriminator validates the measure -- no need
+for the cue-based engineered ceiling (whose cue-protocol mismatched this non-relational measure anyway).
+
+**CONSEQUENCE FOR D094.** Carrying is measurable again (cleanly, non-relationally), so the three-term
+fitness w_e*encoding + w_c*carrying + w_r*(carrying*regulation) stays viable -- the carrying factor is now
+a real, trustworthy quantity. (This retires the D096 "swap in decay-across-delay label measure" plan and
+the backwards ceiling-vs-random result from the cued _carry_decay attempt: both superseded by the
+covariance-retention measure.)
+
+**BUILD.** Replace _carry_decay with a covariance-retention measure: drive with task stream -> silence ->
+record persisting state across delays -> score = (persisting-state covariance alignment with stimulus-
+distribution covariance) that is present at short delay AND decays by long delay. Validate via recurrence
+on/off. Overlapping inputs (D098), whole-network reduction, no cue, no label.
+
+### D098b — Carry measure WORKS: score the DECAY TIME (area under covariance-similarity-vs-delay), not similarity at a point. Recurrence extends the LIFETIME of the similarity, not its magnitude.
+**2026-07-20 · Accepted (result) · PJM's insight resolved 3 failed attempts**
+
+**THE FIX (PJM).** "What the recurrence will do is extend the TIME over which the covariation similarity
+can be detected." Three carry measures failed because they measured similarity MAGNITUDE at a single (or
+short-vs-long) delay -- where passive current echo (the last stimulus decaying through tau_syn/tau_r/
+tau_slow) and active recurrent maintenance look THE SAME. A no-recurrence net scored AS HIGH as the
+engineered attractor, because at one time point both have structure. The discriminator is not the VALUE
+but the LIFETIME: passive echo decays FAST (~tau_slow); active recurrent maintenance decays SLOW.
+**Score carrying as the DECAY TIME CONSTANT / AREA under the similarity-vs-delay curve.**
+
+**VALIDATED (clean known-positive/negative, finally).** Similarity (covariance alignment of persisting
+state with stimulus-distribution top subspace, above a SHUFFLED-stimulus baseline that removes fixed-
+point confounds) measured across delays [50,150,300,500,800,1100]ms:
+- **engineered attractor (POS):** curve [0.29, 0.05, 0.065, 0, 0, 0] -- similarity PERSISTS to 150-300ms.
+  area score 0.0306.
+- **no-recurrence net (NEG):** curve [0.238, 0, 0, 0, 0, 0] -- similarity GONE by 150ms (pure echo).
+  area score 0.0113.
+Attractor > no-recurrence (3x, correct direction). First carry measure to cleanly separate a known
+carrier from a known non-carrier. Also fixes the earlier inverted-logic error (score = short*decay
+PENALIZED slow decay -- backwards; the right statistic is LONG-lastingness = area/time-constant).
+
+**THE MEASURE (final).** Drive with a task-stimulus run -> for each of several silent-delay lengths,
+read the persisting state in a short window at the END of that delay, compute covariance-alignment with
+the stimulus top-subspace, subtract the shuffled-stimulus baseline -> carry = area under that
+similarity-vs-delay curve. Whole-network reduction, non-relational, overlapping inputs, no cue, no label
+(all per D098). Passive echo -> fast decay -> small area; active maintenance -> slow decay -> large area;
+flat confound -> removed by the shuffled baseline.
+
+**CAVEATS.** (1) Modest dynamic range (0.031 vs 0.011) -- clean CONTRAST and correct ordering, fine for a
+selection gradient (relative ordering is what selection uses), but not a large absolute signal. (2) COST:
+the delay sweep is ~6 behaves x 2 (real+shuffled) = ~12 behaves per carry measure -> ~6x a single behave.
+For the GA, use FEWER delays (e.g. 3: short/med/long) to control per-eval cost; full sweep only for
+characterization. Factor into the cost budget (the D068 timing did NOT include this heavier carry
+measure -- re-time before the pilot).
+
+**BUILD.** Wire carry_v3 (area-under-similarity-vs-delay, shuffled baseline) into evolve.evaluate() as
+the carrying component, with a reduced delay set for GA speed. Re-measure per-eval cost with it included.
