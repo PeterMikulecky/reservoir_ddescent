@@ -4072,6 +4072,47 @@ keep re-answering one question), adopt ONE principled floor and validate it with
   doubled study. Same project pattern as principled-default-validated-by-targeted-controls (cf. D087
   measure-effective-P-at-analysis rather than constrain development).
 
+**P_dev AXIS -- FINAL RESOLUTION (2026-07-21, perspective doc + PJM's factoring-out worry): RAW E->E
+count is the x-axis; effective rank is an ALONGSIDE DIAGNOSTIC, not the axis. Measure both ways, compare.**
+A perspective doc proposed three principled epsilon bases (A: dynamical SNR w_ij*<r_j> > eps_PSP;
+B: plasticity-sensitivity / is-it-still-adjustable; C: spectral EFFECTIVE RANK of W_EE via singular-value
+entropy P_eff = exp(-sum p_k log p_k)). Option C is attractive -- it eliminates the arbitrary per-synapse
+threshold (answering the "5% is arbitrary + linear + too-large-given-nonlinearities" objection at its
+root) and is nonlinearity/recurrence-aware (counts functional representational dimensions, not scalar
+magnitudes). BUT PJM raised the decisive methodological worry: **conventional double-descent plots use a
+RAW STRUCTURAL COUNT as the x-axis; the phenomenon LIVES IN THE GAP between raw-P and effective-P (the
+overparameterized second descent happens because raw-P keeps rising while EFFECTIVE capacity saturates
+via implicit regularization). Plotting against effective rank could FACTOR OUT the double descent A
+PRIORI** -- compress/fold the overparameterized regime where effective rank saturates, hiding the very
+effect we're hunting. => Option C, as the AXIS, risks destroying the phenomenon it's meant to detect.
+- **Two problems pull opposite ways:** (1) SMEARING (D104) -- raw TOTAL count mixes representational
+  E->E with boundary-condition E->I/I->I -> argues for a refined count; (2) FACTORING-OUT (PJM) --
+  effective RANK absorbs the raw-vs-effective gap -> argues against going all the way to a spectral axis.
+  The correct x-axis is the MIDDLE level: **raw count of the REPRESENTATION-FORMING parameters = raw
+  E->E synapse count / E->E density.** Restricting to E->E fixes smearing; keeping it a RAW COUNT
+  preserves the gap where double descent lives. D104's insight (which CLASS of parameters) is right;
+  the WITHIN-CLASS accounting stays RAW.
+- **THE PLAN -- one x-axis, three overlays (measure both ways, compare):**
+  * **x-axis (primary curve): raw E->E count / E->E density.** The axis that CAN show double descent.
+  * **Effective rank of W_EE (Option C): measured ALONGSIDE** as the diagnostic that EXPLAINS the shape
+    -- if it tracks raw count up to interpolation then SATURATES in the overparameterized regime, that
+    is the implicit-regularization signature producing the second descent. The GAP between the raw-E->E
+    curve and the effective-rank trajectory IS the double-descent mechanism made visible (conventional
+    papers leave this gap implicit; we measure it explicitly = a contribution, not a liability).
+  * **Raw total / P_total: the smeared comparison** (D104) showing why naive whole-network accounting
+    fails in a multi-class network.
+  * **floor_fraction (D105): the pruning/regularization readout.**
+- **Effective rank of W_EE (weights) vs of developed ACTIVITY (representation):** W_EE (the parameters,
+  what we sweep) is PRIMARY; activity effective-rank is a complementary measure (closest to functional
+  DOF, most directly honors the nonlinearity point). Reuses existing measures.py (effective_rank,
+  participation_ratio); connects to the E1 dimensionality<->connectivity core.
+- **The floor (D105) is now NON-load-bearing for P-counting either way** (raw E->E count doesn't need it;
+  effective rank doesn't use it). It STAYS in the dynamics for numerical stability + EVOLUTIONARY RESCUE
+  (a weight resting at w_min, not exactly 0, remains a mutable P_evo locus -- the perspective doc's
+  Section-1 point: vanished weights are EXCLUDED from P_dev but RESCUED in P_evo, since they're still
+  mutable genome loci reactivatable next generation. floor_fraction = exactly the set that is in P_evo
+  but not P_dev).
+
 **ACTION (Step 1 done here; Steps 2-3 for the build).**
 - **Step 2 -- decouple the knobs:** the variation test / double-descent sweep varies E->E DENSITY
   specifically (directly driving P_dev across its threshold), holding inhibitory ratios FIXED (stable
@@ -4086,3 +4127,40 @@ keep re-answering one question), adopt ONE principled floor and validate it with
 reconfigure the variation test (D103/next) to sweep E->E density with fixed inhibitory ratios. This
 supersedes the naive "P = total nonzero synapses" the pilot used, and refines the D087 "measure
 effective-P" thread with a concrete target and definition.
+
+### D105 — Principled dynamical floor DERIVED and SET: w_min_ee = 0.02 (peer-relative, not absolute-noise). Also surfaced: the operating regime is very noisy (noise SD ~= threshold).
+**2026-07-21 · Accepted (derivation + implementation of D104's floor) · logged analysis_logs/*derive_dynamical_floor***
+
+**DERIVATION (D068 measure-don't-guess; D102 logged).** Two attempts:
+- **v1 (wrong reference):** benchmarked a SINGLE synapse's voltage kick against the TOTAL noise voltage
+  SD -> w_min ~0.6-1.0, absurdly large (bigger than typical weights). Flaw: one synapse is always tiny
+  vs aggregate noise, ESPECIALLY here where noise SD ~= threshold. Wrong frame.
+- **v2 (correct, peer-relative):** a synapse is "dynamically negligible" when weak RELATIVE TO ITS PEERS
+  -- relative to the typical active E->E weight the rest of the population is computing with. Measured
+  the developed E->E weight distribution (median 0.41, 5th pct 0.038, 95th pct 1.15, spans 0->2.26 --
+  development DOES differentiate + naturally prune toward 0). Set w_min = 5% of median active weight
+  = ~0.020. A weight there contributes ~5% of a typical synapse's kick (0.0018 vs 0.036) = negligible
+  relative to peers, and sits at the bottom edge of the real distribution (near the 5th pct) -- catches
+  the pruned tail without swallowing the active population.
+
+**SET: EvoNetConfig.w_min_ee = 0.02**, wired as the lower clip of the eSTDP rule (separate from the
+inhibitory w_eps_dev numerical guard -- the FUNCTIONAL floor applies to E->E per D104). VERIFIED:
+developed E->E weights bottom out AT 0.0200 instead of vanishing; floor_fraction (fraction resting at
+floor) is measurable = the regularization readout. Structural and effective P_dev now COINCIDE (D104
+fork dissolved). RECOMPUTE w_min_ee if the operating point (N, noise_sigma, gains, taus) changes.
+
+**REFERENCE-FRAME NOTE (auditable choice).** Absolute-noise vs peer-relative gave a 30x difference
+(0.6 vs 0.02). Peer-relative is correct for P-COUNTING: "negligible as a degree of freedom" means weak
+relative to the population doing the computation, not relative to aggregate noise. Both recorded in the
+log so the reasoning is auditable.
+
+**SEPARATE FINDING (flagged, not chased): the network is VERY NOISY.** noise_sigma=1.0 -> noise voltage
+SD ~= 1.0 ~= threshold. Each neuron's voltage jitters by ~the entire distance-to-threshold from noise
+ALONE. Per-synapse SNR is low. This is independent of the floor and may bear on the flat-pilot / eSTDP-
+selectivity story: eSTDP trying to learn selectivity from a signal buried in threshold-scale noise may
+struggle. Candidate factor to revisit when testing whether eSTDP produces functional variation (add to
+the watch-list alongside the H-series). NOT chased now.
+
+**SPOT-CHECK (deferred to when the variation test runs, per D104):** validate this floor against full-
+vanishing (w_eps=1e-9) at a few representative P_dev points -- agreement validates the floor throughout;
+disagreement flags load-bearing pruning.
