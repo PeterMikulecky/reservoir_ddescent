@@ -1,0 +1,92 @@
+# analysis log: analyze_pilot
+# timestamp: 2026-07-21T14:22:31.769615
+# command: scripts/analyze_pilot.py runs/E9_evolve/E9-evolve__20260721-033119__exp__g4786765__step3-pilot/data/pilot_history.parquet
+# parquet=runs/E9_evolve/E9-evolve__20260721-033119__exp__g4786765__step3-pilot/data/pilot_history.parquet
+#====================================================================
+
+[logging to analysis_logs\20260721-142231_analyze_pilot.log]
+======================================================================
+RUN DIAGNOSTICS PANEL (D101) — each readout -> knob -> action
+======================================================================
+
+[cell density=0.2 seed=0]
+  fitness_slope_lastK          [gens]: still climbing
+      -> INCREASE gens (fitness not saturated)
+  fit_std_collapse             [pop]: diversity retained
+      -> pop adequate (diversity retained)
+  component_emergence          [N / dev_ms]: capability (car/reg) emerged
+      -> capability building — good
+  dev_convergence_fraction     [dev_ms]: dev_ms TOO SHORT (immature phenotypes)
+      -> INCREASE dev_ms — scoring immature phenotypes undermines the develop-then-score premise (D083)
+  nan_abort_count              [numerical health]: clean
+      -> healthy
+
+[cell density=0.4 seed=0]
+  fitness_slope_lastK          [gens]: plateaued
+      -> gens sufficient (plateaued) — can economize
+  fit_std_collapse             [pop]: diversity retained
+      -> pop adequate (diversity retained)
+  component_emergence          [N / dev_ms]: capability (car/reg) emerged
+      -> capability building — good
+  dev_convergence_fraction     [dev_ms]: dev_ms TOO SHORT (immature phenotypes)
+      -> INCREASE dev_ms — scoring immature phenotypes undermines the develop-then-score premise (D083)
+  nan_abort_count              [numerical health]: clean
+      -> healthy
+
+[cell density=0.6 seed=0]
+  fitness_slope_lastK          [gens]: still climbing
+      -> INCREASE gens (fitness not saturated)
+  fit_std_collapse             [pop]: diversity retained
+      -> pop adequate (diversity retained)
+  component_emergence          [N / dev_ms]: capability (car/reg) emerged
+      -> capability building — good
+  dev_convergence_fraction     [dev_ms]: dev_ms TOO SHORT (immature phenotypes)
+      -> INCREASE dev_ms — scoring immature phenotypes undermines the develop-then-score premise (D083)
+  nan_abort_count              [numerical health]: clean
+      -> healthy
+
+[cell density=0.8 seed=0]
+  fitness_slope_lastK          [gens]: still climbing
+      -> INCREASE gens (fitness not saturated)
+  fit_std_collapse             [pop]: diversity retained
+      -> pop adequate (diversity retained)
+  component_emergence          [N / dev_ms]: capability (car/reg) emerged
+      -> capability building — good
+  dev_convergence_fraction     [dev_ms]: dev_ms TOO SHORT (immature phenotypes)
+      -> INCREASE dev_ms — scoring immature phenotypes undermines the develop-then-score premise (D083)
+  nan_abort_count              [numerical health]: clean
+      -> healthy
+
+[cross-cell] P_dependence_of_capability [the science]: no clean P-trend in capability
+    densities [0.2, 0.4, 0.6, 0.8]
+    final car+reg [0.0516, 0.0679, 0.055, 0.0598] (slope 0.00582)
+    -> P-structure present — proceed to full run to resolve the curve
+======================================================================
+
+======================================================================
+A1 -- INTERPOLATION THRESHOLD (best_train vs density)
+======================================================================
+best_train ~0 at low density -> OVERparameterized, sweep SPARSER.
+best_train stays HIGH at high density -> UNDERparameterized (or not learning at all).
+
+  P=0.2: best_train 0.964 -> 0.984  (final best_test 0.962)
+  P=0.4: best_train 0.989 -> 0.989  (final best_test 0.940)
+  P=0.6: best_train 0.949 -> 0.980  (final best_test 0.982)
+  P=0.8: best_train 0.981 -> 0.985  (final best_test 0.968)
+
+======================================================================
+B1 -- SELECTION PRESSURE (fit_std trajectory: is selection acting?)
+======================================================================
+fit_std ~constant while fit_mean drifts -> selection NOT discriminating (weak beta).
+fit_std shrinks as fit_mean climbs -> selection IS acting.
+
+  P=0.2: fit_std 0.0243->0.0269 | fit_mean 0.0412->0.0393
+  P=0.4: fit_std 0.0238->0.0287 | fit_mean 0.0448->0.0565
+  P=0.6: fit_std 0.0259->0.0257 | fit_mean 0.0489->0.0428
+  P=0.8: fit_std 0.0317->0.0260 | fit_mean 0.0430->0.0477
+
+WITHIN-CELL fitness shape (% of steps upward; 50%=random walk, >>50%=directed):
+  P=0.2: 47% upward
+  P=0.4: 51% upward
+  P=0.6: 45% upward
+  P=0.8: 55% upward
