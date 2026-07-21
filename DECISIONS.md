@@ -3776,3 +3776,34 @@ measure -- re-time before the pilot).
 
 **BUILD.** Wire carry_v3 (area-under-similarity-vs-delay, shuffled baseline) into evolve.evaluate() as
 the carrying component, with a reduced delay set for GA speed. Re-measure per-eval cost with it included.
+
+### D099 — Step-3 pilot harness built + parallel determinism verified. Ready to run.
+**2026-07-20 · Accepted (build)**
+
+**BUILT: scripts/run_pilot.py.** The full apparatus (develop + 3-term D094 fitness + D095 readout +
+D098b carry + selection) as a grid of independent (P, seed) CELLS -- embarrassingly parallel, VM-ready
+(each cell its own provenanced GA). n_workers=6 default (PJM: leave 2 cores free on the 8-core laptop).
+evolve.py history now records the three component means/bests per generation (enc/car/reg) so the pilot
+can watch whether they COMPOUND under selection.
+
+**THE PILOT'S QUESTION (a shakedown, NOT the double-descent curve).** Over 50 generations: (1) does
+fitness CLIMB (vs flat Gate A birth-fitness, D082)? (2) do encoding/carrying/regulation PERSIST and
+COMPOUND, or dissolve (the noise test PJM named -- gen-0 signal was expected-flat; real signal compounds
+under selection)? (3) any NaN/blowup/collapse? (4) does carrying (now the validated D098b covariance-
+decay measure) actually rise, so the carrying*regulation second-descent term can switch on (the D096
+concern)? Grid: densities [0.2,0.4,0.6,0.8] x 1 seed, pop 30, 50 gens, dev_ms=800, n_assays=1. ~1.1 hr
+on 6 cores. If encouraging -> design the full run.
+
+**PARALLEL DETERMINISM VERIFIED (clears the D097 flag).** serial vs 2-worker parallel give BIT-IDENTICAL
+results (fit 0.112470 both, car 0.026620 both). The per-assay/dev seeds derive from a CONTENT hash
+(zlib.crc32 of weight bytes) not process/worker state, so distribution across workers does not change
+results. ⇒ reproducible regardless of worker count AND across machines (important for the Azure-VM
+escape hatch: same seed -> same result anywhere).
+
+**VERIFIED end-to-end (sandbox dry run):** harness runs the grid, per-cell GA with full apparatus,
+component tracking, provenance run + parquet + notebook stub, and a behave-or-not verdict. Fitness moved
+in the dry run (density 0.4: 0.035->0.059 in 3 gens, best_test 0.982->0.900). Cosmetic only: a
+multiprocessing semaphore-leak warning at shutdown (harmless).
+
+**NEXT: run the pilot** (python scripts/run_pilot.py, ~1.1 hr on 6 cores), read the verdict, then design
+the full run (P-range, seeds, generations, c_syn=0 vs >0 sweep) if the apparatus behaves.

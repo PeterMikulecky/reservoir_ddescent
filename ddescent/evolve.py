@@ -344,6 +344,14 @@ def run_evolution(task, net_cfg: EvoNetConfig, cfg: EvolveConfig,
             mean_params=float(nps.mean()), std_params=float(nps.std()),
             mean_exc_frac=float(np.mean([r["exc_frac"] for r in res])),
             fit_mean=float(fits.mean()), fit_std=float(fits.std()),
+            # D094 component means -- the pilot watches whether these PERSIST and COMPOUND under
+            # selection (the real test that development+selection builds capability, not gen-0 noise).
+            enc_mean=float(np.mean([r["encoding"] for r in res])),
+            car_mean=float(np.mean([r["carrying"] for r in res])),
+            reg_mean=float(np.mean([r["regulation"] for r in res])),
+            enc_best=float(res[order[0]]["encoding"]),
+            car_best=float(res[order[0]]["carrying"]),
+            reg_best=float(res[order[0]]["regulation"]),
           ))
           if verbose and (gen % 20 == 0 or gen == cfg.n_generations - 1):
             h = history[-1]
