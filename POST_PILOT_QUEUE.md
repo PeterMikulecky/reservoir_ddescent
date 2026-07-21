@@ -219,3 +219,54 @@ can't, the fork everything else hangs on. Then G4b (reconcile dev flag). Then, p
 substrate-can't -> G5 (N / input-expansion / task difficulty); if evolution-can't -> back to selection
 pressure (B1) with the encoding-gradient question. beta optimization (B1) remains important but is
 downstream of establishing that a representable signal EXISTS to select on.
+
+---
+
+## H. ROOT CAUSE IDENTIFIED (2026-07-21, D103): development is missing its LEARNING + COMPETITION halves
+
+The G-series localized the flat pilot to "state carries no task-usable info" (encoding not forming).
+PJM's development model + a literature search (D103) identified WHY: development has only its STABILIZER
+(Vogels iSTDP) and lacks the two mechanisms that build stimulus-selective representation. This is the
+root; it MOOTS or REORDERS much of A-G.
+
+**H1. THE FIX (primary): add the missing development mechanisms (D103, = D087 step-2, now THE missing
+half not an enhancement).** Development = a TRINITY: eSTDP (learning engine, builds selective
+representation) + competition via lateral inhibition (selectivity/differentiation) + iSTDP/Vogels
+(stabilizer — what we have). Adopt TESTED rule combos (temporal-paradox blowup risk; Oja lesson D086):
+Srinivasa & Cho 2014 (closest architecture), Diehl & Cook 2015 (eSTDP+WTA), Brian2 canonical STDP.
+
+**H2. Build/validate sequence (next session):**
+  (a) Add eSTDP (E->E, maybe E->I) as a general Hebbian rule (D038/D074: let selectivity emerge, don't
+      hand-wire). Pair with the existing Vogels iSTDP for stability (they're a PAIR — iSTDP stabilizes
+      eSTDP; we had the stabilizer alone).
+  (b) Test whether COMPETITION emerges through EXISTING inhibitory structure once excitatory synapses
+      learn, BEFORE building a separate hand-built WTA. Add explicit lateral-competition only if needed.
+  (c) Handle the timescale separation (Hebbian fast vs homeostatic slow) via the tested combo, not a
+      hand-rolled interaction.
+  (d) VALIDATE before wiring into the GA: does a developed network's state now BEAT THE FLOOR (does
+      representation actually form)? This is the direct test of G3/H1 — the thing that was failing.
+      Validate against a control (random/undeveloped, and/or the ceiling-style known-positive).
+  (e) Only THEN re-run the pilot with real development, and only then does beta/B1 become meaningful
+      (a fitness gradient must EXIST before selection strength matters).
+
+**H3. How H reorders A-G:**
+  - **G4a (ceiling existence proof)** — LOWER priority now. We already know (ceiling controls) the
+    substrate CAN express fitness; the diagnosis is that DEVELOPMENT can't draw it out. G4a would confirm
+    "evolution/development can't find it," which D103 now explains mechanistically. Still a nice
+    confirmation but no longer the fork everything hangs on.
+  - **G4b (dev-convergence contradiction)** — may RESOLVE once eSTDP is added: the pilot's "not
+    converged" vs sweep's "converged" both measured only the INHIBITORY weights; with eSTDP the relevant
+    convergence is different. Revisit after H1.
+  - **B1 (beta/selection pressure)** — still real, but DOWNSTREAM of H1. No gradient to select on until
+    development expresses latent potential. Do H1 first, then B1.
+  - **A (density), C3 (N), readout (G2)** — all deprioritized: none is the blocker (ceiling proves
+    substrate; sweep proves density-insensitive; G2 proves readout isn't the cap). Revisit only as
+    fine-tuning AFTER development works.
+  - **F4 (inhibitory temporal diversity / D084)** — still a later enhancement; note it OVERLAPS H1's
+    competition mechanism (PV-homeostasis vs SOM-competition is literally the F4 interneuron-type
+    distinction). May fold together eventually, but H1 first with the SIMPLEST version (don't front-load
+    the D084 gene).
+
+**REVISED TOP OF WALK:** H1/H2 (add eSTDP + test competition + validate representation forms) is now the
+single highest-priority action — the identified root cause. Everything else waits behind "does
+development now produce a network whose state beats the floor."
