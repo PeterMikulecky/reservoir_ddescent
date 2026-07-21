@@ -3919,3 +3919,57 @@ D100 (which mandated logging for long RUNS) to ALL analytic output.
 waive it, but anything whose output we would cite, revisit, or reason from later gets logged. Together
 with provenance (data + manifest) and D100 (run logs), this completes the record: raw data + run logs +
 ANALYTIC NARRATIVE.
+
+### D103 — Development is missing its "expression" half: it has STABILITY (Vogels iSTDP) but neither LEARNING (eSTDP) nor COMPETITION (lateral inhibition). Literature-grounded diagnosis of the flat pilot.
+**2026-07-21 · Accepted (diagnosis + design direction) · PJM's development model + lit search**
+
+**PJM's development model (the frame).** Development must do TWO things: (1) STABILIZE -> an E/I-balanced
+canvas the network can operate against (our Vogels mechanism); (2) EXPOSE the stabilized canvas to
+stimuli UNDER PLASTICITY so the network's LATENT POTENTIAL expresses itself as fitness scores. Then the
+GA selects on those scores. The current implementation does (1) but NOT (2): the only plasticity during
+stimulus exposure is the SAME Vogels iSTDP -> it stabilizes but cannot express computational potential,
+because the excitatory (signal) pathways are frozen. So development had its stabilization half and none
+of its expression half. This EXACTLY explains the flat pilot + the "state carries no task-usable info"
+finding (G3): balanced-but-random nets sit at the floor; no eSTDP -> no stimulus-selective representation
+ever forms -> undifferentiated fitness -> no gradient -> random-walk drift.
+
+**LITERATURE CONFIRMS the two-part model, and expands it to a TRINITY (Zenke/Gerstner doc: Hebbian
+learning + competition + stability).**
+- **eSTDP = the missing ENGINE.** Excitatory STDP is the Hebbian competitive rule that selectively
+  strengthens pathways correlated with input and self-organizes STIMULUS-SELECTIVE structure (Biomimetics
+  2025); "long-term excitatory STDP enables sparse, efficient learning of salient input features"
+  (Srinivasa & Cho 2014, Front Comput Neurosci -- an E/I reservoir + readout architecture almost
+  identical to ours). THIS IS THE MISSING HALF.
+- **iSTDP/Vogels = the STABILIZER, not standalone development.** Srinivasa & Cho: "iSTDP enables this
+  [excitatory] learning to be stable by establishing balance." REFRAME: our Vogels rule is the safety
+  mechanism that makes eSTDP possible -- we built the stabilizer without the engine it was meant to
+  stabilize. Alone it stabilizes nothing.
+- **COMPETITION via lateral/feedforward inhibition = SELECTIVITY (PJM's specific intuition, CONFIRMED).**
+  PJM: Vogels is mostly global population-mean-rate control; biological circuits also use localized,
+  faster inhibition to shape SELECTIVITY. Lit nails it: Lagzi et al. (in Modularity iSTDP paper) -- in
+  mouse frontal cortex PV vs SOM interneurons follow DIFFERENT STDP rules and roles: PV mediates
+  HOMEOSTASIS in excitatory activity (Vogels-like), SOM builds LATERAL inhibition providing COMPETITION
+  between excitatory assemblies. And (dual-STDP, Biomimetics 2025): FS-mediated lateral inhibition drives
+  WINNER-TAKE-ALL competition that promotes heterogeneous E->E differentiation (forces neurons to become
+  selective for DIFFERENT features; without it, eSTDP collapses / LTD-bias washes out structure).
+
+**CRITICAL CAUTION (the temporal paradox -- Zenke/Gerstner, already in REFERENCES per D085).** Hebbian
+(fast) and homeostatic (slow) plasticity have a PARADOXICAL SEPARATION OF TIMESCALES; naive combination
+breaks (homeostasis too slow to stabilize fast Hebbian runaway). This is a known blowup mode -- same
+family as the Oja blowup (D086). => ADOPT TESTED eSTDP+iSTDP COMBINATIONS, do NOT hand-roll the
+interaction. Candidate reference architectures: Srinivasa & Cho 2014 (E/I reservoir + readout, closest
+to ours); Diehl & Cook 2015 (STDP+WTA MNIST); Brian2 canonical STDP.
+
+**DESIGN DIRECTION (not yet built).** Development becomes eSTDP (build representation) + competition
+(lateral inhibition -> selectivity) + iSTDP/Vogels (stabilize). Notes: (a) our substrate ALREADY has
+inhibitory neurons + E->I/I->E connectivity, so WTA competition may emerge through EXISTING inhibitory
+structure once excitatory synapses can learn -- test adding eSTDP (on E->E, maybe E->I) BEFORE adding a
+separate hand-built WTA. (b) D038/D074: add eSTDP as a GENERAL Hebbian rule, let selectivity emerge from
+stimulus statistics; do NOT hand-wire features. (c) This is the D087 "step 2 excitatory learner",
+previously deferred -- now identified as THE missing half, not an enhancement. Promotes it ahead of most
+of the post-pilot queue (though beta/B1 still matters once a fitness gradient exists to select on).
+
+**STATUS.** Diagnosis + direction accepted. Build sequence, timescale-separation handling, and which
+tested rule to adopt: next session, measure-and-adopt (D086 discipline), likely validate the eSTDP
+learner draws out representation (state beats floor after development) against the ceiling-style control
+before wiring into the GA.
