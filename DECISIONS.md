@@ -3973,3 +3973,116 @@ of the post-pilot queue (though beta/B1 still matters once a fitness gradient ex
 tested rule to adopt: next session, measure-and-adopt (D086 discipline), likely validate the eSTDP
 learner draws out representation (state beats floor after development) against the ceiling-style control
 before wiring into the GA.
+
+### D104 — The dual-P framework: separate P_dev (representation-forming plastic E->E, the double-descent x-axis) from P_evo (evolvable static/stabilizing weights + rule hyperparameters = dynamical boundary conditions). Saturation handled three ways.
+**2026-07-21 · Accepted (framework, load-bearing for the double-descent x-axis) · PJM**
+
+**WHY THIS EXISTS.** Adding eSTDP (D103) created distinct neuron/synapse categories with different
+plasticity status, forcing the question: what counts as P (adjustable parameters) for the double-descent
+x-axis? P in statistical learning theory strictly measures the DEGREES OF FREEDOM AVAILABLE TO FIT THE
+ENVIRONMENTAL DATA. Not all our weights do that.
+
+**THE TWO-TIMESCALE SPLIT.**
+- **P_dev (developmental P):** within-lifetime plastic updates that FIT THE STIMULUS/TASK DATA -> the
+  eSTDP-plastic E->E synapses. Optimization target = the environment's stimulus patterns. **This is the
+  DIRECT DRIVER OF INTERPOLATION** -- it sets model capacity relative to the environmental dataset size.
+  The double-descent curve should be plotted against P_dev.
+- **P_evo (evolutionary P):** genome-encoded initial conditions, STATIC evolvable weights (E->I, I->I),
+  the STABILIZING plastic weights (I->E via Vogels), and rule hyperparameters (eta, gmax, etc.).
+  Optimization target = fitness across generations. **This is the CONSTRAINT / LANDSCAPE SHAPER** -- it
+  sets the inductive bias and dynamical stability regime WITHIN WHICH P_dev operates.
+
+**KEY INSIGHT (boundary conditions).** Static inhibitory weights (E->I, I->I) AND stabilizing plastic
+weights (I->E Vogels) act as DYNAMICAL BOUNDARY CONDITIONS: they constrain the trajectory of activation
+but do NOT directly store task representations. This inherits the D103 functional division (iSTDP
+stabilizes, eSTDP represents) into the P-accounting. Note Vogels I->E is PLASTIC in mechanism but
+BOUNDARY-CONDITION in function -> it goes with P_evo, not P_dev. Rule machinery (traces apre/apost,
+per-synapse eta/gmax, wf/ws scales) is NOT P at all -- it's the differential-equation machinery of the
+rule, not a degree of freedom.
+
+**WHY PLOTTING AGAINST P_total SMEARS THE PEAK (and may explain the flat sweeps).** Classic double
+descent peaks at the interpolation threshold P ~= N_samples. Plotting test performance vs P_total:
+(a) MASKED RATIOS -- a net can double total density by scaling static inhibitory connections without
+changing E->E reservoir capacity; (b) POST-DEVELOPMENT COLLAPSE -- support-freeze / saturation reduces
+the actual rank below nominal. => varying P_total shifts P_evo WITHOUT systematically pushing P_dev
+across its interpolation threshold. **This is a candidate causal explanation for why the global density
+sweeps (pilot + sparse sweep, G1) came back DEAD FLAT across a 20x range: we varied the wrong P.** Not
+"no double descent," not "quenching" -- we never placed P_dev relative to the data. TESTABLE via the
+decoupled sweep below.
+
+**SATURATION ACCOUNTING (corrected 2026-07-21 after PJM's objection -- location != freedom).** An
+initial draft excluded CEILING-saturated weights as "pinned, not free." **That was WRONG (PJM):** a
+parameter's identity as a degree of freedom is STRUCTURAL (was it free to vary in response to data?),
+NOT a function of the VALUE it settled at. A weight that stabilized at an intermediate value did so
+because that value was functionally selected; a weight that stabilized at g_max did so for the SAME
+reason -- both are used, load-bearing DOF that found their optimum; one optimum just happened to be
+extremal. Excluding the ceiling weight would penalize a parameter for finding a STRONG solution and
+systematically undercount exactly the parameters doing the MOST work. (The error was conflating LOCAL
+mobility at a boundary -- gradient can only push one way -- with STRUCTURAL freedom to fit data; those
+are different. Double-descent P counts structural DOF, not end-of-training local wiggle room.)
+=> **CEILING-saturated weights COUNT, unconditionally** -- structurally identical to interior weights.
+Interior weights count (never in question). The saturation trichotomy collapses.
+
+**THE ONLY REMAINING QUESTION IS THE FLOOR -- and it's the genuine structural-vs-effective-P fork.** A
+weight driven to ~0 (w->w_eps) settled there because ~0 was its functionally-selected value. Does it
+count?
+  - **STRUCTURAL P view:** it was free to fit data and chose ~0; it counts. => P_dev,structural = ALL
+    plastic E->E synapses, regardless of final value. Saturation irrelevant.
+  - **EFFECTIVE P view:** a weight at ~0 has removed itself from the fitted function (the standard
+    L0/L1 "effective parameters" notion -- parameters regularized to zero don't contribute to the
+    effective complexity that sets the interpolation threshold). => P_dev,effective excludes only the
+    floor-pruned ~0 weights.
+Both are legitimate and answer DIFFERENT questions; the double-descent literature itself cares about
+this structural-vs-effective distinction. Don't hard-code -- MEASURE BOTH and let the interpolation-peak
+sharpness adjudicate which the peak tracks:
+  - **P_dev,structural** = count of ALL plastic E->E synapses (every parameter free to fit data).
+  - **P_dev,effective** = count of plastic E->E synapses with |w_post| non-negligible (excludes ONLY
+    floor-pruned ~0 weights; ceiling + interior both included).
+  - **floor_fraction** = (structural - effective)/structural = fraction pruned to ~0 = the "how much did
+    development REGULARIZE" readout, now correctly located as the ONLY quantity separating the two P's.
+
+**FLOOR RESOLUTION (PJM, 2026-07-21): a single PRINCIPLED dynamically-grounded floor, used throughout,
+spot-checked -- NOT two versions of every run.** Rather than run floored (prevent-vanishing) AND
+unfloored (vanish-then-subtract) versions of every development/selection round (a permanent 2x tax to
+keep re-answering one question), adopt ONE principled floor and validate it with targeted controls.
+- **Principled, not arbitrary:** set w_min at the weight magnitude below which a synapse's current
+  contribution is DYNAMICALLY NEGLIGIBLE -- i.e. below the network's intrinsic noise/drive scale (a
+  synapse whose single-synapse current is smaller than the noise the neuron already experiences, or a
+  few % of typical total synaptic drive, is indistinguishable from absent). The floor is DEFINED BY THE
+  DYNAMICS, not chosen by taste. Derive it (D068 measure-don't-guess): measure typical total synaptic
+  drive per neuron + noise-induced fluctuation at the study's operating point (N=50, input_gain,
+  noise_sigma, taus), set w_min to the weight whose current contribution falls below that scale. If
+  those constraints change, the floor RECOMPUTES (correct -- it should track the dynamics).
+- **Why this dissolves the fork WITHOUT suppressing pruning:** a weight resting at this floor is BOTH
+  "still in the support (P structurally)" AND "contributing negligibly (pruned effectively)" -- and
+  those now COINCIDE by construction rather than conflicting. Pruning-in-effect (weights become
+  dynamically negligible) with clean-P-in-form (they rest at a known floor, not an ambiguous zero). The
+  "vanished threshold" and the floor become the SAME dynamically-set number, so there is no arbitrary
+  threshold to argue about. floor_fraction (fraction resting AT the floor) still measures how much
+  development regularized -- the signal is preserved, just measured as "fraction at floor."
+- **Uniform, not per-synapse:** one network-level w_min shared by all E->E plastic synapses (it's set by
+  the network-level dynamical scale all synapses share). Simplest implementation: raise the D087 w_eps
+  from a numerical guard (1e-9) to this computed dynamical floor.
+- **P_dev definition under the floor:** P_dev = count of plastic E->E synapses (all resting at-or-above
+  the floor) -> structural and effective COINCIDE -> a clean, threshold-free x-axis used THROUGHOUT.
+- **SPOT-CHECK discipline (not routine 2x cost):** run the formal floored-vs-full-vanishing comparison
+  at a FEW representative P_dev points (e.g. one low, one near the expected interpolation threshold, one
+  high). Agreement -> floor validated, trust it throughout. DISAGREEMENT at some point -> a signal that
+  pruning is load-bearing THERE (informative flag, investigate), paid for with ~3 comparison runs not a
+  doubled study. Same project pattern as principled-default-validated-by-targeted-controls (cf. D087
+  measure-effective-P-at-analysis rather than constrain development).
+
+**ACTION (Step 1 done here; Steps 2-3 for the build).**
+- **Step 2 -- decouple the knobs:** the variation test / double-descent sweep varies E->E DENSITY
+  specifically (directly driving P_dev across its threshold), holding inhibitory ratios FIXED (stable
+  P_evo background). NOT a global density sweep.
+- **Step 3 -- dual x-axis reporting:** primary curve vs P_dev (effective, post-development E->E);
+  secondary curve vs P_total/P_evo plotted ALONGSIDE, to explicitly demonstrate why traditional ML
+  parameter accounting breaks down in an evolutionary/developmental model (a RESULT, not a nuisance).
+- Measure P_dev,free / P_dev,active / floor_fraction per developed network; plot the curve against each;
+  report which sharpens the interpolation peak.
+
+**STATUS.** Framework accepted. Wire the effective-P_dev measurement into the developed-network analysis;
+reconfigure the variation test (D103/next) to sweep E->E density with fixed inhibitory ratios. This
+supersedes the naive "P = total nonzero synapses" the pilot used, and refines the D087 "measure
+effective-P" thread with a concrete target and definition.
