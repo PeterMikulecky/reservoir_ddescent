@@ -3892,3 +3892,30 @@ analysis module) computes all six readouts and prints each with its implied acti
 D100 retrofit so the pilot -- and every run_*.py thereafter -- emits the panel at completion. This is now
 part of what "a run harness" produces, alongside provenance (D-provenance) and checkpointing+logging
 (D100).
+
+### D102 — STANDING POLICY: analysis & troubleshooting scripts must LOG their terminal output to disk, not just persist data. The analytic narrative is part of the record.
+**2026-07-21 · Accepted (standing policy) · PJM**
+
+**THE RULE.** Every analysis / troubleshooting / diagnostic script (not just long RUNS -- D100 covers
+those) MUST capture its terminal output (the printed analysis: tables, verdicts, the numbers we
+reasoned from) to a DURABLE LOG FILE, in addition to whatever data it persists. Default ON.
+
+**WHY (PJM).** "We need to be able to tell the STORY of how we arrived at our eventual optimized system
+long after the terminal has been closed." Parquet/data files persist the RAW RESULTS, but the ANALYTIC
+OUTPUT -- what we computed from them, what it showed, what it led us to conclude and do next -- is the
+NARRATIVE of how the system was diagnosed and optimized. That narrative is exactly what a methods
+section, a lab notebook, or a future collaborator (or future-self) needs to reconstruct the reasoning.
+Persisting data without the analysis that interpreted it loses half the record. The troubleshooting
+scripts this session (analyze_pilot, cost probes, carry-measure experiments) all printed to stdout and
+VANISHED when the terminal closed -- the gap this fixes.
+
+**IMPLEMENTATION.** Analysis scripts tee stdout (and stderr/warnings) to a log file. Preferred location:
+under the relevant run's dir (run.logs()/<analysis_name>.log) when analyzing a specific run, else a
+dated analysis/ log dir. A lightweight tee helper (print to console AND append to log) is the minimal
+form; the log should record the command/args, a timestamp, and the full printed output. Generalizes
+D100 (which mandated logging for long RUNS) to ALL analytic output.
+
+**SCOPE.** Default ON for analysis/troubleshooting/diagnostic scripts. Trivial one-off REPL checks may
+waive it, but anything whose output we would cite, revisit, or reason from later gets logged. Together
+with provenance (data + manifest) and D100 (run logs), this completes the record: raw data + run logs +
+ANALYTIC NARRATIVE.
