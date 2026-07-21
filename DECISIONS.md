@@ -3844,3 +3844,51 @@ restart) is a nice-to-have that falls out naturally once cells checkpoint indepe
 
 **SCOPE.** Default ON for all long runs. A short smoke/dry-run may waive it explicitly. This is now part
 of what "a run harness" means in this project, alongside provenance (runs/ dir, manifest, notebook stub).
+
+### D101 — Principled run-diagnostics panel: six readouts, each mapped to a specific knob and action. Fixed dev_ms (uniform development for clean interpretation), convergence flag SURFACED as a diagnostic (not used for early-abort).
+**2026-07-20 · Accepted (methodological standard) · PJM**
+
+**MOTIVATION.** A run (pilot or full) is not just "did it work" -- it is a DESIGN PROBE for the next
+run's parameter budget. N, pop, gens, dev_ms trade against each other under a fixed compute budget
+(cost ~ N^~1.5 x pop x gens x P-values x seeds x assays), so we cannot crank them all. The pilot's job
+is to REVEAL which knob is the binding constraint, then spend budget there. This decision fixes a
+DOCUMENTED, principled panel so the next-run design is data-driven, not eyeballed -- an instance of the
+"measure before the big run" discipline (D068).
+
+**THE DIAGNOSTIC PANEL (collect every run; each readout -> a specific knob + action).**
+1. **Fitness slope over the last K generations.** Still climbing at the end (slope > threshold)?
+   -> gens too few; INCREASE GENS. Plateaued early -> gens can be economized.
+2. **fit_std trajectory.** Collapsed to ~0 early -> PREMATURE CONVERGENCE (population lost diversity) ->
+   INCREASE POP (or mutation rate). Healthy = std stays > 0 while fitness climbs.
+3. **Component trajectories (enc/car/reg means + bests).** Did carrying/regulation ever rise above
+   noise and PERSIST/COMPOUND? If NEVER at any P -> suspect N TOO SMALL (not enough neurons for
+   evolution to build working memory) OR dev too short. Encoding-only rise is expected early (simplest
+   to develop, D096); the test is whether car/reg follow.
+4. **Development convergence fraction** (the develop() `converged` flag, D087/this decision). Fraction of
+   the population whose plastic weights SETTLED within dev_ms. LOW -> dev_ms TOO SHORT (scoring IMMATURE
+   phenotypes, undermining the D083 develop-then-score premise) -> INCREASE DEV_MS. Uniformly high and
+   fast -> dev_ms wastefully long (could shorten). 
+5. **P-dependence of 1-4.** Do higher-P (denser) cells build capability that lower-P cannot? This is the
+   FIRST WHISPER of double-descent structure -- the pilot is not designed to RESOLVE the curve (that is
+   the full run) but a monotone P-trend in capability emergence is the signal the effect is there.
+6. **NaN/abort count** (develop() NaN tripwire + any degenerate collapse). Numerical health; nonzero ->
+   inspect before scaling.
+
+**Each diagnostic maps to ONE knob** so the read is unambiguous: (1)->gens, (2)->pop, (3)->N or dev_ms,
+(4)->dev_ms, (5)->the science (is the effect present), (6)->numerical health. Report all six at the end
+of every run, with the implied action.
+
+**DEV_MS DECISION: FIXED, uniform (PJM).** Development runs a FIXED dev_ms for every network; we do NOT
+early-abort on convergence. Early-abort could save some compute, but a UNIFORM development budget makes
+results CLEANER TO INTERPRET (every phenotype matured under the identical protocol -- variable dev-time
+would be a confound and would make per-eval cost unpredictable). The develop() `converged` flag is
+therefore used ONLY as diagnostic #4 (is dev_ms long enough?), NOT as a control-flow early-stop. If the
+flag shows widespread non-convergence, we RAISE the fixed dev_ms rather than add early-abort. (Supersedes
+the D096 open question about development duration: it is now a diagnostic-driven fixed value.)
+
+**BUILD.** (a) evaluate() captures develop()'s `converged` flag and returns it; run history aggregates
+the convergence fraction per generation. (b) A documented post-run analysis (in the run harness /
+analysis module) computes all six readouts and prints each with its implied action. (c) Fold into the
+D100 retrofit so the pilot -- and every run_*.py thereafter -- emits the panel at completion. This is now
+part of what "a run harness" produces, alongside provenance (D-provenance) and checkpointing+logging
+(D100).

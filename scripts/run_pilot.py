@@ -84,30 +84,29 @@ def main():
     df = pd.DataFrame(all_rows)
     df.to_parquet(run.table_path("pilot_history"))
 
-    # --- pilot verdict: did the apparatus behave? -------------------------------------------
-    print("\n=== PILOT VERDICT ===")
-    climbed, compounded, clean = [], [], True
-    for dens in DENSITIES:
-        d = df[df.density == dens].sort_values("gen")
-        fit_climb = d["fit_mean"].iloc[-1] - d["fit_mean"].iloc[0]
-        car_rise = d["car_mean"].iloc[-1] - d["car_mean"].iloc[0]
-        reg_rise = d["reg_mean"].iloc[-1] - d["reg_mean"].iloc[0]
-        nan_any = d[["fit_mean", "enc_mean", "car_mean", "reg_mean"]].isna().any().any()
-        climbed.append(fit_climb > 0); compounded.append(car_rise > 0 or reg_rise > 0)
-        clean = clean and not nan_any
-        print(f"  P={dens}: fit {'+' if fit_climb>0 else ''}{fit_climb:.4f} | "
-              f"car {'+' if car_rise>0 else ''}{car_rise:.4f} | reg {'+' if reg_rise>0 else ''}{reg_rise:.4f}"
-              f"{' | NaN!' if nan_any else ''}")
-    print(f"\nfitness climbed in {sum(climbed)}/{len(DENSITIES)} cells")
-    print(f"a capability (car or reg) compounded in {sum(compounded)}/{len(DENSITIES)} cells")
-    print(f"no NaN/degenerate: {clean}")
-    ok = sum(climbed) >= len(DENSITIES) // 2 and clean
-    print(f"\n=> apparatus {'BEHAVES -- design the full run' if ok else 'has issues -- inspect before full run'}")
+    # --- D101 principled diagnostic panel: six readouts -> knob -> action --------------------
+    from ddescent.diagnostics import run_panel, format_panel
+    panel = run_panel(df, last_k=max(5, args.gens // 5))
+    panel_text = format_panel(panel)
+    print("\n" + panel_text)
+    with open(run.table_path("diagnostic_panel").replace(".parquet", ".txt"), "w") as fh:
+        fh.write(panel_text + "\n")
+
+    d5 = panel["d5_P_dependence"]
+    n_climb = sum(1 for c in panel["per_cell"] if "climbing" in c["d1_gens"]["verdict"])
+    n_cap = sum(1 for c in panel["per_cell"] if "emerged" in c["d3_components"]["verdict"])
+    n_abort = sum(c["d6_numerical"]["value"] for c in panel["per_cell"])
+    clean = (n_abort == 0)
+    ok = clean and (n_cap > 0 or n_climb > 0)
+    print(f"\n=> apparatus {'BEHAVES' if ok else 'needs inspection'}: "
+          f"{n_climb}/{len(panel['per_cell'])} cells still climbing, "
+          f"{n_cap}/{len(panel['per_cell'])} built capability, aborts={n_abort}")
 
     run.finalize(status="complete", n_conditions=len(df),
-                 notebook_note=f"Step-3 pilot: fitness climbed {sum(climbed)}/{len(DENSITIES)} cells, "
-                               f"capability compounded {sum(compounded)}/{len(DENSITIES)}, clean={clean}. "
-                               f"{'apparatus behaves' if ok else 'needs inspection'}.")
+                 notebook_note=f"Step-3 pilot: {n_climb}/{len(panel['per_cell'])} cells still climbing, "
+                               f"{n_cap} built capability (car/reg), aborts={n_abort}, "
+                               f"P-trend: {d5['verdict']}. See diagnostic_panel.txt for the full "
+                               f"six-readout panel and implied next-run actions (D101).")
 
 
 if __name__ == "__main__":

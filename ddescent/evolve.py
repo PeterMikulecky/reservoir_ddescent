@@ -239,11 +239,16 @@ def evaluate(genome: Genome, task, net_cfg: EvoNetConfig, cfg: "EvolveConfig | N
     gseed = (zlib.crc32(genome.mag.tobytes()) ^ (base_seed & 0xFFFFFFFF)) & 0x7FFFFFFF
 
     # --- development (D083): mature the phenotype before scoring, DETERMINISTICALLY -----------
+    dev_converged = True; dev_aborted = False
     if cfg is None or cfg.dev_ms > 0:
         eta = 1e-3 if cfg is None else cfg.dev_eta
         dev_ms = 1500.0 if cfg is None else cfg.dev_ms
-        net.develop(task.E_train, eta=eta, dev_ms=dev_ms, warmup_ms=200.0, n_checkpoints=4,
-                    seed=gseed)
+        dev_res = net.develop(task.E_train, eta=eta, dev_ms=dev_ms, warmup_ms=200.0,
+                              n_checkpoints=4, seed=gseed)
+        # D101 diagnostic #4/#6: did development settle within dev_ms (is dev_ms long enough)?
+        # and did the NaN tripwire fire (numerical health)?
+        dev_converged = bool(dev_res.get("converged", True))
+        dev_aborted = (dev_res.get("reason", "ok") != "ok" and "NaN" in dev_res.get("reason", ""))
 
     enc, car, reg, etr, ete = [], [], [], [], []
     # generation component in the seed (fix b): with n_assays=1, an unchanged ELITE must NOT see the
@@ -269,7 +274,8 @@ def evaluate(genome: Genome, task, net_cfg: EvoNetConfig, cfg: "EvolveConfig | N
                 regulation=float(np.mean(reg)),
                 # per-assay SDs: diagnostics for whether a component is stable signal or noise
                 encoding_sd=float(np.std(enc)), carrying_sd=float(np.std(car)),
-                regulation_sd=float(np.std(reg)), n_assays=n_assays)
+                regulation_sd=float(np.std(reg)), n_assays=n_assays,
+                dev_converged=dev_converged, dev_aborted=dev_aborted)
 
 
 _WORKER = {}
@@ -352,6 +358,9 @@ def run_evolution(task, net_cfg: EvoNetConfig, cfg: EvolveConfig,
             enc_best=float(res[order[0]]["encoding"]),
             car_best=float(res[order[0]]["carrying"]),
             reg_best=float(res[order[0]]["regulation"]),
+            # D101 diagnostics: dev convergence fraction (#4, is dev_ms long enough) + abort count (#6)
+            dev_conv_frac=float(np.mean([r.get("dev_converged", True) for r in res])),
+            dev_abort_n=int(np.sum([r.get("dev_aborted", False) for r in res])),
           ))
           if verbose and (gen % 20 == 0 or gen == cfg.n_generations - 1):
             h = history[-1]
