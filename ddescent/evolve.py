@@ -85,6 +85,9 @@ class EvolveConfig:
     n_assays: int = 3                   # noise realizations per genome, averaged. >1 so a single
                                         # lucky/unlucky noise draw isn't mistaken for signal.
 
+    _gen: int = 0                       # internal: current generation (folded into per-assay seeds
+                                        # so unchanged elites get fresh noise each gen). Set by the loop.
+
     seed: int = 0
 
 
@@ -154,15 +157,65 @@ def _affine_nmse(Y, R):
     return float(np.mean((Y - out) ** 2) / (np.var(Y) + 1e-12))
 
 
-def _context_carry(state_tr, C_tr, state_te, C_te):
-    """Carrying = context-distinguishability of the DEVELOPED state (D090/D092b). 1 - decode-NMSE
-    of the context label from state, floored at 0. (Decode uses the same capacity-constrained
-    spirit; it is a MEASURE, not the fitness readout.)"""
-    from .baseline import best_nmse
-    nc = int(max(C_tr.max(), C_te.max())) + 1
-    Ytr = np.eye(nc)[C_tr]; Yte = np.eye(nc)[C_te]
-    nmse = best_nmse(state_tr, Ytr, state_te, Yte, standardize=True)[0]
-    return max(0.0, 1.0 - float(nmse))
+def _carry_covdecay(net, task, net_cfg, noise_seed=None, n_cue=8, delays=(50.0, 300.0, 800.0)):
+    """Carrying = intrinsic persistence of the stimulus COVARIANCE structure (D098), scored by the
+    DECAY TIME of that persistence (D098b): recurrence extends the LIFETIME of the covariance
+    similarity, not its magnitude, so the discriminating statistic is AREA under the
+    similarity-vs-delay curve -- NOT similarity at a single delay (where passive current-echo and
+    active recurrent maintenance look identical -- the confound that sank 3 prior measures).
+
+    Non-relational, whole-network, overlapping inputs, NO cue/label (D098): drive with a task-
+    stimulus run -> for each silent-delay length, read the persisting state in a short window at the
+    END of the delay -> covariance-alignment of that state with the stimulus top-subspace, MINUS a
+    shuffled-stimulus baseline (removes fixed-point confounds) -> carry = area under the
+    (delay -> similarity) curve. Passive echo -> fast decay -> small area; active maintenance ->
+    slow decay -> large area.
+
+    delays: GA uses a REDUCED 3-point set for cost (D098b); characterization can pass a finer sweep.
+    """
+    c = net_cfg
+    if noise_seed is not None:
+        import brian2 as b2
+        b2.seed(noise_seed)
+    rng = np.random.default_rng(0 if noise_seed is None else noise_seed)
+    if len(task.E_train) < n_cue:
+        return 0.0
+    stim = task.E_train[rng.choice(len(task.E_train), n_cue, replace=False)]
+    dp = np.zeros((n_cue, c.N)); dp[:, :c.n_in] = stim
+    _evals, evec = np.linalg.eigh(np.cov(dp.T) + 1e-9 * np.eye(c.N))
+    top = evec[:, -min(5, c.n_in):]                        # top stimulus-covariance directions
+    stim_shuf = stim.copy()
+    for j in range(stim.shape[1]):
+        rng.shuffle(stim_shuf[:, j])                        # destroys covariance, keeps marginals
+
+    def _persist_window(cue, delay_ms):
+        import brian2 as b2
+        from brian2 import ms
+        n = cue.shape[0]; cue_ms = n * c.present_ms; tot = cue_ms + delay_ms
+        n_steps = int(round(tot / c.present_ms)); drive = np.zeros((n_steps, c.N))
+        for k in range(n): drive[k, :c.n_in] = c.input_gain * cue[k]
+        ta = b2.TimedArray(drive, dt=c.present_ms * ms)
+        net.net.restore("init"); net.G.namespace["ta"] = ta
+        mon = b2.StateMonitor(net.G, "r", record=True, dt=c.sample_ms * ms, name="mon_carry")
+        net.net.add(mon); net.net.run(tot * ms)
+        r = np.asarray(mon.r); t = np.asarray(mon.t / ms); net.net.remove(mon)
+        if len(t): t = t - t[0]
+        return r[:, t > (cue_ms + delay_ms - 50)]          # short window at the END of the delay
+
+    def _align(Pm):
+        if Pm.shape[1] < 3:
+            return 0.0
+        pcov = np.cov(Pm)
+        return float(np.trace(top.T @ pcov @ top) / (np.trace(pcov) + 1e-9))
+
+    curve = []
+    for dly in delays:
+        a_real = _align(_persist_window(stim, dly))
+        a_shuf = _align(_persist_window(stim_shuf, dly))
+        curve.append(max(0.0, a_real - a_shuf))
+    if len(delays) < 2:
+        return float(curve[0])
+    return float(np.trapezoid(curve, delays) / (delays[-1] - delays[0]))
 
 
 def evaluate(genome: Genome, task, net_cfg: EvoNetConfig, cfg: "EvolveConfig | None" = None) -> dict:
@@ -193,9 +246,14 @@ def evaluate(genome: Genome, task, net_cfg: EvoNetConfig, cfg: "EvolveConfig | N
                     seed=gseed)
 
     enc, car, reg, etr, ete = [], [], [], [], []
+    # generation component in the seed (fix b): with n_assays=1, an unchanged ELITE must NOT see the
+    # identical noise draw every generation (frozen noise -- the determinism-audit failure mode). The
+    # generation is folded in so elites get FRESH noise each gen while the whole run stays reproducible.
+    gen_off = 0 if cfg is None else (getattr(cfg, "_gen", 0) * 100003)
     for a in range(n_assays):
-        s_tr = (gseed + 2 * a + 1) & 0x7FFFFFFF
-        s_te = (gseed + 2 * a + 2) & 0x7FFFFFFF
+        s_tr = (gseed + gen_off + 4 * a + 1) & 0x7FFFFFFF
+        s_te = (gseed + gen_off + 4 * a + 2) & 0x7FFFFFFF
+        s_ca = (gseed + gen_off + 4 * a + 3) & 0x7FFFFFFF
         B_tr = net.behave(task.E_train, noise_seed=s_tr)
         B_te = net.behave(task.E_test, noise_seed=s_te)
         e_tr = _affine_nmse(task.Y_train, B_tr["rates"])
@@ -203,7 +261,7 @@ def evaluate(genome: Genome, task, net_cfg: EvoNetConfig, cfg: "EvolveConfig | N
         etr.append(e_tr); ete.append(e_te)
         enc.append(max(0.0, 1.0 - e_te))
         reg.append(max(0.0, floor - e_te))
-        car.append(_context_carry(B_tr["state"], task.C_train, B_te["state"], task.C_test))
+        car.append(_carry_covdecay(net, task, net_cfg, noise_seed=s_ca))
 
     return dict(train_err=float(np.mean(etr)), test_err=float(np.mean(ete)),
                 n_params=genome.n_params(), exc_frac=genome.exc_fraction(),
@@ -228,9 +286,13 @@ def _init_worker(task, net_cfg, cfg=None):
     _WORKER["cfg"] = cfg
 
 
-def _eval_payload(genome):
-    """TOP-LEVEL, picklable — Windows spawn (D007). One individual; task comes from the worker."""
-    r = evaluate(genome, _WORKER["task"], _WORKER["net_cfg"], _WORKER.get("cfg"))
+def _eval_payload(item):
+    """TOP-LEVEL, picklable — Windows spawn (D007). Receives (genome, gen); task/cfg from worker."""
+    genome, gen = item
+    cfg = _WORKER.get("cfg")
+    if cfg is not None:
+        cfg._gen = gen
+    r = evaluate(genome, _WORKER["task"], _WORKER["net_cfg"], cfg)
     r.pop("state", None); r.pop("state_var", None)   # do not ship big arrays back
     return r
 
@@ -261,8 +323,9 @@ def run_evolution(task, net_cfg: EvoNetConfig, cfg: EvolveConfig,
                                             initargs=(task, net_cfg, cfg))
     try:
       for gen in range(cfg.n_generations):
+          cfg._gen = gen                          # fold generation into per-assay seeds (fix b)
           if pool is not None:
-            res = pool.map(_eval_payload, pop)      # only the genome is shipped
+            res = pool.map(_eval_payload, [(g, gen) for g in pop])  # ship genome + gen
           else:
             res = [eval_fn(g) for g in pop]
           errs = np.array([r["train_err"] for r in res])
