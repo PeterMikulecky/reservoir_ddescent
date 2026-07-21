@@ -365,10 +365,15 @@ class EvoNet:
         self.net = b2.Network(G, *self._syn)
         self.net.store("init")
 
-    def behave(self, E: np.ndarray) -> dict:
+    def behave(self, E: np.ndarray, noise_seed: int | None = None) -> dict:
         """Run the network over a batch of environments; return the behavior.
 
         E : (n_env, n_in) — each row drives the input neurons.
+        noise_seed : if given, re-seed Brian2's RNG right before the run so this assay uses a
+            specific, reproducible NOISE realization. Passing different seeds gives independent
+            noise draws of the SAME network -> enables distributional evaluation (D085c): average
+            component scores over noise realizations so a single lucky/unlucky draw isn't mistaken
+            for signal. If None, the RNG stream continues from build/prior calls (legacy behavior).
         The window is `cfg.readout_window_ms` long, placed by `cfg.readout_pos` ('trailing'
         = the inherited default, after settling; 'leading' = at onset, where carryover lives).
 
@@ -380,6 +385,8 @@ class EvoNet:
         """
         c = self.cfg
         n = E.shape[0]
+        if noise_seed is not None:
+            b2.seed(noise_seed)
         drive = np.zeros((n, c.N))
         drive[:, :c.n_in] = c.input_gain * E          # environment enters the input neurons
         ta = b2.TimedArray(drive, dt=c.present_ms * ms)
@@ -404,10 +411,14 @@ class EvoNet:
         return dict(rates=state[:, self.cfg.out_slice()], state=state, state_var=state_var)
 
     # --- Kind-A development: Vogels inhibitory plasticity, in-simulation (D086/D087) -----------
-    def develop(self, E, eta=1e-2, dev_ms=None, warmup_ms=200.0, n_checkpoints=10):
+    def develop(self, E, eta=1e-2, dev_ms=None, warmup_ms=200.0, n_checkpoints=10, seed=None):
         """Mature the network by running Vogels inhibitory plasticity on the I->E synapses while
         the stimulus stream drives it. Event-driven INSIDE net.run() — no Python-side weight
         write-back (the fragility that broke the Oja prototype).
+
+        seed : if given, re-seed Brian2 before development so the (noisy) development run is
+            REPRODUCIBLE. Without this, development noise makes the developed weights differ every
+            call -> nondeterministic evaluation. Set it for deterministic runs.
 
         Kind A (D087): only I->E fast magnitudes change; the support (which synapses exist) is
         frozen by the w_eps clip, so nominal-P is invariant. Returns a convergence trace (mean
@@ -417,6 +428,8 @@ class EvoNet:
         c = self.cfg
         if self.con_ie is None:
             return dict(converged=True, trace=[], reason="no I->E synapses (nothing to develop)")
+        if seed is not None:
+            b2.seed(seed)
         if dev_ms is None:
             dev_ms = float(max(20.0 * E.shape[0] * c.present_ms / c.present_ms, 1000.0))
 

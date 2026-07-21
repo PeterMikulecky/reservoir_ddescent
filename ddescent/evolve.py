@@ -81,6 +81,10 @@ class EvolveConfig:
     dev_ms: float = 1500.0              # development duration per eval; 0 disables (birth scoring)
     dev_eta: float = 1e-3               # Vogels plasticity learning rate
 
+    # --- noise-robust evaluation (D085c / determinism) --------------------------------
+    n_assays: int = 3                   # noise realizations per genome, averaged. >1 so a single
+                                        # lucky/unlucky noise draw isn't mistaken for signal.
+
     seed: int = 0
 
 
@@ -162,36 +166,52 @@ def _context_carry(state_tr, C_tr, state_te, C_te):
 
 
 def evaluate(genome: Genome, task, net_cfg: EvoNetConfig, cfg: "EvolveConfig | None" = None) -> dict:
-    """DEVELOP then score the DEVELOPED phenotype (D083). Returns the three D094 components read
-    through the capacity-constrained designated-slice readout (D095).
+    """DEVELOP then score the DEVELOPED phenotype (D083), averaged over K NOISE ASSAYS for
+    noise-robustness (D085c): a single lucky/unlucky noise draw must not be mistaken for signal.
+    Returns the three D094 components read through the capacity-constrained designated-slice
+    readout (D095), each MEANED over K assays (with per-assay SD reported for diagnostics).
 
-    - encoding   = 1 - (developed task NMSE), floored at 0: memoryless-achievable performance.
-    - regulation = max(0, memoryless_floor - developed_NMSE): below-floor excess REQUIRES using
-      context (D091/D040), so it is the regulation signal.
-    - carrying   = context-distinguishability of the developed state (D092b).
+    Determinism: each assay uses a reproducible noise seed derived from (cfg.seed, genome hash,
+    assay index), so the whole run replays identically while each assay sees an INDEPENDENT noise
+    realization -- exactly what distributional evaluation needs.
     """
     net = EvoNet(genome, net_cfg)
 
-    # --- development (D083): mature the phenotype before scoring -----------------------------
+    floor = task.headroom()["memoryless_floor"]
+    n_assays = 1 if cfg is None else max(1, cfg.n_assays)
+    base_seed = 0 if cfg is None else cfg.seed
+    # STABLE genome-derived seed (Python's hash() is per-process randomized -> nondeterministic;
+    # use a content hash of the weight bytes instead so runs replay identically).
+    import zlib
+    gseed = (zlib.crc32(genome.mag.tobytes()) ^ (base_seed & 0xFFFFFFFF)) & 0x7FFFFFFF
+
+    # --- development (D083): mature the phenotype before scoring, DETERMINISTICALLY -----------
     if cfg is None or cfg.dev_ms > 0:
         eta = 1e-3 if cfg is None else cfg.dev_eta
         dev_ms = 1500.0 if cfg is None else cfg.dev_ms
-        net.develop(task.E_train, eta=eta, dev_ms=dev_ms, warmup_ms=200.0, n_checkpoints=4)
+        net.develop(task.E_train, eta=eta, dev_ms=dev_ms, warmup_ms=200.0, n_checkpoints=4,
+                    seed=gseed)
 
-    B_tr = net.behave(task.E_train)
-    B_te = net.behave(task.E_test)
+    enc, car, reg, etr, ete = [], [], [], [], []
+    for a in range(n_assays):
+        s_tr = (gseed + 2 * a + 1) & 0x7FFFFFFF
+        s_te = (gseed + 2 * a + 2) & 0x7FFFFFFF
+        B_tr = net.behave(task.E_train, noise_seed=s_tr)
+        B_te = net.behave(task.E_test, noise_seed=s_te)
+        e_tr = _affine_nmse(task.Y_train, B_tr["rates"])
+        e_te = _affine_nmse(task.Y_test, B_te["rates"])
+        etr.append(e_tr); ete.append(e_te)
+        enc.append(max(0.0, 1.0 - e_te))
+        reg.append(max(0.0, floor - e_te))
+        car.append(_context_carry(B_tr["state"], task.C_train, B_te["state"], task.C_test))
 
-    err_tr = _affine_nmse(task.Y_train, B_tr["rates"])
-    err_te = _affine_nmse(task.Y_test, B_te["rates"])
-
-    floor = task.headroom()["memoryless_floor"]
-    encoding = max(0.0, 1.0 - err_te)
-    regulation = max(0.0, floor - err_te)
-    carrying = _context_carry(B_tr["state"], task.C_train, B_te["state"], task.C_test)
-
-    return dict(train_err=err_tr, test_err=err_te, n_params=genome.n_params(),
-                exc_frac=genome.exc_fraction(), state=B_tr["state"], state_var=B_tr["state_var"],
-                encoding=encoding, carrying=carrying, regulation=regulation)
+    return dict(train_err=float(np.mean(etr)), test_err=float(np.mean(ete)),
+                n_params=genome.n_params(), exc_frac=genome.exc_fraction(),
+                encoding=float(np.mean(enc)), carrying=float(np.mean(car)),
+                regulation=float(np.mean(reg)),
+                # per-assay SDs: diagnostics for whether a component is stable signal or noise
+                encoding_sd=float(np.std(enc)), carrying_sd=float(np.std(car)),
+                regulation_sd=float(np.std(reg)), n_assays=n_assays)
 
 
 _WORKER = {}

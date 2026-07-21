@@ -3637,3 +3637,47 @@ need the D083 convergence-based or task-scaled duration. (3) cost of development
 full GA develops every individual every generation; measure before a big sweep. (4) then the real
 experiment: fitness-vs-P across the double-descent range (Gate B), watching for encoding first-descent +
 carrying*regulation second-descent.
+
+### D097 — Determinism + noise-robust (distributional) evaluation: per-assay noise seeding, k-assay averaging, and a determinism-bug fix (development noise was unseeded).
+**2026-07-20 · Accepted (method) · PJM asked whether the code controls determinism**
+
+**AUDIT RESULT.** Seed-tracking was GOOD at the genome/task/GA-structure level (random_genome, tasks,
+run_evolution all seeded -> reproducible) but had a real gap: the SIMULATION-NOISE seed was a single
+value set once at build (b2.seed(cfg.seed) in _build), the wrong granularity for distributional
+evaluation. Two consequences: (1) no way to average over independent noise realizations of the SAME
+network; (2) develop() ran with UNSEEDED noise -> the developed weights differed every call ->
+evaluate() was NONDETERMINISTIC even with a fixed seed (caught: two evaluate() calls on the same genome
+gave enc 0.0559 vs 0.0542).
+
+**FIXES.**
+- **behave(E, noise_seed=None):** re-seeds Brian2 before the run when given -> independent, reproducible
+  noise realizations of the same network.
+- **develop(E, ..., seed=None):** re-seeds before development -> the (noisy) development run is
+  reproducible. THIS was the determinism bug -- development noise, not scoring noise, was the culprit.
+- **evaluate() does K-ASSAY AVERAGING (D085c):** n_assays independent noise draws per genome, component
+  scores MEANED, and per-assay SD reported (encoding_sd/carrying_sd/regulation_sd) as a
+  signal-vs-noise diagnostic. Seeds derived from a STABLE content hash (zlib.crc32 of weight bytes ^
+  cfg.seed) -- NOT Python's hash() (per-process randomized). Development seeded from the same gseed.
+- **EvolveConfig.n_assays (default 3).**
+
+**VERIFIED.** (1) evaluate() bit-identical across repeated calls (same genome+seed). (2) different
+genomes differ (independence). (3) FULL GA bit-identical run-to-run (fit_mean 0.072009 both). (4)
+per-assay SD works: regulation 0.088 ± 0.010 -> SD << mean -> stable to SIMULATION noise.
+
+**INTERPRETIVE NOTE (refines the D096 "is 0.085 noise" question, per PJM).** The per-assay SD shows the
+below-floor regulation reading is STABLE across simulation-noise draws (not sim-noise noise). BUT that
+does NOT establish it as genuine regulation -- it could still be a spurious READOUT correlation (the
+affine readout finding structure in this particular developed network). "Stable across noise" != "real
+regulation." The remaining tests are the ones PJM named: does it PERSIST across re-assays with different
+STIMULUS draws / task instances, and does it COMPOUND under selection over generations? Only signals
+surviving those get interpreted. The SD machinery is the tool that will let us make these calls
+quantitatively instead of eyeballing single numbers.
+
+**DISCIPLINE RESTORED.** Do not interpret any single small component score until it survives (a)
+noise-averaging (now built), (b) persistence across stimulus/task re-draws, (c) compounding under
+selection. This operationalizes D085c and the standing "don't read small effects as signal" lesson.
+
+**NOTE (parallel path):** b2.seed sets a global; under multiprocessing each worker gets its own stream.
+Serial determinism verified; parallel-vs-serial identity not yet checked (the D078 batch-equivalence
+runs at noise_sigma=0 to sidestep exactly this). Flag: verify parallel determinism before a big
+parallel sweep.
