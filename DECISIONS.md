@@ -3807,3 +3807,40 @@ multiprocessing semaphore-leak warning at shutdown (harmless).
 
 **NEXT: run the pilot** (python scripts/run_pilot.py, ~1.1 hr on 6 cores), read the verdict, then design
 the full run (P-range, seeds, generations, c_syn=0 vs >0 sweep) if the apparatus behaves.
+
+### D100 — STANDING POLICY: every long run has CHECKPOINTING + LOGGING by default. Never run 6h/overnight without knowing it is running properly.
+**2026-07-20 · Accepted (standing policy) · PJM**
+
+**THE RULE.** Any long-running experiment (anything we would not sit and watch to completion -- roughly
+> a few minutes) MUST, by default, unless explicitly waived:
+1. **CHECKPOINT incrementally** -- persist results to disk AS EACH UNIT COMPLETES (per GA cell, per
+   generation block -- whatever the natural unit is), NOT accumulated in memory and written once at the
+   end. A crash/kill must lose only the IN-PROGRESS unit, never completed ones.
+2. **LOG to disk while running** -- stdout/stderr AND warnings streamed to a log file in the run dir
+   (run.logs()), so progress is monitorable live and a durable diagnostic record survives a crash. For
+   PARALLEL runs, capture WORKER-side output too (per-worker log files) -- the numerically important
+   warnings (NaN tripwires, Brian2 blowups, convergence failures) originate INSIDE workers during
+   develop()/behave(), and do NOT flow to the parent log automatically.
+
+**WHY (PJM).** "We can't go 6 hours or overnight before knowing whether an experiment is actually running
+properly." The purpose of a long run is that you can't babysit it -> it must be observable-while-running
+and crash-survivable, or you gamble hours of compute on nothing going wrong. Things DO go wrong (NaN
+blowups, a degenerate cell, a leak at hour 4). Without checkpointing, a crash in cell 3 of 4 loses cells
+1-2 as well (the all-at-once end write never touched disk). Without logging, you discover at hour 6 that
+it died at hour 1, with no trace of why.
+
+**THE GAP THIS FORMALIZES.** run_pilot.py (D099) as first built violated BOTH: it accumulated all cells'
+history in memory and wrote the parquet only at the very end (a mid-run crash loses everything), and it
+printed to stdout with no disk log (warnings/progress vanish with the terminal). The ~1hr pilot's
+exposure is limited, but the 5+hr full run would be a real risk. Fix BOTH before the full run;
+retrofit run_pilot.py and make it the template for all run_*.py harnesses.
+
+**IMPLEMENTATION NOTES (for the retrofit).** Checkpoint: write each cell's history to the run's data/
+dir as it finishes (one parquet per cell, or append to a growing file), so partial results are always on
+disk; the final combined parquet is then just a concatenation. Log: a Tee on stdout/stderr to
+run.logs()/<name>.log PLUS routing of the warnings module and Brian2's logger to the same file; per-
+worker log files in run.logs() for worker-side warnings. Resumability (skip already-completed cells on
+restart) is a nice-to-have that falls out naturally once cells checkpoint independently.
+
+**SCOPE.** Default ON for all long runs. A short smoke/dry-run may waive it explicitly. This is now part
+of what "a run harness" means in this project, alongside provenance (runs/ dir, manifest, notebook stub).
