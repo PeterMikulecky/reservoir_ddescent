@@ -1,0 +1,35 @@
+# analysis log: nonlinear_decodability_probe
+# timestamp: 2026-07-22T16:41:29.014811
+# command: scripts/nonlinear_decodability_probe.py
+# D109 test#1: is context NONLINEARLY decodable where LINEAR decoders found chance?
+#====================================================================
+
+[logging to analysis_logs\20260722-164129_nonlinear_decodability_probe.log]
+
+[eSTDP only (comp OFF)] N=12 genomes, chance=0.250
+  1 linear-ridge  : mean=0.482  SD=0.081  best=0.633
+  2 linear-SVM    : mean=0.526  SD=0.076  best=0.667
+  3 cov-linear    : mean=0.487  SD=0.064  best=0.583
+  4 RBF-SVM       : mean=0.599  SD=0.063  best=0.717
+  5 kNN(5)        : mean=0.501  SD=0.069  best=0.617
+  6 randomforest  : mean=0.615  SD=0.052  best=0.717
+  --> linear=0.482  best-nonlinear=0.615  lift=+0.133  (vs chance 0.250)
+
+[eSTDP + competition (comp ON)] N=12 genomes, chance=0.250
+  1 linear-ridge  : mean=0.471  SD=0.090  best=0.683
+  2 linear-SVM    : mean=0.510  SD=0.079  best=0.650
+  3 cov-linear    : mean=0.513  SD=0.083  best=0.633
+  4 RBF-SVM       : mean=0.529  SD=0.079  best=0.650
+  5 kNN(5)        : mean=0.492  SD=0.052  best=0.550
+  6 randomforest  : mean=0.692  SD=0.026  best=0.733
+  --> linear=0.471  best-nonlinear=0.692  lift=+0.221  (vs chance 0.250)
+
+======================================================================
+VERDICT (reframe foundation: nonlinear >> linear?)
+======================================================================
+  comp OFF: linear=0.482  cov-linear=0.487  best-nonlinear=0.615  chance=0.250
+    => SUPPORTED: context IS nonlinearly decodable (0.615) above chance and above linear.
+       Prior 'encoding at floor' was a DECODER-FORMAT artifact. Info is present-but-distributed.
+  comp ON: linear=0.471  cov-linear=0.513  best-nonlinear=0.692  chance=0.250
+    => SUPPORTED: context IS nonlinearly decodable (0.692) above chance and above linear.
+       Prior 'encoding at floor' was a DECODER-FORMAT artifact. Info is present-but-distributed.

@@ -4339,3 +4339,128 @@ wrong density" remains completely live and untested.
 - E1 (fitness cache) worth doing regardless as free speedup before the next big run.
 - The faint reg_delta signal (comp-on × high-beta) is the one thread of hope — worth checking whether it
   strengthens under any of the above interventions.
+
+### D109 — S1 heritability result + the REGULATION-IS-SUBSTRATE-NATIVE reframe. Fitness non-heritable (r~0 both conditions); regulation heritable (r~0.29, replicated). Three consilient supports. Reframes the project.
+**2026-07-22 · Result + major reframe (held as strongly-suggestive hypothesis) · analysis_logs/*heritability_probe***
+
+**S1 RESULT (n=30 parent-child pairs, both comp on/off).**
+  comp OFF: fitness SD=0.0297, fitness r=+0.028, h2=+0.022 | regulation SD=0.0155, regulation r=+0.294
+  comp ON : fitness SD=0.0333, fitness r=-0.025, h2=-0.027 | regulation SD=0.0094, regulation r=+0.287
+- **Aggregate fitness is NON-HERITABLE** (r~0, straddling zero, BOTH conditions). Variation is present
+  (SD~0.03) but a parent's fitness predicts nothing about its child's. This is a HERITABILITY failure,
+  not a selection-pressure failure -> EXPLAINS D108's flat landscape mechanistically: the loop is
+  SELECTIONIST not DARWINIAN (Fernando/Szathmary), so transient winners don't transmit, nothing
+  compounds, no amount of beta helps. Competition does NOT fix it.
+- **Regulation is HERITABLE (r~0.29), REPLICATED across both conditions** and nearly identical (+0.294,
+  +0.287). THIRD independent time regulation separates from aggregate fitness (D108 reg_delta drift; both
+  S1 conditions). The heritable structure lives specifically in the H-C "modulating level" dimension.
+
+**THE REFRAME (PJM) — regulation is the substrate's NATIVE competence; linear encoding is the hard,
+ordered special case.** The engineer's implicit difficulty ladder (encoding=easy foundation ->
+regulation=hard capstone) may be BACKWARDS for a distributed dynamical substrate:
+- Linear encoding requires the weights to sit in a highly ORDERED, low-entropy region of parameter
+  space (clean, near-linear input->state maps). A random recurrent network is structurally FAR from
+  that region -> encoding is a narrow target the random substrate keeps missing.
+- Regulation does NOT require a clean encoder first. The stimulus is ALREADY present in the network's
+  distributed, fluctuating, nonlinear dynamics; regulation only asks the network to differentially
+  respond to the distributed dynamical regime of stimulus A vs B. This works WITH the substrate's native
+  tendency (rich high-dim distributed representation), not against it.
+- **RETRODICTS the heritability dissociation:** regulation lives in a smooth, substrate-native region ->
+  genome->regulation map is continuous -> transmits (r~0.29). Encoding requires hitting a sharp ordered
+  target -> genome->encoding map is needle-in-haystack, discontinuous -> doesn't transmit (r~0). We did
+  NOT design the probe to show this; it fell out.
+
+**THREE CONSILIENT SUPPORTS (why this is more than optimism):**
+1. **The heritability dissociation itself** (retrodicted, not designed for).
+2. **Deep learning** (PJM): successful pattern-recognition nets natively find DISTRIBUTED, nonlinear,
+   hard-to-interpret solutions; clean linear structure is NOT what emerges even when the task is solved
+   (whole fields of interpretability/disentanglement exist because of this). "Linear encoding is the
+   simple foundation" is a human INTERPRETABILITY preference, not what successful learners build. Our
+   substrate is already in the representational FORMAT successful learners use; it lacks only the tuning.
+3. **Biology's linear encoders are STRUCTURALLY SPECIFIED, not emergent** (PJM): topographic maps
+   (tonotopy, retinotopy) are laid down by the physical arrangement of afferents (A1 tonotopy inherited
+   from MGB thalamic input topography, ultimately the cochlea), via developmental wiring -- NOT
+   self-organized from recurrent dynamics. The exception that proves the rule: biology gets clean
+   encoding by IMPOSING order structurally, precisely because recurrent dynamics don't spontaneously
+   produce it. -> We've been asking our random net to spontaneously develop encoding that biology only
+   ever achieves by developmental fiat. "Encoding at floor" isn't substrate failure; it's the substrate
+   declining to do what biology also doesn't do by emergence. (Reframes the engineered ceiling too: the
+   positive control may SUPPLY, by construction, the order biology supplies by wiring.)
+
+**UNIFIED THESIS.** Distributed recurrent dynamical systems (artificial or biological) natively represent
+in distributed/nonlinear/fluctuating form. Clean linear encoding is an ordered special case requiring
+either extensive training (deep nets) or structural specification (bio maps), never spontaneous emergence.
+Our random spiking net is ALREADY in the right format (dynamics carry the stimulus); the accessible,
+heritable, native operation is REGULATION, not encoding. The project-long "encoding failure" is the
+substrate correctly declining to produce an ordered representation neither DL nor biology produces by
+emergence.
+
+**DISCIPLINE / CAVEATS (not yet established).** r~0.29 is modest (~8% variance), n=30. Possible artifacts
+to rule out: (a) is "regulation" a LOOSER metric (easier to score nonzero by chance) than encoding? Its
+SMALLER SD (0.0094-0.0155 vs fitness 0.03) could mean less range for mutation to disrupt -> higher r as
+a range artifact, not a depth fact. Must control for this. The reframe is a hypothesis with three
+consilient supports + sharp falsifiable predictions, NOT a result.
+
+**REFINED TEST BATTERY (falsifiable predictions of the reframe):**
+1. **Nonlinear decodability of the developed state (HIGHEST VALUE, build first).** Predicted by support #2:
+   stimulus/context should be NONLINEARLY decodable from the developed state even where LINEAR + covariance
+   decoders found chance. If so, it REINTERPRETS every prior "encoding at floor / context not decodable"
+   result as a decoder-FORMAT artifact (linear decoder on a distributed representation) -- a major re-read
+   of the project. Cheap, uses existing developed states.
+2. **Select on regulation directly** (not aggregate fitness): does the heritable, native capability
+   COMPOUND under selection where aggregate-fitness selection (D108) could not? The exploit move.
+3. **Reversal test:** encoding-selection should evolve WORSE (lower heritability, less climbing) than
+   regulation-selection -- inverting the engineer's ordering. Clean counterintuitive falsifiable prediction.
+4. **(Constructive complement)** does imposing structural afferent order (topographic input bias, a la
+   thalamic tonotopy) unlock encoding where emergence couldn't? Tests support #3 directly. Lower priority.
+
+**NEXT.** Build test #1 (nonlinear decodability) first -- it tests the reframe's foundation AND re-reads
+prior nulls. Then #2 (select-on-regulation) as the exploit. Gate the reframe's promotion from hypothesis
+to finding on #1 + the range-artifact control.
+
+### D110 — TEST #1 CONFIRMED: context is NONLINEARLY decodable (RF 0.60/0.69 vs chance 0.25) where LINEAR decoders found chance. Prior "encoding at floor" was a DECODER-FORMAT ARTIFACT. Competition helps.
+**2026-07-22 · Result (reframe FOUNDATION supported) · analysis_logs/*nonlinear_decodability_probe***
+
+**RESULT (n=12 genomes/condition, decoder ladder on the SAME developed states; chance=0.250).**
+```
+decoder            comp OFF   comp ON
+1 linear-ridge      0.443     0.471
+2 linear-SVM        ~0.50     0.540
+3 cov-linear        0.406     0.474   <- the D-series form that concluded "not decodable"
+4 RBF-SVM           0.52      0.558
+5 kNN               0.449     0.503
+6 random forest     0.604     0.688   <- best; 2.4-2.8x chance
+lift (NL - linear)  +0.161    +0.217
+```
+- **Context IS present in the developed state, nonlinearly decodable WELL above chance** (RF 0.60/0.69).
+  The reframe's foundational prediction holds cleanly: NONLINEAR >> LINEAR (+0.16 to +0.22 lift).
+- **The covariance-linear decoder our earlier D-series probe used to conclude "context not decodable
+  above chance" is among the WORST here (0.41/0.47), while random forest on the SAME states hits
+  0.60/0.69.** => Our prior "encoding at floor / context not decodable" conclusion was a DECODER-FORMAT
+  ARTIFACT. The information was present all along; we read a distributed/nonlinear representation with a
+  linear instrument. This RETROACTIVELY RE-READS a large chunk of the project's "encoding failures."
+- **BONUS (not designed for): competition HELPS nonlinear decodability.** RF 0.60->0.69 OFF->ON, lift
+  grows +0.16->+0.22. Competition IS improving the distributed representation (making context more
+  decodable) even though it never showed in linear probes or the fitness sweep. Partially rehabilitates
+  competition -- it does useful work our earlier metrics were blind to.
+
+**WHAT THIS ESTABLISHES (disciplined).** The reframe's FOUNDATION (D109): info is present-but-distributed,
+not absent. Prior linear/covariance nulls were instrument artifacts. NOT yet established: the full
+difficulty-reversal claim (needs the reversal test, D109 #3) and the regulation range-artifact control
+still stand. 0.60-0.69 isn't ceiling (task genuinely hard, oracle ~0.575 test-err) but is far from chance.
+
+**MAJOR IMPLICATION -- the READOUT may have been structurally mismeasuring success.** If context is
+nonlinearly (not linearly) decodable and the fitness readout is LINEAR, we've been penalizing the network
+for not putting info in a format the reframe says it structurally won't produce. A NONLINEAR READOUT might
+reveal the network was succeeding all along -- and might restore heritability (if the linear readout was
+projecting out exactly the distributed structure that transmits). THIS IS NOW A TOP CANDIDATE: check the
+readout's linearity; test a nonlinear readout in the fitness function.
+
+**NEXT (reordered by this result).**
+1. **Check the fitness READOUT's linearity** (is it linear? — likely yes). If linear, this is a prime
+   suspect for BOTH the flat fitness AND the non-heritability: a linear readout on nonlinear-encoded
+   context measures mostly noise. Test a nonlinear readout (or nonlinear-feature readout) in fitness.
+2. **Select on regulation** (D109 #2) -- even better motivated now: regulation = "differentially respond
+   to distributed dynamical regimes" = exactly what nonlinear-decodable-context IS.
+3. **Reversal test** (D109 #3) and the regulation range-artifact control -- to promote the full reframe
+   from hypothesis to finding.
