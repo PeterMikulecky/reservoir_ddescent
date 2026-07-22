@@ -4113,6 +4113,27 @@ effect we're hunting. => Option C, as the AXIS, risks destroying the phenomenon 
   mutable genome loci reactivatable next generation. floor_fraction = exactly the set that is in P_evo
   but not P_dev).
 
+**GENERAL PRINCIPLE (PJM, 2026-07-21) -- the standing rule for P-accounting under ambiguity.** A
+parameter's inclusion in P is decided by its status on two timescales:
+  - **Developable (changes within a lifetime) -> IN P_dev.** Unambiguous: it fits within-lifetime data.
+  - **Not selectable AND not developable -> NOT P.** Unambiguous: fixed rule machinery (traces, scales).
+  - **SELECTABLE BUT NOT DEVELOPABLE -> THE AMBIGUOUS CASE -> ALWAYS measure BOTH WAYS and compare.**
+    Such a parameter is a real DOF on the evolutionary timescale but inert on the developmental one, so
+    whether it counts toward P is genuinely undetermined a priori. Do NOT adjudicate it by fiat/functional
+    judgment (the mistake of trying to argue each class in or out). Instead carry BOTH accountings
+    through -- P WITH the class included and P WITHOUT -- plot the double-descent curve under each, and
+    let the COMPARISON be the finding: if the curves differ, that difference reveals whether the class is
+    load-bearing for the phenomenon.
+**Why this is the correct default (not just even-handedness): EPISTEMIC SAFETY.** Committing to a single
+P-accounting risks either SMEARING (count too much -> dilute/mask the peak) or FACTORING-OUT (count too
+little / the wrong effective measure -> divide the phenomenon out a priori, per the effective-rank
+worry). Since we cannot always know a priori which error a given accounting commits, the both-ways
+comparison is the ONLY move that cannot destroy the phenomenon by construction. It generalizes the
+factoring-out logic: ANY selectable-not-developable class gets both-ways-and-compare, full stop. (Class
+ASSIGNMENTS -- which synapse is developable vs selectable-not-developable -- come from the literature +
+prior structural decisions, e.g. I->E is selectable-not-developable=P_evo, E->E is developable=P_dev;
+this principle governs only how the AMBIGUOUS ones are counted, i.e. by comparison not judgment.)
+
 **ACTION (Step 1 done here; Steps 2-3 for the build).**
 - **Step 2 -- decouple the knobs:** the variation test / double-descent sweep varies E->E DENSITY
   specifically (directly driving P_dev across its threshold), holding inhibitory ratios FIXED (stable
