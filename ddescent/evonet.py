@@ -69,6 +69,38 @@ class EvoNetConfig:
     # D074), so Vogels tunes the fast inhibitory magnitude.
     tau_stdp_dev: float = 20.0    # inhibitory STDP trace time constant (ms)
     w_eps_dev: float = 1e-9       # support-freeze floor: plastic w clips to [w_eps, gmax], never 0,
+    # --- excitatory STDP (eSTDP LEARNER, D103 -- the missing development half) --------------------
+    dev_ee_stdp: bool = False     # enable eSTDP on E->E (OFF by default: preserves old behavior until
+                                  # develop() is updated to drive it; flip on to build representation)
+    tau_estdp_dev: float = 20.0   # excitatory STDP trace time constant (ms)
+    estdp_Aplus: float = 1.0      # LTP amplitude (pre-before-post potentiates)
+    estdp_Aminus: float = 1.0     # LTD amplitude (post-before-pre depresses); balance vs Aplus tunes
+                                  # potentiation/depression bias (Aminus>=Aplus is the stable default)
+    dev_gmax_e: float = 5.0       # max plastic excitatory magnitude (Kind-A upper clip)
+    # --- lateral-inhibition WTA COMPETITION (D103 third leg; D106 showed eSTDP-alone needs it) --------
+    dev_wta_comp: bool = False    # enable DEVELOPABLE lateral-inhibition competition during development.
+                                  # OFF by default -> RETAINS the ability to see what selection can do
+                                  # against a backdrop of NO a priori competition (PJM). Lateral inhib
+                                  # among E neurons is PLASTIC (its own iSTDP, mirroring Vogels) so it
+                                  # BREAKS SYMMETRY over developmental time (PJM: a STATIC uniform-all-
+                                  # to-all term just damps everyone equally = no selection; the
+                                  # differentiating power lives in the competition's DEVELOPABILITY, and
+                                  # its effect is TEMPORAL/FUNCTIONAL, not necessarily E->E weight
+                                  # variance). Development MACHINERY, outside P (not genome-encoded).
+    wta_gain: float = 1.0         # initial strength of the lateral-inhibition competition current
+    wta_tau: float = 5.0          # competition inhibition decay (ms); fast (~tau_syn) so the winner
+                                  # suppresses others within the integration window
+    wta_gmax: float = 20.0        # max plastic competition magnitude
+    wta_alpha: float = 0.2        # competition iSTDP target-rate setpoint (Vogels-style)
+    w_min_ee: float = 0.02        # PRINCIPLED dynamical floor for E->E plastic weights (D104): derived
+                                  # as ~5% of the median active developed E->E weight (~0.41) -> a weight
+                                  # here contributes ~5% of a typical synapse's drive = dynamically
+                                  # negligible RELATIVE TO PEERS, but stays formally in-support. Weights
+                                  # rest here instead of vanishing to ~0, so P_dev,structural =
+                                  # P_dev,effective (fork dissolved); floor_fraction = fraction resting
+                                  # here = the regularization readout. Derived by measurement (D068,
+                                  # analysis_logs/*derive_dynamical_floor_v2*). RECOMPUTE if the study's
+                                  # operating point (N, noise_sigma, gains, taus) changes.
                                   #   so a synapse can weaken but never leave P (Kind A, D087)
     dev_alpha: float = 0.2        # target-rate setpoint (Vogels alpha = 2*rho0*tau_stdp); tune per cfg
     dev_gmax: float = 20.0        # max plastic inhibitory magnitude
@@ -275,15 +307,16 @@ class EvoNet:
         # answer H-C by construction). At nmda_frac=0 the slow term is inert and the dynamics
         # equal the prior single-current model exactly.
         eqs = """
-        dv/dt = (v_rest - v + I_fast + I_slow + I_ext + bias)/tau_m + noise_sigma*sqrt(2/tau_m)*xi : 1 (unless refractory)
+        dv/dt = (v_rest - v + I_fast + I_slow + I_wta + I_ext + bias)/tau_m + noise_sigma*sqrt(2/tau_m)*xi : 1 (unless refractory)
         dI_fast/dt = -I_fast/tau_syn : 1
         dI_slow/dt = -I_slow/tau_slow : 1
+        dI_wta/dt = -I_wta/tau_wta : 1
         dr/dt = -r/tau_r : 1
         I_ext = ta(t, i) : 1
         """
         self._dummy = b2.TimedArray(np.zeros((1, c.N)), dt=b2.defaultclock.dt)
         ns = dict(v_rest=c.v_rest, tau_m=c.tau_m * ms, tau_syn=c.tau_syn * ms,
-                  tau_slow=c.tau_slow * ms,
+                  tau_slow=c.tau_slow * ms, tau_wta=c.wta_tau * ms,
                   tau_r=c.tau_r * ms, bias=c.bias, noise_sigma=c.noise_sigma,
                   v_thresh=c.v_thresh, v_reset=c.v_reset, ta=self._dummy)
         G = b2.NeuronGroup(c.N, eqs, threshold="v > v_thresh",
@@ -308,11 +341,19 @@ class EvoNet:
                     signs[j] = np.sign(col[0])
         exc = signs > 0
         pre_inh = ~exc[pre]; post_exc = exc[post]
-        ie_mask = pre_inh & post_exc          # I->E : plastic
-        rest_mask = ~ie_mask                  # E->E, E->I, I->I : static
+        pre_exc_m = exc[pre]
+        ie_mask = pre_inh & post_exc          # I->E : plastic (Vogels iSTDP, stabilizer)
+        ee_mask = pre_exc_m & post_exc        # E->E : plastic (eSTDP, learner -- D103) if dev_ee_stdp
+        # remaining static: E->I, I->I  (and E->E when eSTDP disabled)
+        if c.dev_ee_stdp:
+            rest_mask = ~ie_mask & ~ee_mask
+        else:
+            rest_mask = ~ie_mask
+            ee_mask = np.zeros_like(ee_mask)  # E->E stays in the static block
 
         self._syn = []
         self.con_ie = None
+        self.con_ee = None
 
         # --- static block: two-current, charge-conserved (D074/D075) -----------------------------
         if rest_mask.any():
@@ -359,6 +400,87 @@ class EvoNet:
             con_ie.gmax = c.dev_gmax
             self._syn.append(con_ie)
             self.con_ie = con_ie
+
+        # --- plastic E->E block: excitatory STDP (LEARNER, D103) ----------------------------------
+        # The MISSING HALF (D103): eSTDP self-organizes stimulus-selective structure. Canonical pair-
+        # based rule: pre-before-post -> LTP, post-before-pre -> LTD (Brian2 standard form). Runs
+        # SIMULTANEOUSLY with the Vogels iSTDP that stabilizes it (Srinivasa & Cho 2014: eSTDP learns,
+        # iSTDP balances -- they are a PAIR; the temporal-paradox blowup risk, Zenke/Gerstner, is why
+        # we adopt the tested paired form rather than eSTDP alone). Kind A (D087): w clips to
+        # [w_eps, gmax], never 0 -- support frozen, only magnitudes tune. Excitatory, so it deposits
+        # BOTH fast and slow currents with the D074/D075 charge split (unlike inhibitory Vogels).
+        # eta_e starts 0 (set by develop()); per-synapse eta/gmax (D084 door).
+        if ee_mask.any():
+            estdp = """
+            w : 1
+            eta_e : 1
+            gmax_e : 1
+            wf_scale : 1
+            ws_scale : 1
+            dapre/dt  = -apre/tau_estdp  : 1 (event-driven)
+            dapost/dt = -apost/tau_estdp : 1 (event-driven)
+            """
+            con_ee = b2.Synapses(
+                G, G, model=estdp,
+                on_pre="""apre += Aplus_e
+                          w = clip(w - apost*eta_e, w_eps_e, gmax_e)
+                          I_fast_post += w*wf_scale
+                          I_slow_post += w*ws_scale""",
+                on_post="""apost += Aminus_e
+                           w = clip(w + apre*eta_e, w_eps_e, gmax_e)""",
+                namespace=dict(tau_estdp=c.tau_estdp_dev * ms, w_eps_e=c.w_min_ee,
+                               Aplus_e=c.estdp_Aplus, Aminus_e=c.estdp_Aminus),
+                name="ee_plastic")
+            eep, eeq = pre[ee_mask], post[ee_mask]
+            con_ee.connect(i=eep, j=eeq)
+            con_ee.w = np.abs(self.W[eeq, eep])                       # magnitude
+            con_ee.eta_e = 0.0                                        # plasticity OFF by default
+            con_ee.gmax_e = c.dev_gmax_e
+            # D074/D075 charge split, same as the static excitatory synapses:
+            f = c.nmda_frac; charge_scale = c.tau_syn / c.tau_slow
+            con_ee.ws_scale = f * charge_scale
+            con_ee.wf_scale = (1.0 - f)
+            self._syn.append(con_ee)
+            self.con_ee = con_ee
+
+        # --- lateral-inhibition WTA COMPETITION (D103 third leg; DEVELOPABLE per PJM) --------------
+        # Each excitatory spike deposits fast inhibition (I_wta) onto all OTHER excitatory neurons, and
+        # this lateral inhibition is PLASTIC (Vogels-style iSTDP) so it BREAKS SYMMETRY over development:
+        # specific suppressive relationships strengthen (this neuron reliably suppresses that one),
+        # carving distinct winners rather than uniformly damping the field (the static version's flaw).
+        # Its effect is TEMPORAL/FUNCTIONAL (who fires when), not E->E weight variance. Non-genomic,
+        # driven by wta_eta in develop() -> development machinery, outside P. Present only when enabled.
+        self.con_wta = None
+        if c.dev_wta_comp:
+            exc_idx = np.nonzero(exc)[0]
+            if len(exc_idx) > 1:
+                aa, bb = np.meshgrid(exc_idx, exc_idx, indexing="ij")
+                off = aa != bb
+                src = aa[off].ravel(); tgt = bb[off].ravel()
+                wta_model = """
+                w : 1
+                eta : 1
+                alpha : 1
+                gmax : 1
+                dApre/dt  = -Apre/tau_wstdp  : 1 (event-driven)
+                dApost/dt = -Apost/tau_wstdp : 1 (event-driven)
+                """
+                con_wta = b2.Synapses(
+                    G, G, model=wta_model,
+                    on_pre="""Apre += 1.
+                              w = clip(w + (Apost - alpha)*eta, w_eps, gmax)
+                              I_wta_post -= w""",
+                    on_post="""Apost += 1.
+                               w = clip(w + Apre*eta, w_eps, gmax)""",
+                    namespace=dict(tau_wstdp=c.wta_tau * ms, w_eps=c.w_eps_dev),
+                    name="wta_comp")
+                con_wta.connect(i=src, j=tgt)
+                con_wta.w = c.wta_gain          # initial competition strength
+                con_wta.eta = 0.0               # plasticity OFF by default (driven by develop())
+                con_wta.alpha = c.wta_alpha
+                con_wta.gmax = c.wta_gmax
+                self._syn.append(con_wta)
+                self.con_wta = con_wta
 
         self.G = G
         self.S = self._syn[0] if self._syn else None                 # back-compat alias
@@ -411,27 +533,34 @@ class EvoNet:
         return dict(rates=state[:, self.cfg.out_slice()], state=state, state_var=state_var)
 
     # --- Kind-A development: Vogels inhibitory plasticity, in-simulation (D086/D087) -----------
-    def develop(self, E, eta=1e-2, dev_ms=None, warmup_ms=200.0, n_checkpoints=10, seed=None):
-        """Mature the network by running Vogels inhibitory plasticity on the I->E synapses while
-        the stimulus stream drives it. Event-driven INSIDE net.run() — no Python-side weight
-        write-back (the fragility that broke the Oja prototype).
+    def develop(self, E, eta=1e-2, dev_ms=None, warmup_ms=200.0, n_checkpoints=10, seed=None,
+                eta_e=None):
+        """Mature the network by running plasticity while the stimulus stream drives it. Event-driven
+        INSIDE net.run() -- no Python-side weight write-back (the fragility that broke Oja).
 
-        seed : if given, re-seed Brian2 before development so the (noisy) development run is
-            REPRODUCIBLE. Without this, development noise makes the developed weights differ every
-            call -> nondeterministic evaluation. Set it for deterministic runs.
+        Two paired mechanisms (D103):
+          - Vogels iSTDP on I->E (rate `eta`): the STABILIZER (E/I balance, homeostatic).
+          - eSTDP on E->E (rate `eta_e`): the LEARNER (self-organizes stimulus-selective structure) --
+            the missing "expression" half. Runs SIMULTANEOUSLY with the stabilizer (Srinivasa & Cho:
+            eSTDP learns, iSTDP balances; they are a pair, per the temporal-paradox caution). Only
+            active if the net has E->E plastic synapses (cfg.dev_ee_stdp). Default eta_e = 0.5*eta
+            (excitatory learner a bit slower/comparable to the inhibitory stabilizer; tune per cfg).
 
-        Kind A (D087): only I->E fast magnitudes change; the support (which synapses exist) is
-        frozen by the w_eps clip, so nominal-P is invariant. Returns a convergence trace (mean
-        plastic |w| per checkpoint). NaN tripwire aborts loud (the Oja lesson). No-op if the net
-        has no I->E synapses.
+        seed : re-seed Brian2 for a reproducible (noisy) development run.
+        Kind A (D087): only plastic MAGNITUDES change; support frozen by the w_eps clip (nominal-P
+        invariant). Returns convergence trace(s). NaN tripwire aborts loud (Oja lesson).
         """
         c = self.cfg
-        if self.con_ie is None:
-            return dict(converged=True, trace=[], reason="no I->E synapses (nothing to develop)")
+        has_ie = self.con_ie is not None
+        has_ee = self.con_ee is not None
+        if not has_ie and not has_ee:
+            return dict(converged=True, trace=[], reason="no plastic synapses (nothing to develop)")
         if seed is not None:
             b2.seed(seed)
         if dev_ms is None:
             dev_ms = float(max(20.0 * E.shape[0] * c.present_ms / c.present_ms, 1000.0))
+        if eta_e is None:
+            eta_e = 0.5 * eta
 
         n = E.shape[0]
         drive = np.zeros((n, c.N)); drive[:, :c.n_in] = c.input_gain * E
@@ -439,42 +568,64 @@ class EvoNet:
         self.net.restore("init")
         self.G.namespace["ta"] = ta
 
-        self.con_ie.eta = 0.0                       # warm-up: plasticity off, let dynamics settle
+        # warm-up: all plasticity off, let dynamics settle
+        if has_ie: self.con_ie.eta = 0.0
+        if has_ee: self.con_ee.eta_e = 0.0
+        if self.con_wta is not None: self.con_wta.eta = 0.0
         if warmup_ms > 0:
             self.net.run(warmup_ms * ms)
 
-        self.con_ie.eta = float(eta)                # development: plasticity on, checkpointed
-        trace = []
+        # development: plasticity on (all mechanisms together), checkpointed
+        if has_ie: self.con_ie.eta = float(eta)
+        if has_ee: self.con_ee.eta_e = float(eta_e)
+        if self.con_wta is not None: self.con_wta.eta = float(eta)  # competition develops at the iSTDP rate
+        trace, trace_e = [], []
         chunk = dev_ms / max(n_checkpoints, 1)
         for _ in range(n_checkpoints):
             self.net.run(chunk * ms)
-            w = np.asarray(self.con_ie.w)
-            if not np.all(np.isfinite(w)):
-                return dict(converged=False, trace=trace, reason="NaN/inf in plastic weights (abort)")
-            trace.append(float(np.mean(w)))
+            if has_ie:
+                w = np.asarray(self.con_ie.w)
+                if not np.all(np.isfinite(w)):
+                    return dict(converged=False, trace=trace, reason="NaN/inf in I->E weights (abort)")
+                trace.append(float(np.mean(w)))
+            if has_ee:
+                we = np.asarray(self.con_ee.w)
+                if not np.all(np.isfinite(we)):
+                    return dict(converged=False, trace=trace, trace_e=trace_e,
+                                reason="NaN/inf in E->E weights (abort)")
+                trace_e.append(float(np.mean(we)))
 
-        self.con_ie.eta = 0.0
+        if has_ie: self.con_ie.eta = 0.0
+        if has_ee: self.con_ee.eta_e = 0.0
+        if self.con_wta is not None: self.con_wta.eta = 0.0
         self._commit_developed_weights()
         # reset neuron+trace state to rest, THEN re-store "init", so behave() starts clean but with
-        # the DEVELOPED weights (not the dirty end-of-development state).
+        # the DEVELOPED weights.
         self.G.v = c.v_rest
         self.G.I_fast = 0; self.G.I_slow = 0; self.G.r = 0
-        self.con_ie.Apre = 0; self.con_ie.Apost = 0
+        if has_ie: self.con_ie.Apre = 0; self.con_ie.Apost = 0
+        if has_ee: self.con_ee.apre = 0; self.con_ee.apost = 0
+        if self.con_wta is not None: self.con_wta.Apre = 0; self.con_wta.Apost = 0
         self.net.store("init")
 
-        conv = (len(trace) >= 2 and abs(trace[-1] - trace[-2]) < 0.01 * (abs(trace[-1]) + 1e-9))
-        return dict(converged=bool(conv), trace=trace, reason="ok")
+        # convergence: primary trace is whichever plastic block exists (prefer the learner if present,
+        # since eSTDP settling is the meaningful "representation formed" signal, D103).
+        primary = trace_e if has_ee else trace
+        conv = (len(primary) >= 2 and abs(primary[-1] - primary[-2]) < 0.01 * (abs(primary[-1]) + 1e-9))
+        return dict(converged=bool(conv), trace=trace, trace_e=trace_e, reason="ok")
 
     def _commit_developed_weights(self):
-        """Write developed plastic I->E magnitudes back into self.W (as negative -- inhibitory),
-        so n_params / effective-P / behave see the matured network. Support preserved. I->E has
-        no slow component (w_slow=0 for inhibitory), so only the fast/effective W changes."""
-        if self.con_ie is None:
-            return
-        i = np.asarray(self.con_ie.i)      # presynaptic (source)
-        j = np.asarray(self.con_ie.j)      # postsynaptic (target)
-        w = np.asarray(self.con_ie.w)      # magnitude (>=0)
-        self.W[j, i] = -w                  # W[post, pre] = -magnitude (inhibitory)
+        """Write developed plastic magnitudes back into self.W so n_params / effective-P / behave
+        see the matured network. Support preserved. I->E committed as NEGATIVE (inhibitory, no slow
+        component); E->E committed as POSITIVE (excitatory, D103 eSTDP learner)."""
+        if self.con_ie is not None:
+            i = np.asarray(self.con_ie.i); j = np.asarray(self.con_ie.j)
+            w = np.asarray(self.con_ie.w)
+            self.W[j, i] = -w              # W[post, pre] = -magnitude (inhibitory)
+        if self.con_ee is not None:
+            ie = np.asarray(self.con_ee.i); je = np.asarray(self.con_ee.j)
+            we = np.asarray(self.con_ee.w)
+            self.W[je, ie] = we           # W[post, pre] = +magnitude (excitatory)
 
 
 def behave_batch(genomes, cfg, E):

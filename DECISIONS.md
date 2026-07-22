@@ -4234,3 +4234,51 @@ does eSTDP-WITH-competition change eff_rank / produce large state_change where e
 grid is now a reusable instrument for that A/B. Then, in whatever region competition makes eSTDP live,
 run the across-genome spread test. Also note the spread probe should be re-run at a live eta_e (not the
 weak default) once competition is in.
+
+### D107 — Developable lateral-inhibition competition built (D103 third leg). PJM's two corrections: competition must be DEVELOPABLE (not static), and its differentiation is FUNCTIONAL/temporal (not E->E weight variance). First movement off the floor.
+**2026-07-22 · Build + finding · toggle dev_wta_comp (off-switch retained per PJM)**
+
+**FIRST ATTEMPT (wrong) + PJM'S CORRECTIONS.** Built competition as a STATIC, symmetric, all-to-all
+fast inhibition among E neurons. It suppressed firing hard (mean_state 1.15->0.24, sparsity 0.19->0.82
+as gain rose) but did NOT increase E->E weight variance (flat 0.124 across 100x gain) -- I read that as
+failure. PJM corrected on two counts, both right:
+  1. **Static lateral inhibition can't differentiate.** A fixed symmetric all-to-all term just DAMPS
+     everyone uniformly = no selection. The differentiating power lives in the competition's
+     DEVELOPABILITY -- it must break symmetry over developmental time (specific suppressive
+     relationships forming: this neuron reliably suppresses that one) to carve distinct winners.
+  2. **The differentiation is FUNCTIONAL/temporal, not structural in E->E weights.** WTA changes WHO
+     FIRES WHEN (the activity manifold), which need not show up as E->E weight-variance. I was measuring
+     the wrong signature (imported from one paper's structural readout); the sparsification I saw WAS
+     the WTA effect, in the activity where PJM said it lives. And it's what our (A) commitment actually
+     cares about (representation = activity manifold, not weight scalars).
+
+**BUILT (corrected): DEVELOPABLE competition.** Lateral inhibition among E neurons (all-to-all excl.
+self) is now PLASTIC -- its own Vogels-style iSTDP (traces Apre/Apost, target-rate alpha, clip to
+[w_eps, gmax]), driven by develop() at the iSTDP rate, so it breaks symmetry over development. Deposits
+into a new fast I_wta neuron current (tau_wta~5ms). Non-genomic, development machinery -> OUTSIDE P.
+Toggle dev_wta_comp (OFF by default -> retains PJM's ability to test what selection does with NO a
+priori competition). The batched behave path is unchanged (competition is development-time; its effects
+reach behave via committed weights). Regression VERIFIED: all-off unchanged (0.960).
+
+**FINDING (measured FUNCTIONALLY per correction #2): competition moves the representation where eSTDP-
+alone (D106) could not.** eSTDP-only == baseline on every measure (eff_rank 29->29, selectivity
+0.87->0.88 -- confirms D106 inertness). eSTDP + DEV-COMPETITION: eff_rank 29->16, per-neuron
+across-input variability 0.87->0.52, and test_err 0.970->0.946 -- **the FIRST movement off the floor by
+any development manipulation.** So competition clears the "does it reshape the representation" bar that
+eSTDP-alone failed.
+
+**INTERPRETATION HELD WITH DISCIPLINE (one net, one seed, small effect -- the over-reading trap).**
+eff_rank and selectivity went DOWN. Two readings, undistinguished by this measurement: OPTIMISTIC =
+competition consolidates high-dim NOISE-driven activity (eff_rank~30 was largely noise, D105/D106) into
+a lower-dim STRUCTURED representation (WTA should reduce dimensionality; test_err improved, consistent);
+SKEPTICAL = competition merely SUPPRESSES activity (quieter net trivially has lower-dim, less-variable
+state) = suppression not differentiation (the selectivity DROP is the worrying sign -- true distinct
+winners might RAISE per-neuron selectivity). Can't tell from one measurement. test_err off the floor is
+the most encouraging single number but small + unreplicated.
+
+**NEXT (the real gate).** Not "what does competition do to one net" but the (A)-commitment VARIATION
+TEST: does eSTDP+competition produce representational SPREAD -> fitness SPREAD ACROSS GENOMES? Competition
+cleared the bar to EARN that test (eSTDP-alone did not). Also RE-RUN THE D106 LANDSCAPE with competition
+on, measured FUNCTIONALLY (eff_rank/selectivity/state-change across genomes, not weight variance), to map
+where competition is productive vs merely suppressive -- which directly adjudicates the optimistic-vs-
+skeptical reading above.
