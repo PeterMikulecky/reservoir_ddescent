@@ -642,3 +642,51 @@ motif dissociation (item 1) rather than the density sweep.
 
 **Open reads (priority order):** Clark/Abbott/Litwin-Kumar 2023; Cayco-Gajic 2017;
 Litwin-Kumar 2017 in full; Dambre 2012; the E/I-ratio PR paper in full.
+
+### Jordan, Schmidt, Senn & Petrovici 2021 — "Evolving interpretable plasticity for spiking networks" (eLife 10:e66273)
+E2L: evolves the plasticity RULE as a symbolic expression (Cartesian genetic programming) on a fixed
+architecture — the mirror of our approach (we evolve the net, hand-design the rules). Evolve-the-rule is
+out of scope for us. Mined for three transferable insights (see POST_PILOT_QUEUE E-series):
+- **GA efficiency:** cache fitness for unchanged genomes (their silent-mutation caching; our analogue is
+  don't re-develop unchanged elites) — E1.
+- **Weight-dependent (multiplicative, soft-bound) STDP** naturally bimodalizes weights = differentiation
+  we lack with additive+clip (Gütig et al. 2003 form) — E2.
+- **Homeostasis as differentiator, not just stabilizer:** their evolved homeostatic terms drove weight
+  DIVERGENCE (strong=signal / weak=background), explicitly beyond "maintaining a working point." Directly
+  reframes our Vogels-stabilizer leg; testable hypothesis that our stabilizer may be SUPPRESSING
+  differentiation — E3.
+Also: task-difficulty-as-knob / evolve-on-simplified-then-transfer reinforces the curriculum thread (E5);
+slow novelty-accumulator + evolutionary-hurdles as minor primitives (E4). Their cost regime (~24-48 node-
+hrs/run, 10³-10⁴ sims/run) is comparable to ours, so caching is the real efficiency lever, not a magic
+speedup. Their validation depends on tasks with known-optimal rules — a loop unavailable to us by design.
+
+### Fernando, Karishma & Szathmáry 2008 — "Copying and Evolution of Neuronal Topology" (PLoS ONE 3(11):e3775)
+Foundational paper of the neuronal-replicator / Darwinian-neurodynamics program. Proposes STDP + topo-
+graphic maps can COPY neuronal connectivity between brain regions, enabling TRUE Darwinian evolution
+(replication + heritable variation + selection) inside the brain — distinct from selectionist theories
+(Edelman, Changeux), which they argue are "a population of stochastic hill-climbers" (selection WITHOUT
+replication), a strictly weaker search. Key transferable findings (see POST_PILOT_QUEUE S-series):
+- **Heritability is the crux + the hard part** (S1): they PROVE the process is Darwinian by plotting
+  parent-vs-offspring fitness (Figs 15/16). Bare STDP copies only 2/15 motifs; needs error-correcting
+  observer neurons, reverberation-limiting gating, neuromodulation, layer resetting. → test whether OUR
+  develop-then-select produces HERITABLE fitness, or is merely selectionist (flat-fitness diagnosis).
+- **Activity reverberation corrupts structure; sparse activation fixes it** (S2): non-local spread makes
+  spurious cross-correlations (4 named failure modes); 1 Hz vs 5 Hz dramatically improves fidelity. →
+  candidate mechanism for OUR funnel + third vote for the excessive-density hypothesis.
+- **LTD/LTP ratio controls formed structure** (S3, Figs 7/8): an unswept knob in our eSTDP
+  (estdp_Aplus/Aminus).
+- **Oja + lateral-inhibition soft competition, WTA cleans up "shifts and compressions"** (S4): indep.
+  arrival at our eSTDP+competition design; better vocabulary than "funnel."
+
+### Fernando, Vasas, Szathmáry & Husbands 2011 — "Evolvable Neuronal Paths" (PLoS ONE 6(8):e23534)
+Same program: neuronal PATHS (not just topology) as evolvable units — paths grow collaterals to recruit
+nodes, activity spreads probabilistically along competing paths, good paths strengthened by reward. A
+selection-among-paths mechanism inside the brain. Reinforces the selectionist-vs-truly-Darwinian
+distinction (S5) that sharpens our three-learnings disentanglement. (Related IEEE TNN 2010
+10.1109/TNN.2010.2083685 in the same cluster; not pulled — the two PLoS papers carry the core.)
+
+**CONVERGENCE (recorded in queue):** three independent sources — PJM's pre-sweep density intuition,
+E2L's weight-dependent-STDP/homeostasis-as-differentiator, and this Szathmáry reverberation/sparsity
+work — now point at ONE hypothesis: too much activity/connectivity/reverberation is PREVENTING
+differentiation. "Reduce activity/density, re-measure differentiation functionally" is the most-converged
+post-sweep experiment.

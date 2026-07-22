@@ -270,3 +270,168 @@ Srinivasa & Cho 2014 (closest architecture), Diehl & Cook 2015 (eSTDP+WTA), Bria
 **REVISED TOP OF WALK:** H1/H2 (add eSTDP + test competition + validate representation forms) is now the
 single highest-priority action — the identified root cause. Everything else waits behind "does
 development now produce a network whose state beats the floor."
+
+---
+
+## E-series — threads from Jordan/Schmidt/Senn/Petrovici 2021 (E2L, eLife 66273)
+
+**Source.** "Evolving interpretable plasticity for spiking networks," eLife 10:e66273. They evolve the
+plasticity RULE itself (symbolic, via Cartesian genetic programming) on a FIXED architecture — the mirror
+image of us (we evolve the network, hand-design the rules). The evolve-the-rule philosophy is OUT OF
+SCOPE for us (PJM), and their validation loop depends on tasks with KNOWN-optimal rules to check against,
+which our task lacks by design. But three mechanistic/efficiency insights transfer. Gate: weigh these
+AFTER reading the dev×beta sweep — they're the "if the sweep comes back ambiguous / metrics aren't telling
+us what to tweak" branch, not automatic.
+
+### E1 — GA efficiency: fitness cache on unchanged genomes (MOST ACTIONABLE, possibly free)
+Their biggest speedup: CGP's genotype/phenotype degeneracy means many mutations are SILENT (genome
+changes, phenotype doesn't), so they cache fitness by phenotype and only evaluate genomes whose phenotype
+actually changed. Our genome→phenotype map ISN'T degenerate that way (every weight change changes the
+net), so the trick doesn't transfer directly. BUT the principle does: **don't re-evaluate what hasn't
+changed.** ACTION: check whether our GA re-develops+re-assays UNCHANGED ELITES carried forward by
+elitism. If it does, a fitness cache keyed on genome-hash is free speedup — and development is our
+dominant cost (~5-6s/genome), so unchanged elites re-developed every generation is pure waste. Cheap to
+check, potentially real savings. Do this regardless of sweep outcome.
+
+### E2 — eSTDP form: additive+clip vs weight-dependent (multiplicative / soft-bound) — DIFFERENTIATION lever
+Their evolved correlation rules used WEIGHT-DEPENDENT updates (e.g. −(w−1)·E, Gütig-style soft bounds):
+potentiate small weights more, saturate near max. Property: weight-dependent bounds naturally produce a
+BIMODAL weight distribution (weights pushed toward 0 or max, not piled mid-range) = structural
+differentiation. We use ADDITIVE eSTDP with HARD clips (floor/ceiling). The bimodalization they get is
+exactly the differentiation we've failed to produce (D106/D107 funnel problem). HYPOTHESIS: switching
+eSTDP from additive+clip to weight-dependent (multiplicative, soft-bound) might produce weight
+differentiation intrinsically, where our additive form drifts uniformly. Candidate mechanism change,
+mechanistically tied to our core stuck-point. (Caveat: adopt a TESTED form, D086 — Gütig et al. 2003 is
+the reference; don't hand-roll.)
+
+### E3 — homeostasis as DIFFERENTIATOR, not just stabilizer (DEEPEST insight; directly testable NOW)
+Their key finding: evolved homeostatic terms were NOT merely maintaining a set-point — they did
+computational work by DRIVING WEIGHT DIVERGENCE (pre-synaptically-triggered homeostasis potentiates large
+weights more than small → splits distribution into strong=signal / weak=background). They explicitly
+contrast this with "the classical perception of homeostatic mechanisms as merely maintaining an ideal
+working point."
+
+Why it matters for US: our trinity assigns a CLEAN division of labor — eSTDP learns, competition
+differentiates, Vogels STABILIZES (treated as computationally inert, just prevents runaway). This paper
+is direct evidence the stabilizer/homeostatic leg CAN ITSELF be the differentiator. That collapses a
+distinction we've treated as fundamental. Two implications:
+  (a) our failure to get differentiation from COMPETITION may be partly because we asked the wrong leg —
+      the homeostatic leg, if made weight-dependent (potentiate-strong-more), might differentiate.
+  (b) WORSE POSSIBILITY, and it's a checkable pathology: our Vogels leg, tuned only for stability, might
+      be COMPRESSING the weight distribution (mean-reverting toward a set-point) = actively SUPPRESSING
+      the differentiation we're trying to produce elsewhere. Stabilizer and differentiator working
+      against each other.
+
+**DIRECTLY TESTABLE NOW (doesn't need the sweep):** measure whether our current Vogels iSTDP, during
+development, COMPRESSES or PRESERVES weight-distribution spread. Take developed networks with Vogels
+on vs off (or strong vs weak), measure the spread/bimodality of the weight distribution (not weight
+VARIANCE as a scalar — the D107 wrong-signature lesson — but the actual distributional shape: is it
+splitting toward 0/max, or piling toward a common value?). If Vogels compresses spread, it's fighting
+differentiation, and a weight-dependent homeostatic form (per E2) could flip it from suppressor to driver.
+This is the meatiest thread and connects straight to the live competition/funnel question.
+
+### E4 — two novel primitives (lower priority, flagged for completeness)
+- **Slow novelty-accumulator that modulates plasticity + resets on context change.** Their reward rules
+  used a slow internal variable (expected-abs-reward, ramps 0→1 over ~50s) modulating effective learning
+  rate, with a suggested RESET on new task ("novelty signal"). Strip the reward framing (we don't have
+  reward): the abstract primitive is a slow accumulator that detects distribution shift and modulates
+  plasticity. Mechanistically aligned with OUR task (unsignaled context switches inferred from
+  statistics). We have no such primitive. Speculative but genuinely different from our arsenal.
+- **Evolutionary hurdles (So et al. 2019):** cheap early-abort screen (brief development + few contexts)
+  before full evaluation; only survivors get the full budget. Conditional on the cheap screen correlating
+  with full fitness — our floor problem might make everything look equally bad on a short screen,
+  defeating it. Worth a thought if compute becomes the binding constraint.
+
+### E5 — task-difficulty as a knob / evolve-on-simplified-then-transfer (reinforces H-3 curriculum thread)
+They flag task difficulty as a lever against overfitting (more sample-tasks per eval; or evolve scalable
+solutions on SIMPLIFIED tasks then apply to complex instances). This is the CURRICULUM idea (PJM's
+graded-GA thread) now with an EFFICIENCY motivation on top of the biological-fidelity one. Two independent
+motivations converging → curriculum worth exploring. Cross-ref the graded-GA thread from the pre-sweep
+musings (density / size / curriculum trio).
+
+**PRIORITY ORDER when we return to these:** E1 (free speedup, do regardless) → E3 test (Vogels
+compress-vs-preserve, testable now, meatiest) → E2 (weight-dependent eSTDP, tied to E3) → E5/curriculum →
+E4 (speculative). All gated on: does the dev×beta sweep give a clear climbing region? If yes, maybe none
+needed. If ambiguous, this is the mechanism-borrowing menu.
+
+---
+
+## S-series — threads from Szathmáry / Fernando "Darwinian neurodynamics" / neuronal-replicator program
+
+**Sources.** Fernando, Karishma & Szathmáry 2008, "Copying and Evolution of Neuronal Topology," PLoS ONE
+3(11):e3775 (foundational). Fernando, Vasas, Szathmáry & Husbands 2011, "Evolvable Neuronal Paths,"
+PLoS ONE 6(8):e23534. (A third, IEEE TNN 2010 10.1109/TNN.2010.2083685, in the same cluster — not
+pulled; the two PLoS papers carry the core.) Central thesis: can TRUE Darwinian evolution — replication
++ heritable variation + selection — run INSIDE the brain, on neural substrate, at cognitive timescales?
+This is the rigorous deep version of our three-learnings disentanglement.
+
+### S1 — Test HERITABILITY directly (testable NOW; may reframe the whole flat-fitness problem)
+Fernando & Szathmáry draw a sharp, PROVEN distinction we've been treating loosely:
+  - SELECTIONIST (Edelman Neural Darwinism, Changeux synaptic selection): a fixed primary repertoire
+    competes for resources, winners stabilized. They argue this is "a population of stochastic
+    hill-climbers" — selection WITHOUT replication.
+  - TRUE DARWINIAN: units replicate WITH HERITABLE VARIATION. Proven to be strictly MORE powerful for
+    search in a sparsely-occupied space ("the most powerful mechanism").
+Our GA has replication (genomes copy+mutate) but our DEVELOPMENT does not. When we ask "does development
+produce variation selection can amplify," we've implicitly assumed the selectionist frame. The sharper
+question: is developed-phenotype fitness HERITABLE across our develop-then-select generations (parent→
+offspring correlation)? If NOT, that's a DIFFERENT flat-fitness diagnosis than "development is inert" —
+it's "development produces variation but not HERITABLE variation," so selection has nothing to compound.
+Their central rigor-move (e3775 Figs 15/16) is literally plotting parent-vs-offspring fitness to prove
+the process is Darwinian not selectionist. ACTION (cheap, doesn't need the sweep): across our GA
+generations, measure parent-offspring fitness correlation (heritability h²-like). Flat + non-heritable =
+root cause is loss of heritability; flat + heritable = development genuinely inert. This partitions the
+flat-fitness hypothesis space a new way. Their sobering lesson: getting genuine heritable replication out
+of neural substrate is HARD (they needed error-correcting observer neurons EC1/EC2, reverberation-
+limiting inhibitory gating, neuromodulatory gating, layer resetting; bare STDP copied only 2/15 motifs).
+So heritability is the hard part and shouldn't be assumed of our simpler loop.
+
+### S2 — Activity REVERBERATION as the funnel mechanism; SPARSE activation as fix (ties density thread)
+Their STDP-based structure-inference is CORRUPTED by activity reverberation: stimulate one neuron,
+activity spreads widely, creating SPURIOUS cross-correlations. They enumerate four failure modes —
+mistaken dependence, transitive inference, reciprocal interference, causal dominance — all from non-local
+activity spread. THE FIX that worked: SPARSE ACTIVATION (1 Hz vs 5 Hz) "limits the extent of
+cross-correlations arising from non-causal associations," dramatically improving fidelity; their
+Mechanism C explicitly limits spread (local horizontal / global vertical). DIRECTLY relevant to us: we
+run at HIGH noise (σ≈threshold) with freely-spreading recurrent activity = exactly the reverberation
+regime where spurious correlations swamp real structure. HYPOTHESIS: our differentiation/funnel failure
+may BE an activity-reverberation problem — too much recurrent spread makes non-causal correlations that
+prevent clean structure from forming. This is a NAMED MECHANISM for the funnel + a specific remedy
+(sparsify activity / limit reverberation), and a third independent vote for PJM's "excessive density /
+too much activity" intuition (cross-ref pre-sweep density thread + E-series). Test: does lower
+activity/density improve functional differentiation (measured functionally per D107, not weight variance)?
+
+### S3 — LTD/LTP ratio: an UNSWEPT development knob that controls what structure forms
+They show the RATIO of LTD-to-LTP area under the STDP curve controls the false-positive/false-negative
+balance of formed structure (e3775 Fig 7 vs 8): LTD>LTP biases toward LOSING connections (false
+negatives), LTD<LTP toward SPURIOUS ones (false positives). We have eSTDP estdp_Aplus/Aminus and have
+NOT swept it. Their work says it's load-bearing for what structure develops. If our development washes
+out structure, the LTD/LTP balance is a specific, mechanistically-motivated thing to check — are we in a
+regime that erases the very structure we want? Cheap sweep once we're tuning development.
+
+### S4 — Design-choice VALIDATION + better vocabulary (not an action, a confirmation)
+They use Oja + lateral-inhibition SOFT competition for map formation and note WTA/HARD competition cleans
+up residual "shifts and compressions" — the EXACT eSTDP + lateral-inhibition-competition combination we
+built, hitting the EXACT issue we did (soft competition leaves imperfections harder competition
+resolves). Independent arrival at our design = reassuring. Their "shifts and compressions" is more
+precise vocabulary than our "funnel" for the differentiation-failure modes; worth adopting.
+
+### S5 — Framing: "truly Darwinian vs a population of hill-climbers" sharpens the disentanglement
+The selectionist-vs-Darwinian distinction is exactly the rigor our three-learnings disentanglement
+(slide 7 / A11) needs. "Is our develop-then-select process truly Darwinian (heritable variation) or a
+population of hill-climbers (selectionist)?" is a sharp question a CLL/complex-systems audience would
+appreciate, and it's answered by the S1 heritability test. Candidate addition to the deck's appendix
+and to how we frame the (A)-commitment.
+
+**PRIORITY when we return:** S1 (heritability test — cheap, now, may reframe everything) alongside E1/E3
+as the "testable now, doesn't need the sweep" diagnostics. Then S2 (reverberation/sparsity — converges
+with density thread + E-series on the same "too much activity" hypothesis from a third direction). S3
+(LTD/LTP) and S4/S5 (validation/framing) as we tune development and revise the deck. All still gated on
+reading the dev×beta sweep first.
+
+**CONVERGENCE NOTE.** Three independent threads now point at the SAME hypothesis — that we have too much
+activity/connectivity/reverberation and it's PREVENTING differentiation: (1) PJM's pre-sweep density
+intuition (<0.2 may help), (2) E-series weight-dependent-STDP bimodalization + homeostasis-as-
+differentiator, (3) S-series reverberation→spurious-correlation→corrupted-structure + sparse-activation
+fix. When we return post-sweep, "reduce activity/density and re-measure differentiation functionally" is
+the most-converged next experiment.
