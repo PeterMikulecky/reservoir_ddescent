@@ -1,0 +1,34 @@
+# analysis log: heritability_probe
+# timestamp: 2026-07-22T13:00:35.278392
+# command: scripts/heritability_probe.py
+# S1: is developed-fitness HERITABLE parent->offspring? (Darwinian vs selectionist; post-D108)
+#====================================================================
+
+[logging to analysis_logs\20260722-130035_heritability_probe.log]
+Discriminates the D108 flat-landscape: (a) no variation vs (b) non-heritable variation.
+
+[eSTDP only (comp OFF)] N=30 parent-child pairs
+  fitness variation:   SD(parent fitness) = 0.0297
+  fitness heritability: parent-child corr r = +0.028   realized h^2 (slope) = +0.022
+  regulation variation: SD = 0.0155   parent-child corr r = +0.294
+  => (b) VARIATION PRESENT but NOT HERITABLE (corr~0) — SELECTIONIST, not Darwinian.
+        Selection cannot compound it. Development produces variation that doesn't transmit.
+
+[eSTDP + competition (comp ON, wta_gain=1)] N=30 parent-child pairs
+  fitness variation:   SD(parent fitness) = 0.0333
+  fitness heritability: parent-child corr r = -0.025   realized h^2 (slope) = -0.027
+  regulation variation: SD = 0.0094   parent-child corr r = +0.287
+  => (b) VARIATION PRESENT but NOT HERITABLE (corr~0) — SELECTIONIST, not Darwinian.
+        Selection cannot compound it. Development produces variation that doesn't transmit.
+
+======================================================================
+SUMMARY (heritability of developed fitness)
+======================================================================
+  comp OFF: SD=0.0297  r=+0.028  h^2=+0.022
+  comp ON:  SD=0.0333  r=-0.025  h^2=-0.027
+
+RECALL (D108): the sweep showed transient below-floor dips that never consolidate.
+If r~0 here, that non-consolidation IS a heritability failure (selectionist) -> the fix is
+about making variation transmit (e.g. the reverberation/structure-copying angle, S2), not
+about more selection pressure. If r>0, heritability is fine and the density-activity
+hypothesis (too much activity -> poor differentiation) is the live lead.
