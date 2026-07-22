@@ -4185,3 +4185,52 @@ the watch-list alongside the H-series). NOT chased now.
 **SPOT-CHECK (deferred to when the variation test runs, per D104):** validate this floor against full-
 vanishing (w_eps=1e-9) at a few representative P_dev points -- agreement validates the floor throughout;
 disagreement flags load-bearing pruning.
+
+### D106 — eSTDP effectiveness landscape (SNR x eta_e): rules OUT both tuning suspects (noise/rate), points AT the deferred competition leg. Measured on an UNSELECTED randomized network.
+**2026-07-22 · Finding (diagnostic, not yet a design change) · logged analysis_logs/*estdp_effectiveness_landscape* + *estdp_spread_probe***
+
+**CONTEXT.** After building eSTDP (D103), two probes on UNSELECTED random networks:
+1. **Spread probe** (estdp_spread_probe): population of 12 unselected genomes, eSTDP ON vs OFF. Fitness
+   spread SD 0.0198 (ON) vs 0.0195 (OFF) = 1.02x; eff_rank(state) spread also ~equal. eSTDP made ~no
+   difference to cross-genome representational OR fitness spread. BUT it used the WEAK DEFAULT
+   eta_e=5e-4 (0.5*dev_eta) -> possibly underpowered. Motivated the landscape.
+2. **Effectiveness landscape** (estdp_landscape): ONE fixed randomized base network; sweep noise_sigma
+   (SNR) in [0.1,0.25,0.5,1.0] x eta_e in [5e-4,2e-3,5e-3,2e-2]; per cell measure how much eSTDP
+   RESHAPES the representation vs its own OFF-baseline (state_change, w_diff_std, eff_rank).
+
+**LANDSCAPE FINDINGS (disentangles the tangled suspects):**
+- **eta_e works as expected but is a WEAK lever:** w_diff_std climbs cleanly with eta_e (0.003->0.11),
+  and state_change rises with it too but only weakly -- even at eta_e=0.02 (40x the default),
+  state_change maxes at ~0.15 (a 15% state perturbation).
+- **SNR barely matters -- D105's low-SNR-kills-eSTDP hypothesis NOT supported:** state_change is nearly
+  flat DOWN each noise column (e.g. at eta_e=0.02: 0.149/0.130/0.131/0.122 across noise 0.1->1.0). eSTDP
+  is about equally (in)effective at very-quiet (0.1) and current-near-threshold (1.0) noise. The noise
+  regime is NOT the wall. (Representational RICHNESS is set by noise: OFF eff_rank 13/17/23/30 as noise
+  rises -- more noise, higher rank -- but that's the noise, not eSTDP.)
+- **THE CORE FINDING: eSTDP does NOT change representational DIMENSIONALITY anywhere.** eff_rank_on ==
+  eff_rank_off in EVERY cell (13/13, 17/17, 23/23, 30/30). eSTDP moves weights and nudges the state
+  ~15% at best, but never alters the effective dimensionality of the representation, at any (SNR,eta_e).
+
+**INTERPRETATION (held with discipline -- one grid, unselected net).** Both TUNING hypotheses (eta_e,
+SNR) are largely RULED OUT as the explanation for the flat spread -- cranking eta_e 40x and quieting
+noise 10x does not unlock a qualitatively different regime. The finding is that **eSTDP-ALONE is a weak
+lever on the representation** (no dimensionality change, modest perturbation). This points at the
+DEFERRED THIRD LEG of the D103 trinity: **COMPETITION via lateral inhibition.** We built eSTDP (learner)
++ Vogels (stabilizer) and DEFERRED competition, betting it might emerge through existing inhibitory
+structure. The grid is evidence it does NOT: the dual-STDP literature (D103 refs) was explicit that
+FS-mediated lateral-inhibition WTA competition is what drives HETEROGENEOUS E->E differentiation; without
+it, eSTDP changes wash out (LTD-bias / uniform-drift failure mode the literature warned of). So the
+deferred piece looks NECESSARY, not optional.
+
+**IMPORTANT FRAMING (PJM).** These results are for an UNSELECTED, RANDOMIZED network, WITHOUT lateral
+competition. This is the FLOOR of expected performance, not a verdict on the mechanism: (a) selection
+hasn't acted -- we're looking at raw pre-selection material; (b) the punch isn't spiked -- competition,
+the leg the grid itself fingers as missing, isn't in yet. Reasons for optimism that eSTDP+competition,
+under selection, behaves very differently. NOT a "don't build" verdict -- a "build the RIGHT next thing
+(competition) before the full stack" signal.
+
+**NEXT.** Add lateral-inhibition WTA competition (D103 third leg) and RE-RUN THIS EXACT LANDSCAPE:
+does eSTDP-WITH-competition change eff_rank / produce large state_change where eSTDP-alone did not? The
+grid is now a reusable instrument for that A/B. Then, in whatever region competition makes eSTDP live,
+run the across-genome spread test. Also note the spread probe should be re-run at a live eta_e (not the
+weak default) once competition is in.
