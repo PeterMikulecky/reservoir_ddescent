@@ -4282,3 +4282,60 @@ cleared the bar to EARN that test (eSTDP-alone did not). Also RE-RUN THE D106 LA
 on, measured FUNCTIONALLY (eff_rank/selectivity/state-change across genomes, not weight variance), to map
 where competition is productive vs merely suppressive -- which directly adjudicates the optimistic-vs-
 skeptical reading above.
+
+### D108 — The dev×beta sweep: FLAT landscape. Joint-tuning hypothesis NOT supported. Redirects to the converged density/heritability threads.
+**2026-07-22 · Result (well-powered negative) · sweep_runs/_summary.json + 20260721-182635_dev_beta_sweep.log**
+
+**THE RUN.** 4×4 grid, wta_gain[0,0.5,1,2] × fitness_beta[1,5,20,50], each cell a real GA (pop=30,
+gens=40), ~18h total. Density FROZEN at 0.2 (density_mode="fixed" — see caveat below). Read as a PATTERN
+across the grid per standing discipline, not cell-by-cell.
+
+**HEADLINE: the grid is FLAT — every cell is drift.** fit_slope ranges only [-0.0003, +0.0008] across
+all 16 cells; those are noise around zero (a +0.0008 slope moves fitness ~0.03 over 40 gens, comparable
+to within-cell gen-to-gen jitter). NO cell climbs, and NO pattern across the grid: competition-on rows
+do NOT beat the competition-off row, high-beta does NOT beat low-beta, the tiny positive slopes are
+scattered without structure (largest at wta0/beta50 and wta2/beta5 — incoherent). **The joint-tuning
+hypothesis — that some competition×selection combination unlocks climbing — is NOT SUPPORTED.** Neither
+competition nor selection pressure, alone or together, at these settings, produces adaptive climbing.
+Clean, well-powered negative (16 full GA runs).
+
+**THREE INFORMATIVE SIGNALS INSIDE THE FLATNESS:**
+1. **best_test never CONSOLIDATES below floor anywhere.** Best any cell reached was best_test_min=0.890
+   (wta0_beta20) vs floor 1.014 — so networks momentarily FLICKER below floor, but every cell ENDS back
+   near floor (0.93–0.99). Transient variation exists; selection can't consolidate it. This is the
+   flat-fitness signature throughout the project, and it is exactly the S1 prediction: the process may be
+   SELECTIONIST (transient winners) not DARWINIAN (heritable, compounding gains).
+2. **reg_delta is quietly the most interesting column.** Regulation-capability deltas are SYSTEMATICALLY
+   POSITIVE in the competition-on × higher-beta region: wta0.5/beta20 +0.042, wta1/beta20 +0.032,
+   wta2/beta50 +0.029, wta1/beta5 +0.028, wta1/beta50 +0.018, wta1/beta1 +0.020. The comp-off/low-beta
+   corner is mixed/negative. So regulation (the H-C "modulating level" capability) nudges up SPECIFICALLY
+   where competition and selection are both engaged — the ONE thing in the grid showing a hint of the
+   framework-predicted pattern, even as overall fitness stays flat. FAINT, below "real," HELD WITH
+   DISCIPLINE (D085c/D097 over-reading rule) — but it is directional and non-random across the grid the
+   way fit_slope is random. Watch-item, not a claim.
+3. **exc-fraction drift is real and consistent.** Excitatory fraction falls 0.80 → 0.66–0.73 in nearly
+   every cell. Selection HAS reproducible traction on E/I balance — the machinery works; it just isn't
+   translating into generalization gains.
+
+**INTERPRETATION.** The develop-then-select loop, at these settings, does not climb, and competition×
+selection tuning doesn't rescue it. We are now in the pre-designated "metrics aren't telling us what to
+tweak" situation — the trigger for opening the queued E/S-series threads. Crucially, the sweep FAILS IN
+THE SPECIFIC WAY the converged hypothesis predicts: transient, non-consolidating, non-differentiating
+variation is exactly what S1 (heritability failure), S2 (reverberation corrupting structure), and the
+density/E-series (too much activity/connectivity) all predict. Not a mysterious null — a PREDICTED one.
+
+**KEY CAVEAT (structural).** Density was FROZEN at 0.2 (density_mode default "fixed" — the sweep didn't
+override it). So this grid says nothing about whether a DIFFERENT density climbs. The one variable three
+independent threads flag (excessive density/activity) was held fixed by construction. "We're at the
+wrong density" remains completely live and untested.
+
+**REDIRECT (what the sweep tells us to do next).**
+- S1 (heritability test) is now the HIGHEST-PRIORITY diagnostic: the grid shows transient below-floor
+  dips that never consolidate — is that because fitness isn't HERITABLE across generations (selectionist)
+  vs. because there's no variation at all? Parent→offspring fitness correlation discriminates these two
+  failure modes, which call for DIFFERENT fixes. Cheap, testable now.
+- The converged DENSITY/ACTIVITY/REVERBERATION hypothesis (pre-sweep density thread + E2/E3 + S2) is the
+  leading mechanistic candidate for WHY; the density sweep (frozen here) is the natural experiment.
+- E1 (fitness cache) worth doing regardless as free speedup before the next big run.
+- The faint reg_delta signal (comp-on × high-beta) is the one thread of hope — worth checking whether it
+  strengthens under any of the above interventions.
