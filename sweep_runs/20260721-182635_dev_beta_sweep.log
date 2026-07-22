@@ -1,0 +1,136 @@
+# analysis log: dev_beta_sweep
+# timestamp: 2026-07-21T18:26:35.515397
+# command: scripts/dev_beta_sweep.py --pop 30 --gens 40 --workers 6 --out sweep_runs
+# dev(wta_gain) x beta sweep; pop=30 gens=40 grid 4x4
+#====================================================================
+
+[logging to sweep_runs\20260721-182635_dev_beta_sweep.log]
+task floor=1.014 ceiling=0.385
+grid: wta_gain=[0.0, 0.5, 1.0, 2.0] x beta=[1.0, 5.0, 20.0, 50.0] = 16 cells
+
+[cell wta0_beta1] START pop=30 gens=40 wta_gain=0.0 beta=1.0 comp=OFF
+  gen    0: best_train=0.983 best_test=0.948 |W|=735±23 exc=0.80
+  gen   20: best_train=0.990 best_test=0.988 |W|=727±19 exc=0.71
+  gen   39: best_train=0.989 best_test=0.972 |W|=715±3 exc=0.67
+[cell wta0_beta1] DONE in 3778.8s | fit_slope=-0.00033 best_test 0.948->0.972 (min 0.933) car_delta=+0.0343 reg_delta=-0.0243
+  [heartbeat] 1/16 cells done | elapsed 63.0min | eta 944.7min
+
+[cell wta0_beta5] START pop=30 gens=40 wta_gain=0.0 beta=5.0 comp=OFF
+  gen    0: best_train=0.983 best_test=0.948 |W|=735±23 exc=0.80
+  gen   20: best_train=0.993 best_test=0.958 |W|=740±1 exc=0.73
+  gen   39: best_train=0.974 best_test=0.932 |W|=739±0 exc=0.70
+[cell wta0_beta5] DONE in 3764.3s | fit_slope=+0.00040 best_test 0.948->0.932 (min 0.925) car_delta=-0.0279 reg_delta=+0.0154
+  [heartbeat] 2/16 cells done | elapsed 125.7min | eta 880.0min
+
+[cell wta0_beta20] START pop=30 gens=40 wta_gain=0.0 beta=20.0 comp=OFF
+  gen    0: best_train=0.983 best_test=0.948 |W|=735±23 exc=0.80
+  gen   20: best_train=0.981 best_test=0.956 |W|=739±0 exc=0.78
+  gen   39: best_train=0.988 best_test=0.942 |W|=739±0 exc=0.77
+[cell wta0_beta20] DONE in 4243.7s | fit_slope=+0.00015 best_test 0.948->0.942 (min 0.890) car_delta=+0.0046 reg_delta=+0.0062
+  [heartbeat] 3/16 cells done | elapsed 196.4min | eta 851.3min
+
+[cell wta0_beta50] START pop=30 gens=40 wta_gain=0.0 beta=50.0 comp=OFF
+  gen    0: best_train=0.983 best_test=0.948 |W|=735±23 exc=0.80
+  gen   20: best_train=0.947 best_test=0.952 |W|=723±0 exc=0.76
+  gen   39: best_train=0.985 best_test=0.931 |W|=723±0 exc=0.68
+[cell wta0_beta50] DONE in 3660.1s | fit_slope=+0.00078 best_test 0.948->0.931 (min 0.894) car_delta=-0.0163 reg_delta=+0.0167
+  [heartbeat] 4/16 cells done | elapsed 257.4min | eta 772.3min
+
+[cell wta0p5_beta1] START pop=30 gens=40 wta_gain=0.5 beta=1.0 comp=on
+  gen    0: best_train=0.984 best_test=0.989 |W|=735±23 exc=0.80
+  gen   20: best_train=0.985 best_test=0.992 |W|=740±5 exc=0.75
+  gen   39: best_train=0.977 best_test=0.988 |W|=741±0 exc=0.71
+[cell wta0p5_beta1] DONE in 3648.3s | fit_slope=+0.00008 best_test 0.989->0.988 (min 0.919) car_delta=+0.0139 reg_delta=+0.0004
+  [heartbeat] 5/16 cells done | elapsed 318.3min | eta 700.2min
+
+[cell wta0p5_beta5] START pop=30 gens=40 wta_gain=0.5 beta=5.0 comp=on
+  gen    0: best_train=0.984 best_test=0.989 |W|=735±23 exc=0.80
+  gen   20: best_train=0.964 best_test=0.996 |W|=722±28 exc=0.78
+  gen   39: best_train=0.991 best_test=0.988 |W|=712±21 exc=0.73
+[cell wta0p5_beta5] DONE in 3907.3s | fit_slope=-0.00011 best_test 0.989->0.988 (min 0.929) car_delta=+0.0315 reg_delta=+0.0008
+  [heartbeat] 6/16 cells done | elapsed 383.4min | eta 639.0min
+
+[cell wta0p5_beta20] START pop=30 gens=40 wta_gain=0.5 beta=20.0 comp=on
+  gen    0: best_train=0.984 best_test=0.989 |W|=735±23 exc=0.80
+  gen   20: best_train=0.976 best_test=0.931 |W|=752±0 exc=0.87
+  gen   39: best_train=0.975 best_test=0.947 |W|=752±0 exc=0.88
+[cell wta0p5_beta20] DONE in 3942.8s | fit_slope=-0.00014 best_test 0.989->0.947 (min 0.890) car_delta=-0.0179 reg_delta=+0.0420
+  [heartbeat] 7/16 cells done | elapsed 449.1min | eta 577.4min
+
+[cell wta0p5_beta50] START pop=30 gens=40 wta_gain=0.5 beta=50.0 comp=on
+  gen    0: best_train=0.984 best_test=0.989 |W|=735±23 exc=0.80
+  gen   20: best_train=0.939 best_test=0.962 |W|=698±0 exc=0.70
+  gen   39: best_train=0.989 best_test=0.996 |W|=698±0 exc=0.73
+[cell wta0p5_beta50] DONE in 3990.8s | fit_slope=+0.00013 best_test 0.989->0.996 (min 0.921) car_delta=+0.0231 reg_delta=-0.0077
+  [heartbeat] 8/16 cells done | elapsed 515.6min | eta 515.6min
+
+[cell wta1_beta1] START pop=30 gens=40 wta_gain=1.0 beta=1.0 comp=on
+  gen    0: best_train=0.983 best_test=0.989 |W|=735±23 exc=0.80
+  gen   20: best_train=0.977 best_test=0.967 |W|=733±16 exc=0.80
+  gen   39: best_train=0.985 best_test=0.970 |W|=732±16 exc=0.72
+[cell wta1_beta1] DONE in 3967.4s | fit_slope=+0.00008 best_test 0.989->0.970 (min 0.930) car_delta=-0.0155 reg_delta=+0.0196
+  [heartbeat] 9/16 cells done | elapsed 581.7min | eta 452.5min
+
+[cell wta1_beta5] START pop=30 gens=40 wta_gain=1.0 beta=5.0 comp=on
+  gen    0: best_train=0.983 best_test=0.989 |W|=735±23 exc=0.80
+  gen   20: best_train=0.990 best_test=0.944 |W|=724±23 exc=0.77
+  gen   39: best_train=0.966 best_test=0.962 |W|=710±0 exc=0.71
+[cell wta1_beta5] DONE in 4024.1s | fit_slope=+0.00015 best_test 0.989->0.962 (min 0.912) car_delta=-0.0198 reg_delta=+0.0276
+  [heartbeat] 10/16 cells done | elapsed 648.8min | eta 389.3min
+
+[cell wta1_beta20] START pop=30 gens=40 wta_gain=1.0 beta=20.0 comp=on
+  gen    0: best_train=0.983 best_test=0.989 |W|=735±23 exc=0.80
+  gen   20: best_train=0.988 best_test=0.992 |W|=729±0 exc=0.76
+  gen   39: best_train=0.963 best_test=0.957 |W|=729±0 exc=0.63
+[cell wta1_beta20] DONE in 4008.9s | fit_slope=+0.00001 best_test 0.989->0.957 (min 0.908) car_delta=-0.0547 reg_delta=+0.0323
+  [heartbeat] 11/16 cells done | elapsed 715.6min | eta 325.3min
+
+[cell wta1_beta50] START pop=30 gens=40 wta_gain=1.0 beta=50.0 comp=on
+  gen    0: best_train=0.983 best_test=0.989 |W|=735±23 exc=0.80
+  gen   20: best_train=0.986 best_test=0.970 |W|=715±0 exc=0.82
+  gen   39: best_train=0.989 best_test=0.971 |W|=715±0 exc=0.83
+[cell wta1_beta50] DONE in 4070.5s | fit_slope=-0.00014 best_test 0.989->0.971 (min 0.922) car_delta=-0.0457 reg_delta=+0.0179
+  [heartbeat] 12/16 cells done | elapsed 783.5min | eta 261.2min
+
+[cell wta2_beta1] START pop=30 gens=40 wta_gain=2.0 beta=1.0 comp=on
+  gen    0: best_train=0.989 best_test=0.999 |W|=735±23 exc=0.80
+  gen   20: best_train=0.984 best_test=0.962 |W|=712±21 exc=0.74
+  gen   39: best_train=0.993 best_test=0.980 |W|=698±0 exc=0.72
+[cell wta2_beta1] DONE in 4000.8s | fit_slope=-0.00016 best_test 0.999->0.980 (min 0.913) car_delta=-0.0036 reg_delta=+0.0191
+  [heartbeat] 13/16 cells done | elapsed 850.1min | eta 196.2min
+
+[cell wta2_beta5] START pop=30 gens=40 wta_gain=2.0 beta=5.0 comp=on
+  gen    0: best_train=0.989 best_test=0.999 |W|=735±23 exc=0.80
+  gen   20: best_train=0.971 best_test=0.972 |W|=748±15 exc=0.75
+  gen   39: best_train=0.993 best_test=0.999 |W|=743±8 exc=0.69
+[cell wta2_beta5] DONE in 5051.7s | fit_slope=+0.00059 best_test 0.999->0.999 (min 0.933) car_delta=+0.0418 reg_delta=+0.0001
+  [heartbeat] 14/16 cells done | elapsed 934.3min | eta 133.5min
+
+[cell wta2_beta20] START pop=30 gens=40 wta_gain=2.0 beta=20.0 comp=on
+  gen    0: best_train=0.989 best_test=0.999 |W|=735±23 exc=0.80
+  gen   20: best_train=0.974 best_test=0.993 |W|=756±0 exc=0.75
+  gen   39: best_train=0.980 best_test=0.991 |W|=756±0 exc=0.72
+[cell wta2_beta20] DONE in 4412.1s | fit_slope=+0.00014 best_test 0.999->0.991 (min 0.926) car_delta=+0.0260 reg_delta=+0.0083
+  [heartbeat] 15/16 cells done | elapsed 1007.9min | eta 67.2min
+
+[cell wta2_beta50] START pop=30 gens=40 wta_gain=2.0 beta=50.0 comp=on
+  gen    0: best_train=0.989 best_test=0.999 |W|=735±23 exc=0.80
+  gen   20: best_train=0.961 best_test=0.964 |W|=742±0 exc=0.70
+  gen   39: best_train=0.972 best_test=0.970 |W|=742±0 exc=0.66
+[cell wta2_beta50] DONE in 4364.4s | fit_slope=+0.00048 best_test 0.999->0.970 (min 0.941) car_delta=-0.0138 reg_delta=+0.0292
+  [heartbeat] 16/16 cells done | elapsed 1080.6min | eta 0.0min
+
+
+==========================================================================
+FITNESS-CLIMB LANDSCAPE (fit_slope; positive = selection climbing)
+==========================================================================
+  wta\beta |         1.0         5.0        20.0        50.0
+       0.0 |     -0.0003     +0.0004     +0.0002     +0.0008
+       0.5 |     +0.0001     -0.0001     -0.0001     +0.0001
+       1.0 |     +0.0001     +0.0002     +0.0000     -0.0001
+       2.0 |     -0.0002     +0.0006     +0.0001     +0.0005
+
+best_test_min across grid (closest any cell got to beating floor):
+  wta0_beta20: best_test_min=0.890 (floor=1.014)
+
+all 16 cells -> sweep_runs/  (per-cell checkpoints + _summary.json)
