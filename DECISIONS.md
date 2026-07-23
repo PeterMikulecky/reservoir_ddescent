@@ -4464,3 +4464,62 @@ readout's linearity; test a nonlinear readout in the fitness function.
    to distributed dynamical regimes" = exactly what nonlinear-decodable-context IS.
 3. **Reversal test** (D109 #3) and the regulation range-artifact control -- to promote the full reframe
    from hypothesis to finding.
+
+### D111 — The SELECTION READOUT decided by the P-AXIS criterion: regulation-only, LINEAR readout. Nonlinear decoding confined permanently to DIAGNOSTIC. Supersedes the drift toward a nonlinear selection readout.
+**2026-07-22 · Decision (design) · METRIC_BATTERY.md §0**
+
+**GOVERNING CONSTRAINT (PJM, from project history).** The earliest incarnation of this project took a
+RESERVOIR-COMPUTING approach and ABANDONED it, because **RC sidesteps the study's core question.** In RC you
+train a linear decoder on a rich but tangled reservoir; better RCs get better BECAUSE THE DECODER IMPROVED,
+not because of structure imparted to the reservoir. So fitness-vs-P becomes MEANINGLESS: you plot fitness
+against the NETWORK's parameter count while the parameters actually doing the generalization work — the ones
+a double-descent curve is ABOUT — live in the DECODER.
+
+**=> The criterion is NOT "keep the readout weak so the network still matters" (Claude's framing — a
+fitness-sensitivity worry) but: READOUT PARAMETERS ARE UNCOUNTED P.** Every fitted DOF in the readout is P we
+aren't counting, contaminating exactly the axis H-A and H-B live on. A MEASUREMENT-VALIDITY constraint on the
+central claim. Disqualifies random-forest/MLP/any flexible learned readout as a selection basis, and
+disqualifies "mixtures of decoders" (more decoders = more uncounted parameters, strictly worse).
+
+**THE EMPIRICAL POINT THAT DECIDES IT (PJM).** The LINEAR regulation readout we already use **already
+detects regulation capability** — it found regulation heritable (r≈0.29, D109) and meaningfully varying, at a
+time when encoding showed nothing. Regulation IS linearly detectable. Claude had slid from "the context
+information is nonlinear (D110)" to "therefore select nonlinearly," without checking whether the existing
+linear regulation readout already suffices. It does. Two DISTINCT ROLES, different constraints:
+- **Nonlinear decoding as DIAGNOSTIC (D110-style):** valuable — it corrected our INTERPRETATION ("encoding at
+  floor" was a decoder artifact; the substrate isn't failing) and validated the reframe's foundation. Costs
+  NOTHING on the P axis because it's a measurement, never a selection basis. KEEP, permanently in this role.
+- **Nonlinear readout as SELECTION basis:** costs uncounted P, risks the abandoned RC failure mode, and is
+  UNNECESSARY. REJECTED unless it earns its way in.
+
+**DECIDED — the change is WHAT WE SELECT ON, not HOW WE READ IT:**
+1. **Select on REGULATION ONLY, with the EXISTING LINEAR readout** (not the encoding+memory+regulation
+   hybrid). Minimal change, ZERO added uncounted P, directly motivated by D109: regulation is the heritable,
+   substrate-native component; encoding is the ordered target the substrate structurally resists; the hybrid
+   has been DILUTING a transmissible signal with a non-transmissible one.
+2. **Only if (1) stalls:** a FIXED-FORM, ZERO-FITTED-PARAMETER nonlinearity (e.g. a specified quadratic
+   feature map applied identically to every genome). A fixed feature expansion adds no fitted DOF — it just
+   re-presents the same state — so it's the ONLY nonlinearity compatible with the P-axis criterion. Gated on
+   necessity AND the readout-power audit.
+3. **Powerful nonlinear decoders stay DIAGNOSTIC ONLY**, permanently outside the P accounting.
+
+**READOUT-POWER AUDIT (new standing control, promoted to CORE measurement).** Score RANDOM/SCRAMBLED networks
+with the same readout; if a random network scores nearly as well as an evolved one, the readout is doing the
+network's job. The (evolved − random) gap = the headroom the NETWORK actually contributes. Converts "is the
+readout too powerful?" from a design worry into a measured quantity; the direct empirical guard against the
+abandoned RC failure mode. Run whenever readout form changes.
+
+**OPEN HYPOTHESIS (links two problems).** Readout power and heritability may be COUPLED: a too-powerful
+reader can compensate for whatever the network does, so mutating the network barely changes achievable
+performance and fitness fails to transmit. If so, narrowing the readout (as in (1)) might itself RESTORE
+heritability — connecting D109's non-heritability to readout capacity. Testable.
+
+**LITERATURE CONTEXT (searched).** RC work independently validates the reframe's foundation: reservoirs
+compute useful representations "detectable only in higher order principal components" that render tasks
+linearly separable (Nolte et al. arXiv 2411.10047) — our D110 finding in RC language; and tanh vs linear
+neurons is the difference between near-perfect and chance accuracy there. Also a memory-vs-nonlinearity
+tradeoff with "mixture" resolutions (Sci Rep s41598-017-10257-6), and a systematic benchmark of nonlinear
+readouts (Lagomarsini/Ceni/Gallicchio, ICANN 2025) — NOT yet read in full; the reference to pull IF (2) is
+ever triggered. Note the RC framework's own logic supports minimal readouts: the whole point of RC is that a
+SIMPLE readout suffices BECAUSE the reservoir does the nonlinear work — if you need a powerful readout, the
+computation has moved out of the network. Which is precisely the failure this project already rejected.

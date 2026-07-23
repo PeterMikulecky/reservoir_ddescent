@@ -1,8 +1,8 @@
 # METRIC BATTERY — measurement specification (post-2026-07-22 turn)
 
 **Purpose.** Specifies what we measure and store, in light of the H-C→H-Cv2 turn (see HYPOTHESIS_LOG)
-and the move to a nonlinear-regulation readout as the selection basis. Built on one architectural
-principle (PJM):
+and the move to **regulation-only selection read with the EXISTING LINEAR readout** (see §0). Built on one
+architectural principle (PJM):
 
 > **Separate MEASUREMENT from METRIC.** Capture a comprehensive, raw, theory-neutral CORE MEASUREMENT SET
 > now. DERIVE metrics / spaces / distance functions later, empirically, FROM the stored core
@@ -18,6 +18,59 @@ theory-neutral, so derived metrics can be honestly labeled EXPLORATORY (found by
 **The one thing that must be right NOW is the CORE MEASUREMENT SET** — you cannot retrospectively derive a
 metric from data you didn't capture. So the core set errs toward OVER-capture within "rapidly measurable +
 storable."
+
+---
+
+## 0. THE SELECTION READOUT — decided by the P-AXIS criterion (supersedes the earlier nonlinear-readout premise)
+
+**The governing constraint (PJM).** The project's earliest incarnation took a reservoir-computing approach
+and ABANDONED it, because **RC sidesteps the core question of the study.** In RC you train a linear decoder
+on a rich but tangled reservoir; better RCs get better *because the decoder improved*, NOT because of
+structure imparted to the reservoir. So fitness-vs-P becomes **meaningless**: you plot fitness against the
+NETWORK's parameter count while the parameters actually doing the generalization work — the ones a
+double-descent curve is ABOUT — live in the DECODER.
+
+**Therefore the criterion is not "keep the readout weak so the network still matters" (a fitness-sensitivity
+worry) but: READOUT PARAMETERS ARE UNCOUNTED P.** Every fitted degree of freedom in the readout is P we are
+not counting, contaminating the exact axis H-A and H-B live on. This is a MEASUREMENT-VALIDITY constraint on
+the study's central claim, not a nuisance.
+
+**Consequences (what this disqualifies):** random-forest / MLP / any flexible learned readout as a SELECTION
+basis (enormous uncounted capacity). Also disqualifies "mixtures of decoders" — more decoders = more
+uncounted parameters, strictly worse.
+
+**The empirical point that decides it (PJM).** The LINEAR regulation readout we have been using **already
+detects regulation capability** — it found regulation heritable (r≈0.29, D109) and meaningfully varying, at a
+time when encoding showed nothing. So regulation IS linearly detectable. The D110 nonlinear result shows the
+*context* information is present-but-distributed (correcting our INTERPRETATION — "encoding at floor" was a
+decoder artifact, the substrate isn't failing); it does NOT follow that the SELECTION readout must go
+nonlinear. Two distinct roles, different constraints:
+- **Nonlinear decoding as a DIAGNOSTIC** (D110-style): valuable, costs nothing on the P axis (it is a
+  measurement, never a selection basis). KEEP, permanently confined to this role.
+- **Nonlinear readout as the SELECTION basis:** costs uncounted P, risks the abandoned RC failure mode, and
+  appears UNNECESSARY since the linear regulation readout already works. REJECTED unless it earns its way in.
+
+**DECIDED — the change is what we SELECT ON, not how we read it:**
+1. **Select on REGULATION ONLY, with the EXISTING LINEAR readout.** (Not the encoding+memory+regulation
+   hybrid.) Minimal change, ZERO added uncounted P, directly motivated by D109: regulation is the heritable,
+   substrate-native component; encoding is the ordered target the substrate structurally resists; the hybrid
+   has been diluting a transmissible signal with a non-transmissible one.
+2. **Only if (1) stalls:** test a **fixed-form, ZERO-FITTED-PARAMETER** nonlinearity (e.g. a specified
+   quadratic feature map applied identically to every genome). A fixed feature expansion adds no fitted DOF —
+   it re-presents the same state — so it is the ONLY form of nonlinearity compatible with the P-axis
+   criterion. Gated on necessity AND on the readout-power audit below.
+3. **Powerful nonlinear decoders remain DIAGNOSTIC ONLY**, permanently outside the P accounting.
+
+**READOUT-POWER AUDIT (standing control, promoted to a core measurement).** Score RANDOM / SCRAMBLED networks
+with the same readout. If a random network scores nearly as well as an evolved one, the readout is doing the
+network's job. The gap (evolved − random) is the headroom the NETWORK is actually contributing. This converts
+"is the readout too powerful?" from a design worry into a measured quantity, and it is the direct empirical
+guard against the abandoned RC failure mode. Run it whenever readout form changes.
+
+**Open hypothesis worth testing:** readout power and heritability may be COUPLED — a too-powerful reader can
+compensate for whatever the network does, so mutating the network barely changes achievable performance and
+fitness fails to transmit. If so, weakening/narrowing the readout (as in (1)) might itself RESTORE
+heritability. Testable, and it would link two open problems (D109 non-heritability ↔ readout capacity).
 
 ---
 
@@ -46,9 +99,13 @@ storable."
   tonic↔fluctuation-driven axis (serves H-D and the reframe's fluctuation-driven-native claim).
 
 ### 1c. Performance (fitness side)
-- **Nonlinear-regulation readout score** — the new selection basis (H-Cv2).
-- **Linear readout score** — kept as CONTRAST, not target. The linear-vs-nonlinear GAP is itself a core
-  metric (indexes how distributed/nonlinear the representation is).
+- **Regulation score, LINEAR readout — the SELECTION BASIS** (§0). Zero added uncounted P.
+- **Hybrid fitness (encoding+memory+regulation)** — retained as CONTRAST (continuity with all prior runs;
+  the hybrid-vs-regulation-only difference is itself informative).
+- **Readout-power audit:** the same readout applied to RANDOM/SCRAMBLED networks (§0) — the evolved−random
+  gap is the network's actual contribution. Core, not occasional.
+- **Nonlinear-decodability (DIAGNOSTIC ONLY, never a selection basis)** and linear-decodability, stored
+  separately; their GAP indexes how distributed/nonlinear the representation is (D110).
 - **Component scores** (encoding / carrying / regulation) — continuity with prior runs + needed for the
   reversal test.
 - **Nonlinear- AND linear-decodability of context** (the D110 decoder-ladder metrics), stored separately.
@@ -63,7 +120,8 @@ storable."
 The same performance/fitness scalars we have always tracked, PLUS the nonlinear-regulation readout. Their
 job is to answer ONE question: **is there a meaningful performance gain in this run worth characterizing?**
 - fitness / performance trajectory (best + cohort-mean, per generation)
-- the nonlinear-regulation readout (selection basis) and the linear readout (contrast) + their gap
+- the LINEAR regulation readout (selection basis, §0) and the hybrid fitness (contrast)
+- the readout-power audit gap (evolved − random/scrambled) — is the network contributing?
 - component scores (enc/car/reg) per generation
 - population-distribution summaries of the above (mean, SD, tail) per generation
 
@@ -113,9 +171,10 @@ H-Cv2 discriminating predictions (Section 4) are CONFIRMATORY. Label each honest
 
 A metric earns "core/confirmatory" status only if it can DISTINGUISH hypothesis versions.
 
-- **H-A (peak exists):** error-vs-P on the NONLINEAR readout (the clean curve the linear readout hid).
-  Requires P swept (density-evolvable or explicit density arms — note the D108 frozen-density problem).
-- **H-B (peak tracks r₁ not data count):** r₁-vs-n_env contrast on the nonlinear error axis (r₁/n_env
+- **H-A (peak exists):** error-vs-P on the REGULATION-ONLY (linear-readout) fitness — the axis is only
+  meaningful if the readout adds no uncounted P (§0). Requires P swept (density-evolvable or explicit density
+  arms — note the D108 frozen-density problem).
+- **H-B (peak tracks r₁ not data count):** r₁-vs-n_env contrast on the regulation-only error axis (r₁/n_env
   independently manipulable — confirmed in code).
 - **H-Cv2 (second descent = REFINEMENT of native regulation):** discriminating signatures vs H-C v1 —
   · nonlinear-decodability ABOVE chance even at LOW P / no selection (native), CLIMBING with P/selection
