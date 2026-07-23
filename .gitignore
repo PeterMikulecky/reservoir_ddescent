@@ -1,4 +1,10 @@
-runs/
+# runs/ holds ALL outputs (logs, checkpoints, summaries) and IS tracked.
+# Only bulk/regenerable artifacts are ignored:
+runs/**/*.parquet
+runs/**/*.npy
+runs/**/*.npz
+runs/**/*.pkl
+
 __pycache__/
 *.pyc
 *.tmp
