@@ -21,6 +21,33 @@ storable."
 
 ---
 
+## 0a. ⚠️ DATA-SPLIT DISCIPLINE — three-way split REQUIRED (D113)
+
+**Non-negotiable, and it precedes every other measurement decision.** Since D094, fitness components were
+computed from TEST error, so selection optimised the exact quantity reported as generalisation (D113).
+That is test-set leakage through model selection (~1200 selective evaluations against `E_test` per run) and
+it invalidates any formal use of D094-onward absolute test numbers.
+
+**Required split, for all runs from here:**
+| split | used by | never used by |
+|---|---|---|
+| `E_train` | DEVELOPMENT (the network's within-lifetime plasticity) | reporting |
+| `E_val` (NEW) | SELECTION — all fitness components computed here | reporting |
+| `E_test` | REPORTING ONLY — the double-descent y-axis | development, selection, any tuning |
+
+**Rules.**
+- No quantity computed from `E_test` may enter the selection signal, directly or via a component.
+- Audit `task.headroom()` (`memoryless_floor`, `oracle_ceiling`): `floor` enters the fitness expression, so
+  if it is derived from test data that is a smaller leak of the same family.
+- Add a MECHANICAL GUARD (assertion / unit test) that `_fitness()`'s inputs trace only to train/validation
+  data, so this regression cannot recur silently. Names are not measurements; trace every fitness input to
+  its data source.
+- Exploratory CONTRASTS from the leaked era remain readable (all modes leak identically, so between-
+  condition comparisons are not differentially biased) — but no absolute number from that era is
+  publication-grade.
+
+---
+
 ## 0. THE SELECTION READOUT — decided by the P-AXIS criterion (supersedes the earlier nonlinear-readout premise)
 
 **The governing constraint (PJM).** The project's earliest incarnation took a reservoir-computing approach

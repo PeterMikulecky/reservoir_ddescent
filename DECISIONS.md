@@ -4608,3 +4608,70 @@ evolve them and then analyze what it decided to do, and how that changed at vary
 components had been reasoned about from their NAMES and docstrings for many sessions without checking the
 arithmetic. Names are not measurements. Add to the standing discipline: **before building a hypothesis on a
 component, read how it is computed.**
+
+### D113 — ⚠️ CRITICAL: TEST-SET LEAKAGE. Fitness has been computed from TEST error since D094, so selection optimises the exact quantity we report as generalisation. All D094-onward test numbers are UNUSABLE for formal/publication purposes. Fix = three-way split.
+**2026-07-22 · CRITICAL CORRECTION · found by tracing `evaluate()` after D112 · affects every run since 2026-07-19**
+
+**READ THIS FIRST.** If this had gone uncaught until after we found an evolvable configuration and ran
+production experiments, **every one of those production results would have been invalid.** The bug is
+silent, produces plausible-looking numbers, and sits in the single most load-bearing measurement in the
+study. Flagged as loudly as possible for that reason (PJM).
+
+**THE FINDING.** In `evaluate()`:
+```
+e_tr = _affine_nmse(task.Y_train, B_tr["rates"])     # train error  -- computed, then essentially unused
+e_te = _affine_nmse(task.Y_test,  B_te["rates"])     # TEST error
+enc.append(max(0.0, 1.0   - e_te))                   # "encoding"    <- from TEST error
+reg.append(max(0.0, floor - e_te))                   # "regulation"  <- from TEST error
+```
+`_fitness()` consumes `encoding`, `carrying`, `regulation`. **Therefore fitness is a function of TEST
+error, and selection optimises test error directly.** True of BOTH `hybrid` and `regulation_only` (the
+latter is `floor - e_te`, i.e. pure test error affinely transformed; the constant `floor` cancels in the
+replicator softmax `z = beta*(f - f.max())`, so `regulation_only` selection is EXACTLY selection on
+`-test_err`).
+
+**THE TEST SET IS THEREFORE NOT HELD OUT.** This is textbook test-set leakage through MODEL SELECTION: the
+GA is performing architecture/parameter search against the test set. At pop=30 x gens=40 that is **~1200
+evaluations of selective pressure applied against `E_test` per run.** Whatever the fitness-vs-P curve looks
+like, **its y-axis is no longer an unbiased estimate of generalisation** — fatal for a study whose entire
+deliverable is generalisation-error-vs-P.
+
+**PARTIAL DEFENCE, AND WHY IT FAILS.** The two levels are distinct: the network's WITHIN-LIFETIME learning
+(development) uses `E_train` only, so test is genuinely held out from DEVELOPMENT. Only the EVOLUTIONARY
+search touches test. But that is precisely the standard leakage case — selection over many candidates
+against a fixed set will fit that set. The level at which the fitting happens does not matter; what matters
+is that the reported quantity was optimised.
+
+**PROVENANCE OF THE ERROR — D077 HAD IT RIGHT AND D094 SILENTLY REVERSED IT.** D077 (2026-07-18) states the
+correct principle outright: *"Test error is REPORTING, not selection... `_fitness()` reads only `train_err`.
+Selection never touches test."* D094 (2026-07-19) redefined the components in terms of `e_te` **without
+flagging that it reversed D077's principle.** The regression went unnoticed for ~4 days of work because
+each component was reasoned about from its NAME, not its arithmetic (the same failure mode as D112).
+
+**WHAT IS AND IS NOT INVALIDATED.**
+- **NOT invalidated: the exploratory CONTRASTS.** D108's flat landscape, D111's regulation-vs-hybrid
+  comparison, and the currently-running cells remain readable AS CONTRASTS, because every mode leaks
+  identically — the comparison between conditions is not differentially biased. PJM: this is tolerable
+  only because we are still in the bumping-around-in-the-dark, get-the-system-working phase.
+- **INVALIDATED: any formal/publication use of ABSOLUTE test numbers from D094 onward.** No test error,
+  best_test, headroom-relative score, or fitness-vs-P curve from this era may be quoted as generalisation
+  performance. Treat all of it as exploratory instrumentation only.
+- **D109 heritability**: the parent-offspring CORRELATION is not invalidated by leakage per se (both
+  generations measured identically), but the underlying fitness values are test-contaminated.
+- **D110 decodability**: UNAFFECTED — it is a measurement, not a selection signal, and used internal
+  cross-validation.
+
+**THE FIX — THREE-WAY SPLIT (required before ANY production run).**
+- **develop** on `E_train` (unchanged — the network's within-lifetime learning),
+- **select** on a NEW `E_val` / `Y_val` split (fitness computed from validation error),
+- **report** the double-descent curve on `E_test`, which nothing in the loop ever touches.
+Implementation: add a validation split to `hierarchical_environments`; route the fitness components to
+validation error; keep `e_te` computed for REPORTING only. Also audit that `task.headroom()`'s
+`memoryless_floor` / `oracle_ceiling` are not themselves derived from test data (a smaller leak of the same
+family, since `floor` enters the fitness expression).
+
+**STANDING RULE ADDED (generalises the D112 lesson).** *Names are not measurements — and any quantity that
+appears in the fitness function must be traced to its data source before it is trusted.* Specifically:
+**no quantity computed from the reporting split may enter the selection signal.** Add a mechanical guard —
+an assertion or unit test that `_fitness()`'s inputs derive only from train/validation data — so this class
+of regression cannot recur silently.
