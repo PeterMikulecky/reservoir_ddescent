@@ -24,9 +24,14 @@ class _Tee:
 
 
 @contextlib.contextmanager
-def tee(name, log_dir="analysis_logs", header=None):
+def tee(name, log_dir="runs", header=None):
     """Context manager: mirror stdout+stderr to a timestamped log file for the duration of the block.
-    Records a header (timestamp, command line) so the log is self-describing (D102)."""
+    Records a header (timestamp, command line) so the log is self-describing (D102).
+
+    **ALL OUTPUTS LIVE UNDER `runs/`** (2026-07-22 convention): one predictable location for every
+    artifact this project produces. Probes log to `runs/` directly; multi-cell experiments pass
+    `log_dir="runs/<experiment>"` so their log sits with their checkpoints and summary.
+    (Supersedes the old `analysis_logs/` default; existing logs there remain as committed history.)"""
     os.makedirs(log_dir, exist_ok=True)
     stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     path = os.path.join(log_dir, f"{stamp}_{name}.log")
