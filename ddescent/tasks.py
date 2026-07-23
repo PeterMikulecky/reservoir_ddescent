@@ -253,12 +253,37 @@ class HierarchicalTask:
     Y_test: np.ndarray
     C_test: np.ndarray
     meta: dict | None = None
+    # --- D113 THREE-WAY SPLIT: selection reads VALIDATION, never test ------------------------
+    # E_train -> DEVELOPMENT (within-lifetime plasticity)
+    # E_val   -> SELECTION   (every fitness component)
+    # E_test  -> REPORTING   (the double-descent y-axis; touched by nothing in the loop)
+    E_val: np.ndarray | None = None
+    Y_val: np.ndarray | None = None
+    C_val: np.ndarray | None = None
 
     def n_constraints(self) -> int:
         """n_env * d — what |W| is compared against for the interpolation threshold."""
         return int(self.Y_train.shape[0] * self.Y_train.shape[1])
 
-    def headroom(self, alphas=(1e-2, 1e-1, 1e0, 1e1, 1e2)) -> dict:
+    def _split(self, which: str):
+        """D113: resolve a named split. 'val' falls back to test only if no val split exists
+        (legacy tasks) -- and warns, because that fallback reintroduces the leak."""
+        if which == "val":
+            if self.E_val is None:
+                import warnings
+                warnings.warn("D113: task has no validation split; falling back to TEST. "
+                              "This reintroduces selection-on-test leakage.", RuntimeWarning)
+                return self.E_test, self.Y_test, self.C_test
+            return self.E_val, self.Y_val, self.C_val
+        if which == "test":
+            return self.E_test, self.Y_test, self.C_test
+        raise ValueError(f"unknown split {which!r}")
+
+    def headroom(self, alphas=(1e-2, 1e-1, 1e0, 1e1, 1e2), split: str = "test") -> dict:
+        """D113: `split` selects which data the bounds are estimated against.
+        - split='val'  -> for anything that feeds SELECTION (the fitness `floor` term).
+        - split='test' -> for REPORTING the double-descent axis. (Default, for reporting compat.)
+        Using the test-derived floor inside fitness is a leak of the same family as D113."""
         """The two bounds that make 'levelling up' operational.
 
         * **memoryless floor** — best NMSE achievable WITHOUT context. Estimated empirically by
@@ -274,16 +299,17 @@ class HierarchicalTask:
         design is dead. This is a REQUIRED check before any run.
         """
         from .baseline import best_nmse
-        floor = best_nmse(self.E_train, self.Y_train, self.E_test, self.Y_test,
+        E_s, Y_s, C_s = self._split(split)
+        floor = best_nmse(self.E_train, self.Y_train, E_s, Y_s,
                           alphas=alphas, standardize=False)[0]
         # oracle: a separate map per context (context SELECTS the map)
         errs, wts = [], []
         for c in np.unique(self.C_train):
-            mtr, mte = self.C_train == c, self.C_test == c
+            mtr, mte = self.C_train == c, C_s == c
             if mtr.sum() < 5 or mte.sum() < 2:
                 continue
             e = best_nmse(self.E_train[mtr], self.Y_train[mtr],
-                          self.E_test[mte], self.Y_test[mte],
+                          E_s[mte], Y_s[mte],
                           alphas=alphas, standardize=False)[0]
             errs.append(e * mte.sum()); wts.append(mte.sum())
         ceiling = float(np.sum(errs) / max(np.sum(wts), 1))
@@ -293,6 +319,7 @@ class HierarchicalTask:
 
 def hierarchical_environments(K: int = 10, d: int = 10, r1: int = 3,
                               n_contexts: int = 4, n_train: int = 50, n_test: int = 50,
+                              n_val: int | None = None,
                               context_dwell: int = 10, learnable_frac: float = 1.0,
                               unexplained_scale: float = 0.5, seed: int = 0) -> HierarchicalTask:
     """Two-level environment: context (slow, in the STATISTICS) selects a rank-r1 map (fast).
@@ -352,8 +379,9 @@ def hierarchical_environments(K: int = 10, d: int = 10, r1: int = 3,
         return Y
 
     E_tr, C_tr = draw(n_train)
+    E_va, C_va = draw(n_val if n_val is not None else n_test)   # D113: SELECTION split
     E_te, C_te = draw(n_test)
-    Y_tr, Y_te = respond(E_tr, C_tr), respond(E_te, C_te)
+    Y_tr, Y_va, Y_te = respond(E_tr, C_tr), respond(E_va, C_va), respond(E_te, C_te)
 
     # --- unexplained variance: split into LEARNABLE (context) vs TRUE NOISE (D051) -------
     # the context-driven part is already in Y (it is why the same E maps differently).
@@ -369,6 +397,7 @@ def hierarchical_environments(K: int = 10, d: int = 10, r1: int = 3,
         for arr, E_, C_ in ((None, E_tr, C_tr),):
             pass
         Y_tr = blend * Y_tr + (1 - blend) * np.tanh(E_tr @ Wbar)
+        Y_va = blend * Y_va + (1 - blend) * np.tanh(E_va @ Wbar)
         Y_te = blend * Y_te + (1 - blend) * np.tanh(E_te @ Wbar)
 
     mean_sep = float(np.max([np.abs(rng.multivariate_normal(np.zeros(K), covs[c], 2000).mean(0)).max()
@@ -376,4 +405,5 @@ def hierarchical_environments(K: int = 10, d: int = 10, r1: int = 3,
     meta = dict(kind="hierarchical_environments", K=K, d=d, r1=r1, n_contexts=n_contexts,
                 context_dwell=context_dwell, learnable_frac=learnable_frac,
                 W_ctx=W_ctx, mean_separation=mean_sep)
-    return HierarchicalTask(E_tr, Y_tr, C_tr, E_te, Y_te, C_te, meta=meta)
+    return HierarchicalTask(E_tr, Y_tr, C_tr, E_te, Y_te, C_te, meta=meta,
+                            E_val=E_va, Y_val=Y_va, C_val=C_va)

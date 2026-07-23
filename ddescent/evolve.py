@@ -244,6 +244,28 @@ def _carry_covdecay(net, task, net_cfg, noise_seed=None, n_cue=8, delays=(50.0, 
     return float(np.trapezoid(curve, delays) / (delays[-1] - delays[0]))
 
 
+
+# --- D113 three-way-split helpers + mechanical guard ----------------------------------------
+def _val_E(task):
+    """Stimuli for the SELECTION split. Falls back to test only for legacy tasks (warns)."""
+    return task.E_test if getattr(task, "E_val", None) is None else task.E_val
+
+
+def _val_Y(task):
+    return task.Y_test if getattr(task, "Y_val", None) is None else task.Y_val
+
+
+def assert_no_test_leakage(task) -> None:
+    """D113 MECHANICAL GUARD. Fail loudly if the task lacks a validation split, because then every
+    fitness component silently falls back to TEST error and selection optimises the reported
+    generalisation quantity. Call this at the top of any run that will be reported."""
+    if getattr(task, "E_val", None) is None:
+        raise RuntimeError(
+            "D113: task has NO validation split -- fitness would be computed from TEST error, "
+            "leaking the reporting split into selection. Rebuild the task with n_val set."
+        )
+
+
 def evaluate(genome: Genome, task, net_cfg: EvoNetConfig, cfg: "EvolveConfig | None" = None) -> dict:
     """DEVELOP then score the DEVELOPED phenotype (D083), averaged over K NOISE ASSAYS for
     noise-robustness (D085c): a single lucky/unlucky noise draw must not be mistaken for signal.
@@ -256,7 +278,8 @@ def evaluate(genome: Genome, task, net_cfg: EvoNetConfig, cfg: "EvolveConfig | N
     """
     net = EvoNet(genome, net_cfg)
 
-    floor = task.headroom()["memoryless_floor"]
+    # D113: the fitness-facing floor MUST come from the VALIDATION split, never test.
+    floor = task.headroom(split="val")["memoryless_floor"]
     n_assays = 1 if cfg is None else max(1, cfg.n_assays)
     base_seed = 0 if cfg is None else cfg.seed
     # STABLE genome-derived seed (Python's hash() is per-process randomized -> nondeterministic;
@@ -276,7 +299,7 @@ def evaluate(genome: Genome, task, net_cfg: EvoNetConfig, cfg: "EvolveConfig | N
         dev_converged = bool(dev_res.get("converged", True))
         dev_aborted = (dev_res.get("reason", "ok") != "ok" and "NaN" in dev_res.get("reason", ""))
 
-    enc, car, reg, etr, ete = [], [], [], [], []
+    enc, car, reg, etr, eva, ete = [], [], [], [], [], []
     # generation component in the seed (fix b): with n_assays=1, an unchanged ELITE must NOT see the
     # identical noise draw every generation (frozen noise -- the determinism-audit failure mode). The
     # generation is folded in so elites get FRESH noise each gen while the whole run stays reproducible.
@@ -286,15 +309,19 @@ def evaluate(genome: Genome, task, net_cfg: EvoNetConfig, cfg: "EvolveConfig | N
         s_te = (gseed + gen_off + 4 * a + 2) & 0x7FFFFFFF
         s_ca = (gseed + gen_off + 4 * a + 3) & 0x7FFFFFFF
         B_tr = net.behave(task.E_train, noise_seed=s_tr)
+        B_va = net.behave(_val_E(task), noise_seed=s_te)
         B_te = net.behave(task.E_test, noise_seed=s_te)
         e_tr = _affine_nmse(task.Y_train, B_tr["rates"])
-        e_te = _affine_nmse(task.Y_test, B_te["rates"])
-        etr.append(e_tr); ete.append(e_te)
-        enc.append(max(0.0, 1.0 - e_te))
-        reg.append(max(0.0, floor - e_te))
-        car.append(_carry_covdecay(net, task, net_cfg, noise_seed=s_ca))
+        e_va = _affine_nmse(_val_Y(task), B_va["rates"])     # D113: SELECTION error
+        e_te = _affine_nmse(task.Y_test, B_te["rates"])      # D113: REPORTING only
+        etr.append(e_tr); eva.append(e_va); ete.append(e_te)
+        # --- every fitness component derives from VALIDATION error (D113) ---------------------
+        enc.append(max(0.0, 1.0 - e_va))
+        reg.append(max(0.0, floor - e_va))
+        car.append(_carry_covdecay(net, task, net_cfg, noise_seed=s_ca))  # uses E_train only: no test contact
 
-    return dict(train_err=float(np.mean(etr)), test_err=float(np.mean(ete)),
+    return dict(train_err=float(np.mean(etr)), val_err=float(np.mean(eva)),
+                test_err=float(np.mean(ete)),
                 n_params=genome.n_params(), exc_frac=genome.exc_fraction(),
                 encoding=float(np.mean(enc)), carrying=float(np.mean(car)),
                 regulation=float(np.mean(reg)),
