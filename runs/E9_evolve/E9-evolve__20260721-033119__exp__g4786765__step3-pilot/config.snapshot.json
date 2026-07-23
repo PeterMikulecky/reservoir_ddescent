@@ -1,0 +1,19 @@
+{
+  "experiment": "pilot",
+  "densities": [
+    0.2,
+    0.4,
+    0.6,
+    0.8
+  ],
+  "seeds": [
+    0
+  ],
+  "pop": 30,
+  "gens": 50,
+  "dev_ms": 800.0,
+  "n_assays": 1,
+  "workers": 6,
+  "floor": 1.013584025012514,
+  "ceiling": 0.3851523826542643
+}

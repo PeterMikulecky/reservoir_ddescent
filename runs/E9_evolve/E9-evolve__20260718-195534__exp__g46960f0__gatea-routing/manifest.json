@@ -1,0 +1,27 @@
+{
+  "run_id": "E9-evolve__20260718-195534__exp__g46960f0__gatea-routing",
+  "runhash": "b4db924a",
+  "stage": "E9",
+  "slug": "evolve",
+  "type": "exp",
+  "tag": "gateA-routing",
+  "git_commit": "46960f0",
+  "git_dirty": false,
+  "git_message": "Gate A pre-registered (D080) and corrected before running (D081): metric = champion E|rates on fixed 200-env probe, true random baseline 0.99/0.43 not the 0.73 grid-min artifact; two decode bugs fixed; PASS = E|rates falls below 0.80. Runner + routing instrumentation in evolve.py",
+  "created_utc": "2026-07-18T19:55:35.181871+00:00",
+  "finished_utc": "2026-07-19T02:09:25.964952+00:00",
+  "status": "complete",
+  "hostname": "PJM_Lap",
+  "user": "Peter Mikulecky",
+  "runs_root": "C:\\dev\\reservoir_ddescent\\runs",
+  "script_path": "scripts/run_GateA_routing.py",
+  "script_argv": [
+    "scripts/run_GateA_routing.py"
+  ],
+  "seeds": [
+    0
+  ],
+  "upstream_run_ids": [],
+  "notes": "Gate A (D080/D081): does selection route E to the output neurons?",
+  "n_conditions": 1
+}

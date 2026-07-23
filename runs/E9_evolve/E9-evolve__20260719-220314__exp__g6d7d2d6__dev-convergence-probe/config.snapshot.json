@@ -1,0 +1,10 @@
+{
+  "probe": "dev_convergence",
+  "rule": "oja",
+  "eta": 0.01,
+  "N": 50,
+  "d": 3,
+  "n_env": 200,
+  "density": 0.5,
+  "genomes": 6
+}

@@ -1,0 +1,29 @@
+{
+  "run_id": "T0-tune_operating_point__20260717-211216__exp__gdd19cd0__gateb0-interpolation",
+  "runhash": "3fc8de49",
+  "stage": "T0",
+  "slug": "tune_operating_point",
+  "type": "exp",
+  "tag": "gateB0-interpolation",
+  "git_commit": "dd19cd0",
+  "git_dirty": false,
+  "git_message": "D064: nest parallelism inward, worker initializer, quick preset; runtime estimates",
+  "created_utc": "2026-07-17T21:12:16.335255+00:00",
+  "finished_utc": "2026-07-17T21:35:14.933905+00:00",
+  "status": "failed",
+  "hostname": "PJM_Lap",
+  "user": "Peter Mikulecky",
+  "runs_root": "C:\\dev\\reservoir_ddescent\\runs",
+  "script_path": "scripts\\run_GateB0_interpolation.py",
+  "script_argv": [
+    "scripts\\run_GateB0_interpolation.py",
+    "--preset",
+    "quick"
+  ],
+  "seeds": [
+    0
+  ],
+  "upstream_run_ids": [],
+  "notes": "Gate B0: can the GA reach interpolation? (D049) + bolt-on positive control",
+  "error": "SVD did not converge in Linear Least Squares"
+}

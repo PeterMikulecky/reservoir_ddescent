@@ -1,0 +1,24 @@
+{
+  "run_id": "E9-evolve__20260720-050929__exp__g9894167__ceiling-validation",
+  "runhash": "be88269b",
+  "stage": "E9",
+  "slug": "evolve",
+  "type": "exp",
+  "tag": "ceiling-validation",
+  "git_commit": "9894167",
+  "git_dirty": false,
+  "git_message": "Add scripts/run_ceiling_validation.py: runnable, provenanced validation of the engineered ceiling (D092b). Imports ddescent.engineered_ceiling, runs the silent-delay carry test, persists a run directory + parquet table + LAB_NOTEBOOK stub. Verified end-to-end: ceiling is cue-selective (A-cue lights cluster A, B silent) and decays gracefully through silence (selectivity 3.95->1.66 over 100-600ms) - the validated memory signature (decay-across-delay), distinct from the random-net flat confound. Confirms the carry measure on the known-positive; trustworthy for step-3 developed-net testing",
+  "created_utc": "2026-07-20T05:09:29.299342+00:00",
+  "finished_utc": "2026-07-20T05:09:33.166775+00:00",
+  "status": "complete",
+  "hostname": "PJM_Lap",
+  "user": "Peter Mikulecky",
+  "runs_root": "C:\\dev\\reservoir_ddescent\\runs",
+  "script_path": "scripts/run_ceiling_validation.py",
+  "script_argv": [
+    "scripts/run_ceiling_validation.py"
+  ],
+  "seeds": null,
+  "upstream_run_ids": [],
+  "notes": "D092b: validate the engineered-ceiling known-positive. CARRY = cue-matched cluster persists+decays through silent delay."
+}

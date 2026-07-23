@@ -1,0 +1,27 @@
+{
+  "run_id": "T0-tune_operating_point__20260717-205132__exp__g1265f63__gateb0-interpolation",
+  "runhash": "07692cfc",
+  "stage": "T0",
+  "slug": "tune_operating_point",
+  "type": "exp",
+  "tag": "gateB0-interpolation",
+  "git_commit": "1265f63",
+  "git_dirty": false,
+  "git_message": "D063: control corrected - no first descent claimed falsely, per-M seeding fixed, raw-input baseline now permanent",
+  "created_utc": "2026-07-17T20:51:32.463783+00:00",
+  "finished_utc": "2026-07-17T20:51:35.876517+00:00",
+  "status": "complete",
+  "hostname": "PJM_Lap",
+  "user": "Peter Mikulecky",
+  "runs_root": "C:\\dev\\reservoir_ddescent\\runs",
+  "script_path": "scripts\\run_GateB0_interpolation.py",
+  "script_argv": [
+    "scripts\\run_GateB0_interpolation.py",
+    "--control"
+  ],
+  "seeds": [
+    0
+  ],
+  "upstream_run_ids": [],
+  "notes": "Gate B0: can the GA reach interpolation? (D049) + bolt-on positive control"
+}

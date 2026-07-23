@@ -1,0 +1,41 @@
+{
+  "run_id": "T0-tune_operating_point__20260715-033028__exp__gcae6f45__fine-w0-n1000",
+  "runhash": "0ea1af67",
+  "stage": "T0",
+  "slug": "tune_operating_point",
+  "type": "exp",
+  "tag": "fine-w0-N1000",
+  "git_commit": "cae6f45",
+  "git_dirty": false,
+  "git_message": "T0 rev2: sweep w0 not spectral_radius (D014); score substrates over genome space; full metric battery",
+  "created_utc": "2026-07-15T03:30:28.455321+00:00",
+  "finished_utc": "2026-07-15T04:13:59.013881+00:00",
+  "status": "complete",
+  "hostname": "PJM_Lap",
+  "user": "Peter Mikulecky",
+  "runs_root": "C:\\dev\\reservoir_ddescent\\runs",
+  "script_path": "scripts\\run_T0_tune_operating_point.py",
+  "script_argv": [
+    "scripts\\run_T0_tune_operating_point.py",
+    "--preset",
+    "fine"
+  ],
+  "seeds": [
+    0
+  ],
+  "upstream_run_ids": [],
+  "notes": "operating-point landscape in w0 parameterization; fixes bias/input_gain for E9",
+  "n_conditions": 320,
+  "chosen_operating_point": {
+    "bias": 0.4,
+    "input_gain": 0.1,
+    "pr_mean": 22.826237417235152,
+    "pr_max": 53.466619195849425,
+    "pr_range": 45.54885826918239,
+    "pr_rel": 1.995460637537675,
+    "activity_mean": 0.6034174999999999,
+    "healthy": true,
+    "N": 1000,
+    "coupling_mode": "w0"
+  }
+}

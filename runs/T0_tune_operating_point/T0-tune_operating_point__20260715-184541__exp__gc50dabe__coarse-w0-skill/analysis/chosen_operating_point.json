@@ -1,0 +1,15 @@
+{
+  "bias":0.6,
+  "input_gain":10.0,
+  "skill_med":1.447919129,
+  "frac_beating":0.7777777778,
+  "useful":true,
+  "pr_mean":7.3639789765,
+  "pr_var_mean":27.0262962309,
+  "pr_max":10.2317004792,
+  "pr_rel":0.4935097558,
+  "activity_mean":0.884562963,
+  "healthy":true,
+  "N":300,
+  "coupling_mode":"w0"
+}

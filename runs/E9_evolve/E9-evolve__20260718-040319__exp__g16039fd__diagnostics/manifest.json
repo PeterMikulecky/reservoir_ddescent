@@ -1,0 +1,27 @@
+{
+  "run_id": "E9-evolve__20260718-040319__exp__g16039fd__diagnostics",
+  "runhash": "9e033982",
+  "stage": "E9",
+  "slug": "evolve",
+  "type": "exp",
+  "tag": "diagnostics",
+  "git_commit": "16039fd",
+  "git_dirty": false,
+  "git_message": "rung 1: readout_pos knob (trailing default unchanged) to separate 'memory absent' from 'memory unread'; readout position as a diagnostics grid axis; correct the PR verdict - compression did not transfer and prediction was never tested",
+  "created_utc": "2026-07-18T04:03:19.455906+00:00",
+  "finished_utc": "2026-07-18T04:09:53.726049+00:00",
+  "status": "complete",
+  "hostname": "PJM_Lap",
+  "user": "Peter Mikulecky",
+  "runs_root": "C:\\dev\\reservoir_ddescent\\runs",
+  "script_path": "scripts\\run_E9_diagnostics.py",
+  "script_argv": [
+    "scripts\\run_E9_diagnostics.py"
+  ],
+  "seeds": [
+    0
+  ],
+  "upstream_run_ids": [],
+  "notes": "E9 diagnostics: encode/route, PR channels, memory, carryover, context",
+  "n_conditions": 16
+}

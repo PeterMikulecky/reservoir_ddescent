@@ -1,0 +1,12 @@
+{
+  "bias":0.4,
+  "input_gain":0.1,
+  "pr_mean":22.8262374172,
+  "pr_max":53.4666191958,
+  "pr_range":45.5488582692,
+  "pr_rel":1.9954606375,
+  "activity_mean":0.6034175,
+  "healthy":true,
+  "N":1000,
+  "coupling_mode":"w0"
+}

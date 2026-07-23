@@ -1,0 +1,25 @@
+{
+  "run_id": "E9-evolve__20260721-033119__exp__g4786765__step3-pilot",
+  "runhash": "788f0aa6",
+  "stage": "E9",
+  "slug": "evolve",
+  "type": "exp",
+  "tag": "step3-pilot",
+  "git_commit": "4786765",
+  "git_dirty": false,
+  "git_message": "D099: build step-3 pilot harness (scripts/run_pilot.py) as a grid of independent (P,seed) cells - full apparatus (develop + 3-term fitness + D095 readout + D098b carry + selection), n_workers=6 default, provenanced per cell, VM-ready. evolve.py history now records per-generation component means/bests (enc/car/reg) so the pilot can watch whether capabilities COMPOUND under selection. Parallel determinism VERIFIED (clears D097 flag): serial==parallel bit-identical, content-hash seeds -> reproducible across worker counts and machines. Pilot grid: densities [0.2,0.4,0.6,0.8]x1seed, pop30, 50gen, ~1.1hr on 6 cores. Q: does fitness climb + components compound over 50 gens?",
+  "created_utc": "2026-07-21T03:31:19.976799+00:00",
+  "finished_utc": "2026-07-21T07:25:02.431794+00:00",
+  "status": "complete",
+  "hostname": "PJM_Lap",
+  "user": "Peter Mikulecky",
+  "runs_root": "C:\\dev\\reservoir_ddescent\\runs",
+  "script_path": "scripts/run_pilot.py",
+  "script_argv": [
+    "scripts/run_pilot.py"
+  ],
+  "seeds": null,
+  "upstream_run_ids": [],
+  "notes": "Pilot of the full develop+3-term-fitness+selection apparatus (D096-D098b). Q: does fitness climb + components compound over 50 gens? shakedown, not the double-descent curve.",
+  "n_conditions": 200
+}

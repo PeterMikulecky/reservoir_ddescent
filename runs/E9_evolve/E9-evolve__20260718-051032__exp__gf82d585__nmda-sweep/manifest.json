@@ -1,0 +1,27 @@
+{
+  "run_id": "E9-evolve__20260718-051032__exp__gf82d585__nmda-sweep",
+  "runhash": "6b56b37a",
+  "stage": "E9",
+  "slug": "evolve",
+  "type": "exp",
+  "tag": "nmda-sweep",
+  "git_commit": "f82d585",
+  "git_dirty": false,
+  "git_message": "D074: slow NMDA-like excitatory current (tau_slow=100ms, exc-only, no Mg gate), inert at nmda_frac=0 default; diagnostics sweep nmda_frac at present_ms=50, gate on d2-d3 movement",
+  "created_utc": "2026-07-18T05:10:32.838130+00:00",
+  "finished_utc": "2026-07-18T05:13:11.769580+00:00",
+  "status": "complete",
+  "hostname": "PJM_Lap",
+  "user": "Peter Mikulecky",
+  "runs_root": "C:\\dev\\reservoir_ddescent\\runs",
+  "script_path": "scripts\\run_E9_diagnostics.py",
+  "script_argv": [
+    "scripts\\run_E9_diagnostics.py"
+  ],
+  "seeds": [
+    0
+  ],
+  "upstream_run_ids": [],
+  "notes": "E9 diagnostics: encode/route, PR channels, memory, carryover, context",
+  "n_conditions": 16
+}

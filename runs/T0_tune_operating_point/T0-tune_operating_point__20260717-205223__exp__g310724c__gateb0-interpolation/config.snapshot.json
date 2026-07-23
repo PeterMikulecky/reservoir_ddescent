@@ -1,0 +1,22 @@
+{
+  "preset": "default",
+  "control_only": false,
+  "task": {
+    "K": 10,
+    "d": 5,
+    "r1": 3,
+    "n_contexts": 4,
+    "n_train": 50,
+    "n_test": 50,
+    "context_dwell": 10,
+    "seed": 0
+  },
+  "net": {
+    "N": 50,
+    "n_in": 10,
+    "d": 5,
+    "bias": 0.6,
+    "input_gain": 1.0,
+    "noise_sigma": 1.0
+  }
+}

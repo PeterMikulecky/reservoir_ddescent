@@ -1,0 +1,25 @@
+{
+  "biases": [
+    0.4,
+    0.7
+  ],
+  "input_gains": [
+    0.3
+  ],
+  "radii": [
+    0.9,
+    1.5
+  ],
+  "densities": [
+    0.05,
+    0.4
+  ],
+  "N": 120,
+  "K": 8,
+  "n_probe": 30,
+  "seed": 0,
+  "res_kw": {
+    "present_ms": 100,
+    "readout_window_ms": 40
+  }
+}

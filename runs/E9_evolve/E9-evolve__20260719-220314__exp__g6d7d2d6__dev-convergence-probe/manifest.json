@@ -1,0 +1,24 @@
+{
+  "run_id": "E9-evolve__20260719-220314__exp__g6d7d2d6__dev-convergence-probe",
+  "runhash": "c3e5e84f",
+  "stage": "E9",
+  "slug": "evolve",
+  "type": "exp",
+  "tag": "dev-convergence-probe",
+  "git_commit": "6d7d2d6",
+  "git_dirty": false,
+  "git_message": "Add Oja Kind-A development convergence probe (D083 sub-decision 3 / D085 a) in scripts/: standalone diagnostic, no GA/fitness. Answers the fork - does strength-only support-frozen plasticity converge? Instrumented for what-it-converged-to: E-decode (level-1) + context-decode (level-2), so 'converged but level-2-blind' is measured not assumed. Enforces Kind-A support-freeze invariant in code. Oja update + invariant unit-verified; Brian2 write-back (_reload_W) and convergence hyperparameters need validation on first real run",
+  "created_utc": "2026-07-19T22:03:14.954414+00:00",
+  "finished_utc": null,
+  "status": "running",
+  "hostname": "PJM_Lap",
+  "user": "Peter Mikulecky",
+  "runs_root": "C:\\dev\\reservoir_ddescent\\runs",
+  "script_path": "scripts/run_dev_convergence_probe.py",
+  "script_argv": [
+    "scripts/run_dev_convergence_probe.py"
+  ],
+  "seeds": null,
+  "upstream_run_ids": [],
+  "notes": "D083/D085: does Kind-A Oja development converge? + what does it converge to?"
+}

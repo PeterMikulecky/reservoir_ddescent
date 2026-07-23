@@ -1,0 +1,29 @@
+{
+  "fit_slope": 0.0002520693836981332,
+  "reg_slope": 0.0002520693836981332,
+  "fit_start": 0.03044281734377239,
+  "fit_end": 0.0436535990883523,
+  "reg_best_start": 0.05339914873946372,
+  "reg_best_end": 0.0855715496020415,
+  "reg_mean_start": 0.03044281734377239,
+  "reg_mean_end": 0.0436535990883523,
+  "best_test_start": 0.9601848762730504,
+  "best_test_end": 0.9280124754104726,
+  "best_test_min": 0.9040740396101064,
+  "audit": {
+    "random_mean": 0.025071676654791254,
+    "random_sd": 0.004022906419646521,
+    "random_max": 0.03291329953285349,
+    "n": 10,
+    "evolved_minus_random": 0.018581922433561045
+  },
+  "cell": "regulation_only_beta5",
+  "config_hash": "18a2a1f79c69e8d3",
+  "code_version": "D111-regsel-1",
+  "fitness_mode": "regulation_only",
+  "beta": 5.0,
+  "pop": 30,
+  "gens": 40,
+  "seconds": 4650.2,
+  "timestamp": "2026-07-22T21:47:00.511695"
+}

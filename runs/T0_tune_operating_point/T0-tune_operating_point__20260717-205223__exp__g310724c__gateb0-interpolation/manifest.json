@@ -1,0 +1,26 @@
+{
+  "run_id": "T0-tune_operating_point__20260717-205223__exp__g310724c__gateb0-interpolation",
+  "runhash": "41bfe3fb",
+  "stage": "T0",
+  "slug": "tune_operating_point",
+  "type": "exp",
+  "tag": "gateB0-interpolation",
+  "git_commit": "310724c",
+  "git_dirty": false,
+  "git_message": "lab nb update",
+  "created_utc": "2026-07-17T20:52:23.227129+00:00",
+  "finished_utc": null,
+  "status": "running",
+  "hostname": "PJM_Lap",
+  "user": "Peter Mikulecky",
+  "runs_root": "C:\\dev\\reservoir_ddescent\\runs",
+  "script_path": "scripts\\run_GateB0_interpolation.py",
+  "script_argv": [
+    "scripts\\run_GateB0_interpolation.py"
+  ],
+  "seeds": [
+    0
+  ],
+  "upstream_run_ids": [],
+  "notes": "Gate B0: can the GA reach interpolation? (D049) + bolt-on positive control"
+}

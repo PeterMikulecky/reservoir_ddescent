@@ -1,0 +1,136 @@
+task: constraints=1000  memoryless_floor=0.698  oracle=0.248  headroom=0.449
+      mean_separation=0.0371 (D048: contexts differ in COVARIANCE only; this must be ~0)
+      context timescale = 1500 ms vs tau_m = 20 ms  -> 75x
+
+16 cells x 4 behave() = 3,840,000 timesteps ~ 7.2 min at 113 us/step (measured, D065/D068).
+Cost is ~FLAT in N and |W| -- that is why shrinking N never helped.
+
+  [1/16] gain=3    sig=0.2  nmda=0    E|state=0.362 E|rates=0.952 d1=0.900 d2=0.999 d3=1.001 MC=0.10 ctx=0.26  (8s)
+  [2/16] gain=3    sig=0.2  nmda=0.3  E|state=0.344 E|rates=0.984 d1=0.862 d2=0.996 d3=1.001 MC=0.14 ctx=0.27  (7s)
+  [3/16] gain=3    sig=0.2  nmda=0.5  E|state=0.366 E|rates=0.984 d1=0.901 d2=0.997 d3=1.001 MC=0.10 ctx=0.27  (8s)
+  [4/16] gain=3    sig=0.2  nmda=0.8  E|state=0.358 E|rates=0.998 d1=0.865 d2=0.973 d3=1.000 MC=0.16 ctx=0.27  (7s)
+  [5/16] gain=3    sig=1    nmda=0    E|state=0.495 E|rates=0.999 d1=0.927 d2=1.000 d3=1.001 MC=0.07 ctx=0.26  (8s)
+  [6/16] gain=3    sig=1    nmda=0.3  E|state=0.499 E|rates=1.001 d1=0.940 d2=1.000 d3=1.002 MC=0.06 ctx=0.21  (8s)
+  [7/16] gain=3    sig=1    nmda=0.5  E|state=0.498 E|rates=0.999 d1=0.939 d2=0.994 d3=1.001 MC=0.07 ctx=0.27  (8s)
+  [8/16] gain=3    sig=1    nmda=0.8  E|state=0.471 E|rates=1.001 d1=0.940 d2=1.000 d3=1.000 MC=0.06 ctx=0.28  (8s)
+  [9/16] gain=10   sig=0.2  nmda=0    E|state=0.311 E|rates=0.893 d1=0.830 d2=0.993 d3=1.001 MC=0.18 ctx=0.25  (8s)
+  [10/16] gain=10   sig=0.2  nmda=0.3  E|state=0.334 E|rates=0.943 d1=0.817 d2=0.991 d3=1.002 MC=0.19 ctx=0.32  (8s)
+  [11/16] gain=10   sig=0.2  nmda=0.5  E|state=0.321 E|rates=0.962 d1=0.809 d2=0.982 d3=1.000 MC=0.21 ctx=0.26  (8s)
+  [12/16] gain=10   sig=0.2  nmda=0.8  E|state=0.316 E|rates=0.992 d1=0.766 d2=0.947 d3=0.994 MC=0.29 ctx=0.26  (8s)
+  [13/16] gain=10   sig=1    nmda=0    E|state=0.353 E|rates=0.990 d1=0.892 d2=1.000 d3=1.001 MC=0.11 ctx=0.27  (8s)
+  [14/16] gain=10   sig=1    nmda=0.3  E|state=0.354 E|rates=0.996 d1=0.892 d2=0.998 d3=1.001 MC=0.11 ctx=0.21  (8s)
+  [15/16] gain=10   sig=1    nmda=0.5  E|state=0.355 E|rates=0.999 d1=0.882 d2=0.987 d3=1.000 MC=0.13 ctx=0.26  (8s)
+  [16/16] gain=10   sig=1    nmda=0.8  E|state=0.348 E|rates=0.995 d1=0.899 d2=0.989 d3=0.997 MC=0.11 ctx=0.26  (8s)
+
+=== 1. DOES THE STATE ENCODE E, AND DOES IT REACH FITNESS? ===
+    (NMSE reconstructing E. 1.0 = no information. This is D030's ACTUAL gate,
+     which has never been run: skill() takes the retired TaskData API — D069.)
+  gain  sigma       pos   E|state   E|rates  routed?
+     3    0.2  trailing     0.362     0.952  state only
+     3    0.2  trailing     0.344     0.984  state only
+     3    0.2  trailing     0.366     0.984  state only
+     3    0.2  trailing     0.358     0.998  state only
+     3      1  trailing     0.495     0.999  state only
+     3      1  trailing     0.499     1.001  state only
+     3      1  trailing     0.498     0.999  state only
+     3      1  trailing     0.471     1.001  state only
+    10    0.2  trailing     0.311     0.893  YES
+    10    0.2  trailing     0.334     0.943  state only
+    10    0.2  trailing     0.321     0.962  state only
+    10    0.2  trailing     0.316     0.992  state only
+    10      1  trailing     0.353     0.990  state only
+    10      1  trailing     0.354     0.996  state only
+    10      1  trailing     0.355     0.999  state only
+    10      1  trailing     0.348     0.995  state only
+  best E|state = 0.311 -> encoder WORKS
+  !! E is in the STATE but not in the RATES: the encoder works and nothing
+     reaches fitness. Gate A is a ROUTING problem, and selection's job.
+
+=== 2. DOES FRAMING sec.3 TRANSFER? (PR_mean compresses, PR_var expands) ===
+    reservoir era, D028/D033 at K=20: PR_mean~7.4 (compress), PR_var~27 (expand).
+    Here K=10, input PR = 5.86.
+  gain  sigma       pos  PR_in   PR_mean    PR_var
+     3    0.2  trailing   5.86      8.37     24.75
+     3    0.2  trailing   5.86      8.82     26.14
+     3    0.2  trailing   5.86      8.94     29.66
+     3    0.2  trailing   5.86      9.10     30.61
+     3      1  trailing   5.86     18.17     31.66
+     3      1  trailing   5.86     18.05     33.33
+     3      1  trailing   5.86     18.30     33.15
+     3      1  trailing   5.86     18.70     33.57
+    10    0.2  trailing   5.86      7.28     16.06
+    10    0.2  trailing   5.86      7.34     18.92
+    10    0.2  trailing   5.86      7.38     18.27
+    10    0.2  trailing   5.86      7.49     19.79
+    10      1  trailing   5.86      9.80     25.83
+    10      1  trailing   5.86     10.24     28.40
+    10      1  trailing   5.86      9.88     27.99
+    10      1  trailing   5.86     10.14     26.70
+  PR_mean vs PR_input: EXPANDS -- sec.3 compression does NOT transfer
+  NOTE: PR_var tracks noise_sigma, so 'var expands' is partly the dimensionality
+        of injected noise. sec.3 rests on PREDICTION, which this does not test.
+
+=== 3-4. THE TIMESCALE AUDIT ===
+    present_ms=150, tau_m=20 (tau_r=30 is the READOUT FILTER, not state).
+    Context needs memory over context_dwell=10 presentations = 1500 ms.
+  gain  sigma       pos  mem_d0  mem_d1  mem_d2  mem_d3  mem_d4  mem_d5  mem_d6  mem_d7  mem_d8  mem_d9 mem_d10     MC  ord/noise
+     3    0.2  trailing   0.362   0.900   0.999   1.001   1.003   1.001   1.002   1.003   1.001   1.000   1.002   0.10       1.35
+     3    0.2  trailing   0.344   0.862   0.996   1.001   1.003   1.001   1.002   1.000   1.000   1.001   1.001   0.14       1.34
+     3    0.2  trailing   0.366   0.901   0.997   1.001   1.002   1.002   1.002   1.001   1.001   1.001   1.002   0.10       1.35
+     3    0.2  trailing   0.358   0.865   0.973   1.000   1.000   1.002   1.001   1.001   1.000   1.001   1.000   0.16       1.35
+     3      1  trailing   0.495   0.927   1.000   1.001   1.001   1.002   1.001   1.000   1.001   1.000   1.002   0.07       1.05
+     3      1  trailing   0.499   0.940   1.000   1.002   1.002   1.001   1.000   1.002   1.001   1.000   1.002   0.06       1.05
+     3      1  trailing   0.498   0.939   0.994   1.001   1.000   1.001   1.000   1.002   1.002   1.001   1.001   0.07       1.05
+     3      1  trailing   0.471   0.940   1.000   1.000   1.000   1.001   1.000   1.001   1.001   1.001   1.001   0.06       1.06
+    10    0.2  trailing   0.311   0.830   0.993   1.001   1.004   1.002   1.002   0.999   1.000   1.001   1.002   0.18       2.05
+    10    0.2  trailing   0.334   0.817   0.991   1.002   1.003   1.002   1.001   1.002   1.001   1.001   1.002   0.19       2.08
+    10    0.2  trailing   0.321   0.809   0.982   1.000   1.001   1.002   1.002   1.001   0.999   1.001   1.002   0.21       2.10
+    10    0.2  trailing   0.316   0.766   0.947   0.994   1.000   1.003   1.001   1.001   1.001   1.001   1.002   0.29       2.14
+    10      1  trailing   0.353   0.892   1.000   1.001   1.001   1.002   1.002   1.001   1.001   1.002   1.002   0.11       1.23
+    10      1  trailing   0.354   0.892   0.998   1.001   1.002   1.002   1.002   1.002   1.001   1.000   1.002   0.11       1.20
+    10      1  trailing   0.355   0.882   0.987   1.000   1.001   1.003   1.002   1.001   1.000   1.001   1.002   0.13       1.26
+    10      1  trailing   0.348   0.899   0.989   0.997   1.001   1.001   1.001   1.000   1.001   1.001   1.002   0.11       1.24
+  best memory capacity over delays>=1: 0.29
+  max order/noise ratio: 2.14 (~1.0 => order changes nothing beyond noise)
+
+=== 5. IS THE MEMORY USEFUL? (context decode; BRIDGE L5, never run) ===
+  gain  sigma       pos   ctx_acc  chance
+     3    0.2  trailing     0.255    0.25
+     3    0.2  trailing     0.270    0.25
+     3    0.2  trailing     0.270    0.25
+     3    0.2  trailing     0.265    0.25
+     3      1  trailing     0.260    0.25
+     3      1  trailing     0.210    0.25
+     3      1  trailing     0.265    0.25
+     3      1  trailing     0.275    0.25
+    10    0.2  trailing     0.250    0.25
+    10    0.2  trailing     0.320    0.25
+    10    0.2  trailing     0.255    0.25
+    10    0.2  trailing     0.260    0.25
+    10      1  trailing     0.265    0.25
+    10      1  trailing     0.215    0.25
+    10      1  trailing     0.255    0.25
+    10      1  trailing     0.260    0.25
+  best = 0.320 vs chance 0.25 -> AT CHANCE
+
+=== D074: DOES SLOW EXCITATORY CURRENT BUY MEMORY PAST d1? ===
+    present_ms=50, tau_slow=100 ms. Gate = d2-d3 MOVEMENT in a
+    RANDOM net (d10 is selection's job -- Wang slow reverberation needs an
+    EVOLVED attractor). Watch the ENCODING COST: D030's opposition, again.
+  nmda  best_d1  best_d2  best_d3     MC  E|state  E|rates    ctx
+     0    0.830    0.993    1.001   0.18    0.311    0.893  0.265
+   0.3    0.817    0.991    1.001   0.19    0.334    0.943  0.320
+   0.5    0.809    0.982    1.000   0.21    0.321    0.962  0.270
+   0.8    0.766    0.947    0.994   0.29    0.316    0.992  0.275
+  network HEALTHY across the axis: min PR_mean = 7.28 (no collapse -- D075 charge conservation holding).
+  slow current moves memory past d1: NO
+
+=== WHAT THIS DECIDES ===
+  memoryless floor 0.698 == the raw-input baseline BY IDENTITY (D069):
+  'beats baseline' == 'infers context' == the whole experiment. So the only
+  question that matters here is whether the substrate CAN hold context at all.
+  -> Context is NOT recoverable from a random network's state. Next: is that
+     because selection hasn't acted (Gate A's premise), or because the
+     timing parameters forbid it? Measurement 3-4 separates those, and the
+     fix is fixed-heterogeneous tau_m (drawn, not evolved -- a CAPABILITY,
+     not a route: it gives step 1 without handing evolution a shortcut).

@@ -1,0 +1,64 @@
+# analysis log: regulation_selection_run
+# timestamp: 2026-07-22T20:29:30.248442
+# command: scripts/regulation_selection_run.py --pop 30 --gens 40 --workers 6
+# D111: regulation-only selection vs hybrid control; pop=30 gens=40
+#====================================================================
+
+[logging to runs\reg_select\20260722-202930_regulation_selection_run.log]
+task floor=1.014 ceiling=0.385
+cells: ['regulation_only_beta5', 'regulation_only_beta20', 'regulation_only_beta50', 'hybrid_beta5']
+NOTE: beta is scale-dependent; regulation_only fitness spread is ~4.3x smaller than
+      hybrid, so regulation_only@beta20 ~ hybrid@beta5. Bracketed with 5 and 50.
+
+[cell regulation_only_beta5] START mode=regulation_only beta=5.0 pop=30 gens=40 hash=18a2a1f79c69e8d3
+  gen    0: best_train=0.986 best_test=0.960 |W|=735±23 exc=0.80
+  gen   20: best_train=0.974 best_test=0.956 |W|=764±6 exc=0.71
+  gen   39: best_train=0.993 best_test=0.928 |W|=758±4 exc=0.67
+[cell regulation_only_beta5] DONE 4650.2s | fit_slope=+0.00025 reg_slope=+0.00025 | reg_mean 0.0304->0.0437 | best_test 0.960->0.928 (min 0.904)
+    [audit] random-network mean=0.0251 (max 0.0329) vs evolved 0.0437 | gap=+0.0186
+  [heartbeat] 1/4 cells | elapsed 77.5min | eta 232.5min
+
+[cell regulation_only_beta20] START mode=regulation_only beta=20.0 pop=30 gens=40 hash=6f266f20e6f86042
+  gen    0: best_train=0.986 best_test=0.960 |W|=735±23 exc=0.80
+  gen   20: best_train=0.982 best_test=0.923 |W|=718±5 exc=0.69
+  gen   39: best_train=0.994 best_test=0.945 |W|=717±0 exc=0.67
+[cell regulation_only_beta20] DONE 4445.2s | fit_slope=+0.00006 reg_slope=+0.00006 | reg_mean 0.0304->0.0332 | best_test 0.960->0.945 (min 0.922)
+    [audit] random-network mean=0.0251 (max 0.0329) vs evolved 0.0332 | gap=+0.0081
+  [heartbeat] 2/4 cells | elapsed 151.6min | eta 151.6min
+
+[cell regulation_only_beta50] START mode=regulation_only beta=50.0 pop=30 gens=40 hash=e5ebbd365d9ac56b
+  gen    0: best_train=0.986 best_test=0.960 |W|=735±23 exc=0.80
+  gen   20: best_train=0.986 best_test=0.928 |W|=719±0 exc=0.67
+  gen   39: best_train=0.972 best_test=0.888 |W|=719±0 exc=0.64
+[cell regulation_only_beta50] DONE 3332.0s | fit_slope=+0.00104 reg_slope=+0.00104 | reg_mean 0.0304->0.0648 | best_test 0.960->0.888 (min 0.881)
+    [audit] random-network mean=0.0251 (max 0.0329) vs evolved 0.0648 | gap=+0.0397
+  [heartbeat] 3/4 cells | elapsed 207.1min | eta 69.0min
+
+[cell hybrid_beta5] START mode=hybrid beta=5.0 pop=30 gens=40 hash=6a50c39d979f0af9
+  gen    0: best_train=0.983 best_test=0.989 |W|=735±23 exc=0.80
+  gen   20: best_train=0.990 best_test=0.944 |W|=724±23 exc=0.77
+  gen   39: best_train=0.966 best_test=0.962 |W|=710±0 exc=0.71
+[cell hybrid_beta5] DONE 3651.0s | fit_slope=+0.00015 reg_slope=-0.00008 | reg_mean 0.0304->0.0334 | best_test 0.989->0.962 (min 0.912)
+    [audit] random-network mean=0.0536 (max 0.1120) vs evolved 0.0661 | gap=+0.0125
+  [heartbeat] 4/4 cells | elapsed 268.0min | eta 0.0min
+
+
+==============================================================================
+REGULATION-ONLY SELECTION — did it climb where hybrid was flat?
+==============================================================================
+                      cell |  fit_slope |  reg_slope | reg_mean end |  test_min
+     regulation_only_beta5 |   +0.00025 |   +0.00025 |       0.0437 |     0.904
+    regulation_only_beta20 |   +0.00006 |   +0.00006 |       0.0332 |     0.922
+    regulation_only_beta50 |   +0.00104 |   +0.00104 |       0.0648 |     0.881
+              hybrid_beta5 |   +0.00015 |   -0.00008 |       0.0334 |     0.912
+
+READOUT-POWER AUDIT (evolved - random; small gap => readout doing the network's job):
+       regulation_only_beta5: random=0.0251 evolved=0.0437 gap=+0.0186
+      regulation_only_beta20: random=0.0251 evolved=0.0332 gap=+0.0081
+      regulation_only_beta50: random=0.0251 evolved=0.0648 gap=+0.0397
+                hybrid_beta5: random=0.0536 evolved=0.0661 gap=+0.0125
+
+4 cells -> runs\reg_select/
+
+READ AS A CONTRAST: does regulation_only show a POSITIVE reg_slope/fit_slope where the
+hybrid control (and all of D108) drifted? Compare regulation_only@beta20 to hybrid@beta5.

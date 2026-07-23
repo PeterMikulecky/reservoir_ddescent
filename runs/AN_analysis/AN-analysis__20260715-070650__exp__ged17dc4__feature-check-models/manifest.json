@@ -1,0 +1,27 @@
+{
+  "run_id": "AN-analysis__20260715-070650__exp__ged17dc4__feature-check-models",
+  "runhash": "e4094182",
+  "stage": "AN",
+  "slug": "analysis",
+  "type": "exp",
+  "tag": "feature-check-models",
+  "git_commit": "ed17dc4",
+  "git_dirty": false,
+  "git_message": "lab nb update",
+  "created_utc": "2026-07-15T07:06:50.135536+00:00",
+  "finished_utc": "2026-07-15T07:06:53.090377+00:00",
+  "status": "complete",
+  "hostname": "PJM_Lap",
+  "user": "Peter Mikulecky",
+  "runs_root": "C:\\dev\\reservoir_ddescent\\runs",
+  "script_path": "scripts\\analyze_AN_feature_check.py",
+  "script_argv": [
+    "scripts\\analyze_AN_feature_check.py"
+  ],
+  "seeds": null,
+  "upstream_run_ids": [
+    "T0-tune_operating_point__20260715-053812__exp__gefee6c4__feature-n1000"
+  ],
+  "notes": "M1/M2/M3 x {test_, novel_} on the feature-check table; M2 is D019 screening-off",
+  "n_conditions": 160
+}

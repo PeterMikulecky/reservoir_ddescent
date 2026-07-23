@@ -1,0 +1,29 @@
+{
+  "run_id": "T0-tune_operating_point__20260715-050108__exp__ge927bdb__readout-check-n1000",
+  "runhash": "8d590393",
+  "stage": "T0",
+  "slug": "tune_operating_point",
+  "type": "exp",
+  "tag": "readout-check-N1000",
+  "git_commit": "e927bdb",
+  "git_dirty": false,
+  "git_message": "D027: three-way readout check passes - averaging confound cleared",
+  "created_utc": "2026-07-15T05:01:08.243352+00:00",
+  "finished_utc": "2026-07-15T05:02:47.731680+00:00",
+  "status": "complete",
+  "hostname": "PJM_Lap",
+  "user": "Peter Mikulecky",
+  "runs_root": "C:\\dev\\reservoir_ddescent\\runs",
+  "script_path": "scripts\\run_T0_readout_check.py",
+  "script_argv": [
+    "scripts\\run_T0_readout_check.py",
+    "--preset",
+    "fine"
+  ],
+  "seeds": [
+    0
+  ],
+  "upstream_run_ids": [],
+  "notes": "D026 standing check: PR via window-mean vs instantaneous vs variance",
+  "n_conditions": 16
+}

@@ -1,0 +1,11 @@
+{
+  "gate": "A",
+  "N": 50,
+  "pop": 30,
+  "d": 3,
+  "n_env": 50,
+  "density": 0.5,
+  "gens": 4900,
+  "probe_env": 200,
+  "nmda_frac": 0.5
+}

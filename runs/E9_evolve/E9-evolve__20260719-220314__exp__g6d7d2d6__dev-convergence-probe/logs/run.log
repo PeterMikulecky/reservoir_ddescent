@@ -1,0 +1,5 @@
+run: E9-evolve__20260719-220314__exp__g6d7d2d6__dev-convergence-probe
+Oja Kind-A development · 6 genomes · eta=0.01 · tol=0.0001 patience=5 max_epochs=200
+
+task: memoryless_floor=0.909 oracle=0.296 (the floor->oracle gap is the level-2 reward region)
+

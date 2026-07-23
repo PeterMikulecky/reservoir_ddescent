@@ -1,0 +1,44 @@
+{
+  "run_id": "T0-tune_operating_point__20260715-184541__exp__gc50dabe__coarse-w0-skill",
+  "runhash": "ebfc6c67",
+  "stage": "T0",
+  "slug": "tune_operating_point",
+  "type": "exp",
+  "tag": "coarse-w0-skill",
+  "git_commit": "c50dabe",
+  "git_dirty": false,
+  "git_message": "D030: baseline gate - reservoir loses to raw input at T0's operating point; T0 rev3 gates on skill; D029 task fix",
+  "created_utc": "2026-07-15T18:45:42.176665+00:00",
+  "finished_utc": "2026-07-15T18:57:40.987906+00:00",
+  "status": "complete",
+  "hostname": "PJM_Lap",
+  "user": "Peter Mikulecky",
+  "runs_root": "C:\\dev\\reservoir_ddescent\\runs",
+  "script_path": "scripts\\run_T0_tune_operating_point.py",
+  "script_argv": [
+    "scripts\\run_T0_tune_operating_point.py",
+    "--preset",
+    "coarse"
+  ],
+  "seeds": [
+    0
+  ],
+  "upstream_run_ids": [],
+  "notes": "operating-point landscape in w0 parameterization; fixes bias/input_gain for E9",
+  "n_conditions": 135,
+  "chosen_operating_point": {
+    "bias": 0.6,
+    "input_gain": 10.0,
+    "skill_med": 1.447919128958912,
+    "frac_beating": 0.7777777777777778,
+    "useful": true,
+    "pr_mean": 7.363978976528658,
+    "pr_var_mean": 27.02629623090016,
+    "pr_max": 10.231700479247916,
+    "pr_rel": 0.4935097558108335,
+    "activity_mean": 0.884562962962963,
+    "healthy": true,
+    "N": 300,
+    "coupling_mode": "w0"
+  }
+}

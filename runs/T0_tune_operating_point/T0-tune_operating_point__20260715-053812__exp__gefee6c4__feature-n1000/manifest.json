@@ -1,0 +1,40 @@
+{
+  "run_id": "T0-tune_operating_point__20260715-053812__exp__gefee6c4__feature-n1000",
+  "runhash": "86fc8905",
+  "stage": "T0",
+  "slug": "tune_operating_point",
+  "type": "exp",
+  "tag": "feature-N1000",
+  "git_commit": "efee6c4",
+  "git_dirty": false,
+  "git_message": "feature check: sweep seeds internally, separate net/task seeds, pooled mixed model",
+  "created_utc": "2026-07-15T05:38:12.433989+00:00",
+  "finished_utc": "2026-07-15T06:41:04.949667+00:00",
+  "status": "complete",
+  "hostname": "PJM_Lap",
+  "user": "Peter Mikulecky",
+  "runs_root": "C:\\dev\\reservoir_ddescent\\runs",
+  "script_path": "scripts\\run_T0_feature_check.py",
+  "script_argv": [
+    "scripts\\run_T0_feature_check.py",
+    "--preset",
+    "fine",
+    "--seeds",
+    "10"
+  ],
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9
+  ],
+  "upstream_run_ids": [],
+  "notes": "FIRST generalization measurement (D015). Q1 feature choice; Q2 H1 first test.",
+  "n_conditions": 160
+}

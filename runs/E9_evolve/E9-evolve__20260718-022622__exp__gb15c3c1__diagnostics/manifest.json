@@ -1,0 +1,27 @@
+{
+  "run_id": "E9-evolve__20260718-022622__exp__gb15c3c1__diagnostics",
+  "runhash": "94b4b0ad",
+  "stage": "E9",
+  "slug": "evolve",
+  "type": "exp",
+  "tag": "diagnostics",
+  "git_commit": "b15c3c1",
+  "git_dirty": false,
+  "git_message": "E9 diagnostics: D030's actual gate (decode E from state and rates), FRAMING sec3 channel check on evonet, memory-vs-delay, carryover vs noise floor, context decode",
+  "created_utc": "2026-07-18T02:26:22.455838+00:00",
+  "finished_utc": "2026-07-18T02:29:26.624837+00:00",
+  "status": "complete",
+  "hostname": "PJM_Lap",
+  "user": "Peter Mikulecky",
+  "runs_root": "C:\\dev\\reservoir_ddescent\\runs",
+  "script_path": "scripts\\run_E9_diagnostics.py",
+  "script_argv": [
+    "scripts\\run_E9_diagnostics.py"
+  ],
+  "seeds": [
+    0
+  ],
+  "upstream_run_ids": [],
+  "notes": "E9 diagnostics: encode/route, PR channels, memory, carryover, context",
+  "n_conditions": 8
+}

@@ -1,0 +1,29 @@
+{
+  "run_id": "T0-tune_operating_point__20260717-213756__exp__g91f2891__gateb0-interpolation",
+  "runhash": "9112c3f2",
+  "stage": "T0",
+  "slug": "tune_operating_point",
+  "type": "exp",
+  "tag": "gateB0-interpolation",
+  "git_commit": "91f2891",
+  "git_dirty": false,
+  "git_message": "D065: pool was never created - eval_fn set before the is-None test; every GA run was silently serial",
+  "created_utc": "2026-07-17T21:37:56.545317+00:00",
+  "finished_utc": "2026-07-17T23:04:32.104532+00:00",
+  "status": "complete",
+  "hostname": "PJM_Lap",
+  "user": "Peter Mikulecky",
+  "runs_root": "C:\\dev\\reservoir_ddescent\\runs",
+  "script_path": "scripts\\run_GateB0_interpolation.py",
+  "script_argv": [
+    "scripts\\run_GateB0_interpolation.py",
+    "--preset",
+    "quick"
+  ],
+  "seeds": [
+    0
+  ],
+  "upstream_run_ids": [],
+  "notes": "Gate B0: can the GA reach interpolation? (D049) + bolt-on positive control",
+  "n_conditions": 1
+}
