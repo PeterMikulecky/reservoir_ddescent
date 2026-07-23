@@ -435,3 +435,91 @@ intuition (<0.2 may help), (2) E-series weight-dependent-STDP bimodalization + h
 differentiator, (3) S-series reverberation→spurious-correlation→corrupted-structure + sparse-activation
 fix. When we return post-sweep, "reduce activity/density and re-measure differentiation functionally" is
 the most-converged next experiment.
+
+---
+
+## N-series — threads from the evolutionary-SNN literature (2026-07-22, second literature pass)
+
+**Sources.** Loyola-Jara, Fernández-Rodríguez & Baladron 2026, "Evolving spiking neural networks: the role
+of neuron models and encoding schemes," Front Neurosci 20:1697163 (LIF vs Izhikevich under NEAT).
+Shen, Zhao, Dong & Zeng 2023, "Brain-inspired neural circuit evolution for SNNs," PNAS 120(39):e2218173120
+(NeuEvo: evolves E/I × feedforward/feedback circuit motifs via local unsupervised rules + a GLOBAL ERROR
+SIGNAL). Related: Pan/Zhao/Zhao/Zeng, "Brain-inspired Evolutionary Architectures for SNNs," arXiv
+2309.05263 (local modular motifs + global cross-module connectivity). Survey: arXiv 2406.12552 /
+J Membrane Computing (abstract-level only so far; positioning material for write-up).
+
+### N1 — LIF sufficiency: the P-AXIS CRITERION EXTENDS TO NEURON MODELS (LIF stays, for a principled reason)
+The Frontiers paper finds Izhikevich consistently outperforms LIF under NEAT, concluding the neuron model
+matters as much as the encoding scheme. PJM's reductio: "richer units evolve better" is near-tautological
+(cultured neurons would beat Izhikevich); the real question is whether LIF is SUFFICIENTLY EVOLVABLE **for
+our particular fitness task, as a means to measure the fitness-vs-P curve.**
+
+**Decisive point (extends D111): Izhikevich neurons carry 4 parameters each (a,b,c,d). If evolvable, that's
+4N fitted DOF living OUTSIDE our synaptic P count — the same contamination as a powerful readout, merely
+relocated into the units.** We would be plotting fitness against synapse count while a large share of
+adaptive capacity sits in uncounted neuron parameters. For a study whose entire point is fitness-vs-P,
+**LIF's parameter-poverty is a FEATURE.** Any richer unit model would need its parameters frozen (losing
+the claimed evolvability benefit) or counted in P (changing what the axis means). → **LIF RETAINED.**
+
+### N2 — LANDSCAPE-SMOOTHNESS TEST (new queued experiment; could directly explain D109 non-heritability)
+The sufficiency question narrows to something measurable: **is the LIF genotype→phenotype map smooth
+enough for selection to climb?** Sweep MUTATION MAGNITUDE and measure how far the PHENOTYPE moves
+(regulation score; and the developed state itself, e.g. state-distance or decodability shift).
+  - SMOOTH map → graded phenotype change with mutation size.
+  - ROUGH map → large phenotype jumps even for tiny mutations.
+**This discriminates two very different causes of D109's r≈0 fitness heritability:** (a) SUBSTRATE
+roughness (rugged genotype-phenotype map — LIF's fault, would motivate revisiting the unit model despite
+N1) vs (b) ARCHITECTURE scrambling (something in development/selection destroying transmission — fixable
+without changing the substrate). We currently cannot distinguish these, and they imply completely
+different fixes. Cheap (no GA needed — just mutate-and-measure), and arguably the most diagnostic item
+queued. HIGH PRIORITY.
+
+### N3 — Structural-descriptor vocabulary for the deferred metric layer (partial transfer only)
+The Zeng-lab work supplies a circuit taxonomy (E/I × feedforward/feedback motifs; modular organisation;
+cross-module connectivity) that could fill METRIC_BATTERY §3's deliberately-unspecified structural
+descriptors. **Two constraints on adoption (PJM):**
+1. **It is a HYPOTHESIS, not a neutral descriptor set** — PJM reads it as a claim (likely minicolumn-
+   inspired) about how laminar cortex organises into functional processing units. So we use these as
+   DESCRIPTORS WE COMPUTE, never as STRUCTURES WE EXPECT — otherwise a cortical-organisation hypothesis
+   enters through the back door of our metrics.
+2. **FF/FB is not well-defined in our architecture.** We have a single recurrent pool: no laminae, no
+   space, no hierarchy. "Feedforward/feedback" presupposes a hierarchy we don't have; applying it would
+   require DERIVING one (input-distance ordering, functional depth), an interpretive step with its own
+   assumptions.
+**TRANSFERABLE CORE (grounded in structure we actually have):** E/I motif composition (we have Dale's
+law), CYCLE/LOOP structure (feedback loops are detectable in the directed graph without layers), and
+MODULARITY. FF/FB held in reserve pending a justified derived hierarchy.
+
+### N4 — Dense-then-prune: plausible for the DEVELOPMENTAL phase, but "how dense is dense" is undefined
+NeuEvo's framing notes the neurodevelopmental pattern: connections that are used stabilise and are
+retained while the rest degenerate. This suggests a THIRD option for the density question alongside "lower
+fixed density" and "evolvable density": **dense start + a real PRUNING dynamic** (activity-dependent
+elimination). Note our product-rule mutation already drives weights toward zero but NOTHING EVER REMOVES
+them, and density_mode="fixed" forbids structural change entirely.
+**PJM's two cautions, both of which land:**
+1. Overproduction-and-pruning is a CRITICAL-PERIOD phenomenon (early development, adolescence), NOT the
+   mechanism of ongoing adult learning; importing it as a general learning strategy would be a category
+   error. (Wrinkle in its favour: our "development" phase IS explicitly a developmental window before the
+   phenotype is assayed — closer to the analogy than generic adult learning. It doesn't rescue it as a
+   LEARNING principle, but it isn't obviously misapplied to the developmental phase specifically.)
+2. **We have NO principled anchor for what density MEANS in our system.** Cortical local connection
+   probability (~0.1–0.2) is distance-dependent in a spatially organised network of enormous size; our
+   N=50 pool has no space and no scale correspondence. Density is not comparable across those regimes, so
+   "is 0.2 too dense?" may be unanswerable as posed. **This weakens the earlier three-thread convergence:
+   what those threads actually converge on is "too much ACTIVITY/REVERBERATION," of which density is only
+   one route.**
+
+### N5 — How to set up the density work given N4 (revises the earlier converged plan)
+Consistent with D104's measure-both-ways: **keep RAW PARAMETER COUNT as the double-descent axis** (the DD
+curve requires a parameter count; a non-count quantity on the axis would corrupt it), **and measure a
+DYNAMICALLY MEANINGFUL INVARIANT alongside as a covariate** — spectral radius, mean effective input per
+neuron, and/or a branching-parameter estimate. Then "how dense is dense" is answered EMPIRICALLY in
+dynamical terms (where does the network sit relative to criticality?) without contaminating the P axis.
+This also supplies the diagnostic we've never had: whether two densities differing in COUNT are actually
+in different DYNAMICAL REGIMES. Fold these invariants into the core measurement set (METRIC_BATTERY §1b
+regime indicators).
+
+**PRIORITY:** N2 (landscape smoothness — cheap, discriminates substrate-vs-architecture as the source of
+non-heritability) → N5 (dynamical invariants into the core measurements, needed BEFORE the density/P_dev
+sweep is designed) → N3 (descriptors, when the derived-metric layer opens) → N4 (pruning, as one option
+in the density design). N1 is DECIDED (LIF retained). All gated on the running regulation-selection result.

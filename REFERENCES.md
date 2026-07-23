@@ -690,3 +690,29 @@ E2L's weight-dependent-STDP/homeostasis-as-differentiator, and this Szathmáry r
 work — now point at ONE hypothesis: too much activity/connectivity/reverberation is PREVENTING
 differentiation. "Reduce activity/density, re-measure differentiation functionally" is the most-converged
 post-sweep experiment.
+
+### Loyola-Jara, Fernández-Rodríguez & Baladron 2026 — "Evolving spiking neural networks: the role of neuron models and encoding schemes in neuromorphic learning" (Front Neurosci 20:1697163)
+NEAT evolving weights+topology; compares LIF vs Izhikevich across encoding schemes on classification and
+RL. Izhikevich consistently outperforms LIF (one task comparable); concludes the neuron model matters as
+much as the encoding scheme. **Our response (D111 extension, queue N1):** the P-axis criterion resolves
+this against adopting Izhikevich — 4 parameters/neuron would be 4N fitted DOF outside the synaptic P count,
+contaminating the very axis we measure. LIF's parameter-poverty is a feature. The live question becomes
+landscape SMOOTHNESS (queue N2), not unit richness.
+
+### Shen, Zhao, Dong & Zeng 2023 — "Brain-inspired neural circuit evolution for spiking neural networks" (PNAS 120(39):e2218173120)
+NeuEvo: evolves biologically plausible circuit structures using excitatory–inhibitory neurons and
+feedforward–feedback connections via local unsupervised learning rules, **combined with a global error
+signal**. Related: Pan, Zhao, Zhao & Zeng, arXiv 2309.05263 (local modular motifs + evolved global
+cross-module feedforward/feedback connectivity). **Use for us (queue N3):** a candidate structural-
+descriptor vocabulary for METRIC_BATTERY §3. **Two constraints:** (1) PJM reads it as a HYPOTHESIS (likely
+minicolumn-inspired) about laminar cortical organisation — so use as descriptors we COMPUTE, never as
+structures we EXPECT; (2) FF/FB is undefined in our single recurrent pool (no laminae/space/hierarchy), so
+only E/I motif composition, cycle/loop structure, and modularity transfer cleanly. **Caveat:** their local
+rules are paired with a GLOBAL ERROR SIGNAL, a supervised channel we deliberately lack — so their success
+is not evidence that evolution + purely local rules suffices, and that global signal is arguably doing work
+analogous to the readout-capacity hazard D111 rejects.
+
+### Evolutionary Spiking Neural Networks: A Survey (arXiv 2406.12552 / J Membrane Computing 2024)
+Survey of evolutionary approaches to SNNs. Abstract-level only so far; positioning material for the
+write-up (checking whether anyone has asked the fitness-vs-P question of a biologically-structured SNN).
+Pull properly when drafting.

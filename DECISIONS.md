@@ -4514,6 +4514,21 @@ reader can compensate for whatever the network does, so mutating the network bar
 performance and fitness fails to transmit. If so, narrowing the readout (as in (1)) might itself RESTORE
 heritability — connecting D109's non-heritability to readout capacity. Testable.
 
+**EXTENSION (2026-07-22, second literature pass): THE P-AXIS CRITERION APPLIES TO NEURON MODELS TOO.**
+The Frontiers 2026 NEAT study (Loyola-Jara et al., Front Neurosci 20:1697163) finds Izhikevich neurons
+consistently outperform LIF, concluding the neuron model matters as much as the encoding scheme — an
+apparent challenge to our LIF substrate. But the D111 criterion resolves it: **Izhikevich units carry 4
+parameters each (a,b,c,d); if evolvable that is 4N fitted DOF OUTSIDE the synaptic P count** — the same
+contamination as a powerful readout, merely relocated from the reader into the units. We would be plotting
+fitness against synapse count while much of the adaptive capacity sat in uncounted neuron parameters. For a
+study whose central measurement IS fitness-vs-P, **LIF's parameter-poverty is a FEATURE, not a limitation**;
+a richer unit model would have to be either frozen (forfeiting the evolvability benefit) or counted in P
+(changing what the axis means). **LIF RETAINED.** PJM's framing: "richer units evolve better" is
+near-tautological (cultured neurons would beat Izhikevich); the real question is whether LIF is
+sufficiently evolvable FOR OUR TASK as a means to measure the fitness-vs-P curve. That narrows to a
+MEASURABLE property — genotype→phenotype landscape smoothness — queued as N2, which also discriminates
+substrate-roughness from architecture-scrambling as the cause of D109's non-heritability.
+
 **LITERATURE CONTEXT (searched).** RC work independently validates the reframe's foundation: reservoirs
 compute useful representations "detectable only in higher order principal components" that render tasks
 linearly separable (Nolte et al. arXiv 2411.10047) — our D110 finding in RC language; and tanh vs linear
