@@ -116,8 +116,49 @@ internal on/off switch of that regime is the crux.
 
 ---
 
+## CORRECTION (2026-07-22, D112) — affects H-Cv2's evidential basis, not its content
+
+**What was found.** "Encoding" and "regulation" as implemented are the SAME measurement offset by a
+constant: encoding = 1.0 − test_err, regulation = floor − test_err (floor = 1.014), so
+regulation ≡ encoding + 0.014, perfectly correlated over the operating range. They are not separable
+components.
+
+**Consequence for the H-C → H-Cv2 revision.** The revision cited four supports. Support #1 (the D109
+heritability dissociation) was stated as "regulation is heritable, aggregate fitness/encoding is not." That
+comparison was never actually run: the probe compared HYBRID fitness against REGULATION, and since
+regulation ≡ encoding + const their heritabilities are necessarily identical. **Restated correctly, the
+D109 dissociation is: pure test-error-based PERFORMANCE (r≈0.29) vs HYBRID fitness (r≈0.03), implicating
+`carrying` — the covariance-decay memory measure, the only genuinely distinct component — as the source of
+non-heritability.**
+
+Supports #2 (deep networks natively find distributed solutions), #3 (biology's clean linear encoders are
+structurally specified rather than emergent) and #4 (D110: context nonlinearly but not linearly decodable)
+are independent of this error and stand unchanged.
+
+**Status of H-Cv2 after the correction: STILL PROVISIONAL, not refuted, but with one leg reinterpreted.**
+Its "encoding is a hard ordered target while regulation is native" phrasing leaned on a component
+distinction that does not exist in the implementation. The underlying claim — that the substrate natively
+carries distributed context structure, and the second descent is REFINEMENT rather than EMERGENCE — rests
+on supports #2–#4 and is unaffected. **But note H-Cv2 can no longer be tested by comparing the
+enc/reg components**, because they are the same quantity; its discriminating predictions must be evaluated
+on decodability, structural descriptors, and the fitness-vs-P curve instead.
+
+**Related design decision (D112).** The enc/car/reg decomposition is COLLAPSED for selection purposes: the
+D094 three-term fitness was itself an a priori engineering hypothesis about how the network ought to solve
+the task (encoding → carrying → regulation atop it), which is the same imposition the reframe rejects.
+Selection now uses a single performance scalar (floor − test_err); the components are retained as
+post-hoc DIAGNOSTICS. This also means the discriminating tests for H-Cv2 vs H-C v1 shift toward "analyse
+what the evolved networks actually built, and how it changed with P" rather than "which pre-defined
+component climbed."
+
+---
+
 ## Revision history (chronological)
 - **2026-07-22** — H-C v1 → H-Cv2 (difficulty ordering inverted: regulation native, encoding the hard
   ordered case; second descent = refinement not emergence). Forced by DECISIONS D108–D110. H-Cv2
   PROVISIONAL, gated on the reversal test + range-artifact control. H-A measurement rebuilt (nonlinear
   readout) without revising the claim. Driving question, H-B, H-D unrevised.
+- **2026-07-22 (correction, D112)** — encoding ≡ regulation + const discovered; H-Cv2 support #1 restated
+  (dissociation is performance-vs-carrying, not regulation-vs-encoding). H-Cv2 remains PROVISIONAL on
+  supports #2–#4. enc/car/reg decomposition collapsed for selection; components retained as diagnostics.
+  H-Cv2's discriminating tests move to decodability / structural descriptors / the fitness-vs-P curve.

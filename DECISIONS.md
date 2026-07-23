@@ -4538,3 +4538,73 @@ readouts (Lagomarsini/Ceni/Gallicchio, ICANN 2025) — NOT yet read in full; the
 ever triggered. Note the RC framework's own logic supports minimal readouts: the whole point of RC is that a
 SIMPLE readout suffices BECAUSE the reservoir does the nonlinear work — if you need a powerful readout, the
 computation has moved out of the network. Which is precisely the failure this project already rejected.
+
+### D112 — CORRECTION to D109 + collapse the enc/car/reg decomposition. "Encoding" and "regulation" are the SAME measurement offset by a constant; the real dissociation is performance-vs-CARRYING. Stop imposing a solution decomposition a priori; evolve, then analyse.
+**2026-07-22 · Correction + design decision · found by reading evaluate() while the D111 run was in flight**
+
+**THE MEASUREMENT FACT.** In `evaluate()` the three components are built as:
+```
+e_te = _affine_nmse(Y_test, rates)          # test error, lower better
+enc  = max(0.0, 1.0   - e_te)               # "encoding"
+reg  = max(0.0, floor - e_te)               # "regulation"   (floor = 1.014 this task instance)
+car  = _carry_covdecay(...)                 # "carrying"  <- the only genuinely different measure
+```
+**So `regulation = encoding + (floor - 1.0) = encoding + 0.014` EXACTLY.** Both are the same test error
+subtracted from a reference and sign-flipped; they differ only in intercept. In our operating range
+(e_te ~ 0.90-0.99) neither clips, so **encoding and regulation are PERFECTLY CORRELATED — not separable
+components.** (Narrow exception: for poor performers with 1.0 < e_te < 1.014, encoding clips to 0 while
+regulation stays positive, so they decorrelate slightly at the BOTTOM of the population; for the top
+performers that selection acts on, they are identical up to the offset.)
+
+**WHAT D109 ACTUALLY SHOWED (correction).** D109 was read as "regulation is heritable (r~0.29) but
+encoding/aggregate fitness is not (r~0.03)," and that dissociation seeded the H-Cv2 reframe. But:
+- The probe compared **hybrid fitness** heritability against **regulation** heritability. It NEVER measured
+  encoding heritability separately.
+- Since regulation ≡ encoding + const, their heritabilities are NECESSARILY IDENTICAL. **The
+  "regulation-vs-encoding" dissociation was never tested and cannot exist as stated.**
+- **The real dissociation is: pure test-error-based performance (heritable, r~0.29) vs the HYBRID fitness
+  (non-heritable, r~0.03).** The hybrid's distinguishing ingredients are `carrying` and the
+  `carrying*regulation` product. **=> `carrying` (the covariance-decay memory measure) is the likely
+  source of the non-heritability**, not "encoding."
+
+**EFFECT ON THE H-Cv2 REFRAME (one leg reinterpreted, three stand).** D109's heritability dissociation was
+support #1 of four. It must be RESTATED as performance-vs-carrying. Supports #2 (deep nets natively find
+distributed solutions), #3 (biology's linear encoders are structurally specified, not emergent), and #4
+(D110: context is nonlinearly but not linearly decodable) are INDEPENDENT of this error and stand
+unchanged. H-Cv2 is not refuted, but its "encoding is a hard ordered target while regulation is native"
+phrasing leaned on a component distinction that does not exist in the implementation.
+
+**A SEPARATE DESIGN FLAW, worth recording.** The docstring calls encoding "memoryless-achievable task
+performance (first descent)." `1.0 - e_te` is not that — it is total performance against a fixed reference
+of 1.0. A real memoryless-achievable measure would require SCORING A MEMORYLESS MODEL, not subtracting from
+1.0. So the component intended to isolate first-descent encoding never did.
+
+**DECISION (PJM): COLLAPSE THE DECOMPOSITION. Stop treating enc/car/reg as distinct components to select
+on.** Rationale, and it is the reframe applied to our own fitness function: **the D094 three-term fitness
+was itself an ENGINEERING HYPOTHESIS about HOW the network should solve the task** — build encoding, then
+carrying, then regulation atop it. That ladder is precisely the a priori decomposition the reframe says we
+must stop imposing (and the same error as D038/D074's "don't build in the mechanism under test"). PJM:
+*"let's stop deciding for the network ahead of time the way it should be engineering its solutions; let's
+evolve them and then analyze what it decided to do, and how that changed at varying P."*
+
+**WHAT REPLACES IT.**
+- **Selection: a SINGLE performance scalar** = `floor - test_err` ("how far do you beat the memoryless
+  floor"), which by the task's construction requires context inference. **This is exactly what
+  `fitness_mode="regulation_only"` already computes** — so the RUNNING D111 EXPERIMENT IS ALREADY DOING THE
+  RIGHT THING; only its NAME and its RATIONALE change. (Rename deferred: the mode string is inside the
+  checkpoint config-hash, so renaming mid-run would invalidate the cells. Rename AFTER the run completes.)
+- **Bonus: this cleans the study's central measurement.** A single well-defined performance quantity on the
+  y-axis vs P on the x-axis, instead of a weighted composite whose curve shape depends on w_e/w_c/w_r that
+  we chose.
+- **enc/car/reg are RETAINED AS MEASUREMENTS, not as selection targets** — they go into the core
+  measurement set as diagnostics/descriptors (METRIC_BATTERY §1c), to be analysed post hoc. Note `carrying`
+  remains genuinely informative BECAUSE it is a different measure (and is now the prime suspect for the
+  non-heritability).
+- **The analysis burden moves post hoc, as intended:** evolve under a single performance measure, then
+  characterise WHAT the networks built and HOW that changed with P — using the agnostic structural
+  descriptors (queue N3) and the deferred derived-metric layer (METRIC_BATTERY §3).
+
+**LESSON (methodological).** This was found by reading the implementation while a run was in flight — the
+components had been reasoned about from their NAMES and docstrings for many sessions without checking the
+arithmetic. Names are not measurements. Add to the standing discipline: **before building a hypothesis on a
+component, read how it is computed.**
