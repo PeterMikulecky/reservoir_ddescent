@@ -70,6 +70,20 @@ class EvolveConfig:
     crossover: bool = False             # OFF: competing conventions
 
     # --- fitness (D094 three-term) ------------------------------------------------------
+    # --- selection basis (D111) ------------------------------------------------------------------
+    fitness_mode: str = "hybrid"        # 'hybrid'            = D094 three-term (encoding+carrying+bonus)
+                                        # 'regulation_only'   = RAW regulation alone. This is literally the
+                                        #   component D109 measured as HERITABLE (r~0.29) while aggregate
+                                        #   fitness was not (r~0). Direct test of the D109 hypothesis that
+                                        #   the hybrid DILUTES a transmissible signal with a
+                                        #   non-transmissible one.
+                                        # 'regulation_gated'  = carrying*regulation (the D094 bonus term).
+                                        #   Keeps D094's logic that regulation is only meaningful ON TOP OF
+                                        #   holding context, which guards against DEGENERATE solutions that
+                                        #   score raw regulation without actually carrying context.
+                                        # Which is right is OPEN -> measure both ways and compare (D104).
+                                        # NOTE: readout is unchanged (LINEAR) in all modes -- D111's P-axis
+                                        # criterion. This switch changes WHAT we select on, not HOW we read.
     c_syn: float = 0.0                  # metabolic cost per synapse. 0 = FRANK'S ASSUMED REGIME
     w_e: float = 1.0                    # weight on encoding (first descent)
     w_c: float = 1.0                    # weight on carrying (short-term memory)
@@ -99,10 +113,22 @@ def _fitness(comp: dict, n_params: int, cfg: EvolveConfig) -> float:
     - carrying*regulation = working memory BONUS (second descent): regulation is contingent on
       holding context (multiplicative), so it is only accessible on top of carrying (D094).
     c_syn is the metabolic complexity penalty: 0 = Frank's assumed regime (D054); >0 regularized.
-    All components are read through the CAPACITY-CONSTRAINED designated-slice readout (D095)."""
-    base = (cfg.w_e * comp["encoding"]
-            + cfg.w_c * comp["carrying"]
-            + cfg.w_r * (comp["carrying"] * comp["regulation"]))
+    All components are read through the CAPACITY-CONSTRAINED designated-slice readout (D095).
+
+    D111: `fitness_mode` selects WHAT we select on. The readout stays LINEAR in every mode (the
+    P-axis criterion: readout parameters are uncounted P, so the readout must not gain capacity).
+    """
+    mode = getattr(cfg, "fitness_mode", "hybrid")
+    if mode == "regulation_only":
+        base = comp["regulation"]                                   # the D109-heritable component
+    elif mode == "regulation_gated":
+        base = comp["carrying"] * comp["regulation"]                # D094 bonus term, carrying-gated
+    elif mode == "hybrid":
+        base = (cfg.w_e * comp["encoding"]
+                + cfg.w_c * comp["carrying"]
+                + cfg.w_r * (comp["carrying"] * comp["regulation"]))
+    else:
+        raise ValueError(f"unknown fitness_mode {mode!r}")
     return base - cfg.c_syn * n_params
 
 
