@@ -4675,3 +4675,75 @@ appears in the fitness function must be traced to its data source before it is t
 **no quantity computed from the reporting split may enter the selection signal.** Add a mechanical guard —
 an assertion or unit test that `_fitness()`'s inputs derive only from train/validation data — so this class
 of regression cannot recur silently.
+
+### D114 — Regulation-only selection run (D111 experiment) COMPLETE. Selection strength, not selection basis, is the dominant effect. Hybrid confirmed a BAD basis on two independent grounds. Apparatus reproduces exactly. All test numbers void per D113.
+**2026-07-22 · Result (exploratory; leaked per D113) · runs/reg_select/_summary.json + log**
+
+**THE GRID** (pop=30, gens=40, competition on, wta_gain=1.0; PRE-D113-fix code, so fitness = floor - TEST error):
+```
+cell                     fit_slope   reg_slope   reg_mean_end   test_min   audit(evolved-random)
+regulation_only_beta5     +0.00025    +0.00025      0.0437        0.904        +0.0186
+regulation_only_beta20    +0.00006    +0.00006      0.0332        0.922        +0.0081
+regulation_only_beta50    +0.00104    +0.00104      0.0648        0.881        +0.0397
+hybrid_beta5              +0.00015    -0.00008      0.0334        0.912        +0.0125
+```
+
+**FINDING 1 — EXACT REPRODUCIBILITY (apparatus validation).** `hybrid_beta5` here gives fit_slope=+0.00015,
+test_min=0.912. D108's `wta1_beta5` cell (same config, same seed, run days earlier) gave fit_slope=+0.00015,
+min=0.912 — **identical to every digit.** The pipeline is deterministic and the control exactly reproduces a
+prior independent run. Cross-run comparisons are therefore trustworthy.
+
+**FINDING 2 — THE HEADLINE CONTRAST FAILS AT MATCHED SELECTION STRENGTH.** The experiment asked "does
+regulation-only climb where hybrid was flat," with beta=20 as the CALIBRATED match to hybrid@beta5 (the
+~4.3x fitness-spread ratio). At matched strength: reg_only@beta20 ends at reg_mean 0.0332, hybrid@beta5 at
+0.0334 — **indistinguishable.** The advantage appears ONLY at beta=50, ~2.5x beyond the calibrated match.
+**=> The dominant effect in this grid is SELECTION STRENGTH, not selection BASIS.** Reported plainly rather
+than framing beta50-vs-hybrid5 as the intended contrast (it isn't; those differ on both axes).
+
+**FINDING 3 — but the BASIS effect is real, small, and DIRECTIONAL.** Every regulation_only cell moves
+regulation UP (reg_slope > 0 in all three). Hybrid is the only cell where fit_slope and reg_slope DISAGREE
+IN SIGN: fitness rose (+0.00015) while regulation FELL (-0.00008). So under hybrid selection the population
+improved on something that is NOT regulation — almost certainly `carrying`, the one component computed
+differently (and from E_train). **This is stronger than "hybrid was flat": hybrid actively ERODES
+regulation**, and it independently supports D112's inference that carrying is the anomalous ingredient.
+
+**FINDING 4 — the READOUT-POWER AUDIT (D111) cleanly separates the two bases, and HYBRID FAILS IT.**
+Under hybrid fitness, random networks score mean 0.0536 / **max 0.1120** vs evolved 0.0661: **the best of ten
+RANDOM draws beats the evolved population mean by ~1.7x.** Forty generations of selection produced something
+worse than a good random draw. Under regulation_only the audit passes and scales with beta (evolved 0.0437 /
+0.0332 / 0.0648 vs random max 0.0329). **A fitness that random networks can score highly on by chance is a
+noise-dominated fitness** — a second, independent indictment of the hybrid basis, and a vindication of
+promoting the audit to a standing control.
+
+**FINDING 5 — beta is still SUB-SATURATION even at 50, and beta=20 was non-monotonically WEAK.** With
+regulation-fitness SD ~0.0088, the softmax discriminability product beta*SD is 0.044 / 0.18 / 0.44 for
+beta 5 / 20 / 50 — all below the ~1 needed for sharp discrimination. Most likely reading of the
+non-monotonicity (beta20 weakest): beta 5 and 20 are both sub-threshold so their ordering is noise, and only
+50 bites. **Next runs should use beta 50 / 100 / 200.**
+
+**THE D113 CAVEAT LANDS HARDEST ON THE BEST-LOOKING CELL.** This run predates the three-way-split fix, so
+`regulation_only` = floor - TEST error and selection ran ~1200 evaluations against E_test. The
+train-vs-test divergence is the smoking gun:
+```
+reg_only:  train 0.986 -> 0.993 / 0.994 / 0.972    test 0.960 -> 0.928 / 0.945 / 0.888
+hybrid:    train 0.983 -> 0.966                    test 0.989 -> 0.962
+```
+**In every regulation_only cell TEST improves while TRAIN stagnates or WORSENS** — the classic signature of
+fitting the evaluation set rather than learning the task. Hybrid, which partly selects on `carrying`
+(computed from E_train), improves BOTH together — mechanistically consistent. **So our most encouraging
+number (beta50) is also our most contaminated one. NO test number from this run may be read as
+generalisation.**
+
+**WHAT SURVIVES.**
+- Selection CAN move the population hard when beta is high enough (beta50 moved reg_mean 0.0304->0.0648,
+  and captured ~21% of headroom on test_min — though that figure is leak-inflated). D108 left it genuinely
+  unclear whether our GA could move a population at all; it can.
+- The apparatus is deterministic and reproduces exactly (Finding 1).
+- Hybrid is a bad selection basis on TWO independent grounds (Findings 3 and 4) — collapse decision (D112)
+  further supported.
+- Nothing about GENERALISATION.
+
+**NEXT.** Re-run at beta 50 / 100 / 200 on the D113 three-way split. **The diagnostic that matters: does
+TEST error move when selection can no longer see it?** If yes, genuine. If val improves while test stays
+flat, this entire signal was leak. ALSO ADD as a standing diagnostic: **train-vs-test divergence is a cheap,
+sensitive leak detector** we could have had all along.
