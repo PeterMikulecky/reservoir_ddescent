@@ -1,4 +1,4 @@
-"""TRIAL-ARM RUNNER — first GA arm on the cue->delay->probe XOR task (D120), with the D121 clock fix.
+"""TRIAL-ARM RUNNER - first GA arm on the cue->delay->probe XOR task (D120), with the D121 clock fix.
 
 Drives the TRIAL task through run_evolution's task-agnostic hooks (added alongside D121):
     eval_fn       = trial_evaluate                  -- population scoring (serial path)
@@ -74,7 +74,7 @@ def preflight_gate(task, net_cfg, cfg, verbose=True):
 
     if verbose:
         print("PRE-ARM GATE")
-        print("  leakage: |Δfitness| when Y_test destroyed = %.2e  -> %s"
+        print("  leakage: |deltafitness| when Y_test destroyed = %.2e  -> %s"
               % (leak_delta, "PASS" if leak_ok else "FAIL"))
         print("  controls (random genome): normal=%.3f omit_cue=%.3f scramble=%.3f  -> %s"
               % (accs["normal"], accs["omit_cue"], accs["scramble"],
@@ -142,7 +142,7 @@ def main():
         if not args.skip_gate:
             ok, detail = preflight_gate(task, net_cfg, cfg)
             if not ok:
-                print("\nGATE FAILED — aborting before the arm (would produce scored garbage).")
+                print("\nGATE FAILED - aborting before the arm (would produce scored garbage).")
                 (out_dir / "_gate_FAILED.json").write_text(json.dumps(detail, indent=2, default=str))
                 sys.exit(1)
             print("gate PASS\n")
@@ -171,7 +171,7 @@ def main():
         ckpt.write_text(json.dumps(m, indent=2, default=str))
 
         print("\n" + "=" * 78)
-        print("TRIAL ARM — did it climb?")
+        print("TRIAL ARM - did it climb?")
         print("=" * 78)
         print(f"  fit_slope={m['fit_slope']:+.5f} | fit {m['fit_start']:.4f}->{m['fit_end']:.4f} "
               f"| best_test {m['best_test_start']:.3f}->{m['best_test_end']:.3f} (min {m['best_test_min']:.3f})")

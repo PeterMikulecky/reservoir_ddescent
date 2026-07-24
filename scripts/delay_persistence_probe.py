@@ -1,4 +1,4 @@
-"""delay_persistence_probe.py — trial-task invariants for the audit's C-group (D120/D121).
+"""delay_persistence_probe.py - trial-task invariants for the audit's C-group (D120/D121).
 
 Rebuilt and TESTED against the real trial-task code (2026-07-24). The original lived only in the
 frozen chat's sandbox and was never committed; this is a fresh implementation, not a reconstruction,
@@ -6,18 +6,18 @@ verified to run on ddescent.trial_task + EvoNet.behave/develop.
 
 It provides three checks, each an invariant the trial task must satisfy before a GA arm is trusted:
 
-  1. d121_regression   — a ZERO-PLASTICITY develop() must be bit-identical to no development at all.
+  1. d121_regression   - a ZERO-PLASTICITY develop() must be bit-identical to no development at all.
                          This is the invariant whose violation WAS D121 (developed nets were assayed
                          on clock-shifted stimuli). Keep it as a permanent regression guard: if the
                          clock-offset fix in EvoNet.behave ever regresses, cue decode collapses here.
 
-  2. delay_persistence — cue decodability at the LAST delay segment, swept over delay length. This is
+  2. delay_persistence - cue decodability at the LAST delay segment, swept over delay length. This is
                          the H-D measurement made concrete: below tau_slow the substrate coasts on
                          passive decay (cue held ~1.0); past it, an UNDEVELOPED net must drop toward
                          chance. Where it breaks is the boundary H-D is about, and it is what a
                          developed net must learn to push outward.
 
-  3. degenerate_checks — omit_cue and scramble controls must sit at chance (0.5). These are the
+  3. degenerate_checks - omit_cue and scramble controls must sit at chance (0.5). These are the
                          degenerate-strategy invariants: the XOR target makes every cue-blind and
                          every probe-blind strategy score exactly chance BY CONSTRUCTION (D120), so a
                          network genuinely doing the task must fall to chance under either control.
@@ -42,7 +42,7 @@ def stage_rows(task, split: str, stage: str) -> np.ndarray:
     """Row indices (into the (n_trials*n_seg, .) presentation axis) for `stage` in every trial.
 
     stage in {"cue", "delay", "probe", "read"}. For a multi-segment delay, "delay" returns the LAST
-    delay segment of each trial — the most stringent point for persistence (the cue must still be
+    delay segment of each trial - the most stringent point for persistence (the cue must still be
     present right before the probe arrives).
     """
     m = task.meta
@@ -58,7 +58,7 @@ def stage_rows(task, split: str, stage: str) -> np.ndarray:
 def decode(X, labels, n_splits: int = 3, seed: int = 0) -> float:
     """Cross-validated linear decodability of integer `labels` from feature rows `X` (best fold).
 
-    One-vs-rest ridge in closed form — enough for a decodability read, no sklearn dependency. Rows of
+    One-vs-rest ridge in closed form - enough for a decodability read, no sklearn dependency. Rows of
     X are trials, columns are neurons. Returns the max over folds (peak decodability), matching how
     the frozen-chat caller used it (`max(decode(...))` there; here the max is folded in).
     """
@@ -84,10 +84,10 @@ def decode(X, labels, n_splits: int = 3, seed: int = 0) -> float:
 
 
 # ==================================================================================================
-# CHECK 1 — D121 REGRESSION: zero-plasticity develop() must equal no development
+# CHECK 1 - D121 REGRESSION: zero-plasticity develop() must equal no development
 # ==================================================================================================
 def d121_regression(seed: int = 1, noise_sigma: float = 0.0) -> dict:
-    """At noise=0 the two must be bit-identical; the returned max|Δ| is the guard value.
+    """At noise=0 the two must be bit-identical; the returned max|delta| is the guard value.
 
     Also reports per-stage cue decode for both conditions at the study's real noise, where they must
     at least agree on the load-bearing cue/delay stages.
@@ -121,7 +121,7 @@ def d121_regression(seed: int = 1, noise_sigma: float = 0.0) -> dict:
 
 
 # ==================================================================================================
-# CHECK 2 — DELAY PERSISTENCE: how far the (undeveloped) substrate coasts, swept over delay length
+# CHECK 2 - DELAY PERSISTENCE: how far the (undeveloped) substrate coasts, swept over delay length
 # ==================================================================================================
 def delay_persistence(delays=(1, 2, 4, 8), seed: int = 1) -> dict:
     """Cue decodability at the LAST delay segment vs delay length, on an UNDEVELOPED net.
@@ -146,7 +146,7 @@ def delay_persistence(delays=(1, 2, 4, 8), seed: int = 1) -> dict:
 
 
 # ==================================================================================================
-# CHECK 3 — DEGENERATE-STRATEGY CONTROLS: omit_cue and scramble must sit at chance
+# CHECK 3 - DEGENERATE-STRATEGY CONTROLS: omit_cue and scramble must sit at chance
 # ==================================================================================================
 def degenerate_checks(seed: int = 7) -> dict:
     """omit_cue and scramble must sit at chance (0.5) for ANY network doing the task.
@@ -182,7 +182,7 @@ if __name__ == "__main__":
     warnings.filterwarnings("ignore")
     r1 = d121_regression()
     print("== CHECK 1  D121 regression (zero-plasticity develop == no development) ==")
-    print("   max|Δ| state at noise=0 : %.3e  -> %s"
+    print("   max|delta| state at noise=0 : %.3e  -> %s"
           % (r1["max_abs_state_diff_noise0"], "PASS" if r1["passed"] else "FAIL"))
     print("   per-stage cue decode (undeveloped, zeroDev), real noise:")
     for st, (u, d) in r1["stage_decode_undev_vs_dev"].items():

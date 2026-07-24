@@ -551,7 +551,7 @@ def run_evolution(task, net_cfg: EvoNetConfig, cfg: EvolveConfig,
           if verbose and (gen % 20 == 0 or gen == cfg.n_generations - 1):
             h = history[-1]
             print(f"  gen {gen:>4}: best_train={h['best_train']:.3f} best_test={h['best_test']:.3f} "
-                  f"|W|={h['mean_params']:.0f}±{h['std_params']:.0f} exc={h['mean_exc_frac']:.2f}")
+                  f"|W|={h['mean_params']:.0f}+/-{h['std_params']:.0f} exc={h['mean_exc_frac']:.2f}")
 
           if gen == cfg.n_generations - 1:
             break
