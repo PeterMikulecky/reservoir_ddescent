@@ -362,7 +362,17 @@ def hierarchical_environments(K: int = 10, d: int = 10, r1: int = 3,
 
     def draw(n):
         n_blocks = int(np.ceil(n / context_dwell))
-        ctx = np.repeat(rng.integers(0, n_contexts, n_blocks), context_dwell)[:n]
+        # STRATIFIED context assignment. Drawing i.i.d. per block leaves whole contexts absent from a
+        # split whenever n_blocks is close to n_contexts: with 6 blocks and 4 contexts a local run had
+        # train={0,1,3}, val={0,1,3}, test={0,1,2,3} — so 17% of the TEST set came from a context that
+        # was never developed on and never selected on, an uncontrolled, seed-dependent train/test
+        # distribution mismatch. Stratify so every split covers every context, then SHUFFLE the block
+        # order so the sequence stays unpredictable and context must still be inferred from statistics
+        # rather than from position.
+        reps = int(np.ceil(n_blocks / n_contexts))
+        pool = np.tile(np.arange(n_contexts), reps)[:n_blocks]
+        rng.shuffle(pool)
+        ctx = np.repeat(pool, context_dwell)[:n]
         E = np.empty((n, K))
         for c in range(n_contexts):
             m = ctx == c

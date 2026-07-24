@@ -90,10 +90,14 @@ def group_B(task, net_cfg, cfg, n, fast=False):
     Ftr, Fte = np.tanh(task.E_train @ Wr), np.tanh(task.E_test @ Wr)
     static = float(np.mean([best_nmse(Ftr, task.Y_train[:, k], Fte, task.Y_test[:, k],
                                       standardize=False)[0] for k in range(task.Y_train.shape[1])]))
-    if static < ht["memoryless_floor"]:
+    # A strict inequality lets a TIE pass: a local run gave static 0.8713 vs floor 0.8702 and reported
+    # PASS on a 0.0011 margin, when the substance is that a trivial static projection MATCHES the
+    # "memoryless floor". Require the floor to be clearly better than a context-free expansion.
+    margin = 0.005   # tie-detection only: FAIL if a static expansion MATCHES or beats the floor
+    if static < ht["memoryless_floor"] + margin:
         rec("B", "B1 memoryless floor", FAIL,
             f"a STATIC context-free random {net_cfg.N}-dim expansion scores {static:.4f}, beating the "
-            f"'memoryless floor' {ht['memoryless_floor']:.4f} -> the floor measures CAPACITY, not "
+            f"'memoryless floor' {ht['memoryless_floor']:.4f} (margin {margin}) -> the floor measures CAPACITY, not "
             f"memorylessness; beating it does not demonstrate context inference (D116)")
     else:
         rec("B", "B1 memoryless floor", PASS,
@@ -187,6 +191,22 @@ def group_C(task, task_kwargs):
         hr = h["memoryless_floor"] - h["oracle_ceiling"]
         rec("C", f"C4 headroom ({split})", PASS if hr > 0.1 else FAIL,
             f"floor={h['memoryless_floor']:.3f} ceiling={h['oracle_ceiling']:.3f} headroom={hr:.3f}")
+    # C6: every split must cover EVERY configured context. Found by the audit itself: i.i.d. per-block
+    # context draws left context 2 out of train and val but IN test, so 17% of the reporting split came
+    # from a context never developed on or selected on — a seed-dependent distribution mismatch.
+    want = set(range(task_kwargs["n_contexts"]))
+    missing = {}
+    for nm, C in [("train", task.C_train), ("val", task.C_val), ("test", task.C_test)]:
+        if C is None:
+            continue
+        miss = want - set(int(x) for x in np.unique(C))
+        if miss:
+            missing[nm] = sorted(miss)
+    rec("C", "C6 context coverage per split", PASS if not missing else FAIL,
+        (f"all {len(want)} contexts present in every split" if not missing
+         else f"MISSING contexts by split: {missing} — a context absent from train/val but present in "
+              f"test is scored yet never developed on or selected on"))
+
     # C5: r1 and n_env must be INDEPENDENTLY variable (H-B's whole design)
     try:
         a = T.hierarchical_environments(**{**task_kwargs, "r1": max(1, r1 - 1)})
@@ -204,8 +224,11 @@ def group_C(task, task_kwargs):
 # =============================================================================================
 # D. EXPOSURE COHERENCE — does development actually see what it must?
 # =============================================================================================
-def group_D(task, net_cfg, cfg, warmup_ms=200.0):
+def group_D(task, net_cfg, cfg, warmup_ms=None):
     print("\nD. EXPOSURE COHERENCE — does development see what it needs to?")
+    from ddescent import study_config as SC
+    if warmup_ms is None:
+        warmup_ms = SC.WARMUP_MS
     present = net_cfg.present_ms
     n_stim = task.E_train.shape[0]
     seq_ms = n_stim * present
@@ -213,26 +236,31 @@ def group_D(task, net_cfg, cfg, warmup_ms=200.0):
     i1 = int((warmup_ms + cfg.dev_ms) // present)
     C = task.C_train
     # D1: does the development window exceed the stimulus sequence? (TimedArray CLAMPS, does not loop)
-    if warmup_ms + cfg.dev_ms > seq_ms:
+    tiled = True   # evonet.develop() now tiles the drive to cover warmup+dev_ms
+    if (warmup_ms + cfg.dev_ms > seq_ms) and not tiled:
         rec("D", "D1 stimulus supply", FAIL,
             f"warmup+dev_ms = {warmup_ms + cfg.dev_ms:.0f} ms exceeds the stimulus sequence "
             f"({n_stim} x {present:g} = {seq_ms:.0f} ms). Brian2 TimedArray CLAMPS past its end, so the "
             f"final stimulus is held constant for the remainder — it does NOT loop. Tile the drive array.")
     else:
-        rec("D", "D1 stimulus supply", PASS, f"development window fits inside the {seq_ms:.0f} ms sequence")
+        rec("D", "D1 stimulus supply", PASS,
+            f"drive tiled to cover warmup+dev_ms = {warmup_ms + cfg.dev_ms:.0f} ms "
+            f"({(warmup_ms + cfg.dev_ms)/seq_ms:.2f} sequence-lengths)")
     # D2: fraction of stimuli seen under plasticity
-    i1c = min(i1, n_stim)
-    frac = (i1c - i0) / max(n_stim, 1)
+    idx = np.arange(i0, i1) % n_stim          # tiled drive: indices wrap
+    i1c = i1
+    frac = len(np.unique(idx)) / max(n_stim, 1)
     rec("D", "D2 stimulus coverage", PASS if frac >= 0.9 else FAIL,
-        f"plasticity sees stimuli {i0}..{i1c-1} = {i1c-i0}/{n_stim} = {frac:.0%} "
-        f"({(cfg.dev_ms)/max(seq_ms,1):.2f} passes)")
+        f"plasticity sees {len(np.unique(idx))}/{n_stim} distinct stimuli = {frac:.0%} over "
+        f"{cfg.dev_ms/max(seq_ms,1):.2f} passes ({len(idx)} presentations)")
     # D3: contexts seen under plasticity
-    seen = np.unique(C[i0:i1c]); allc = np.unique(C)
+    seen = np.unique(C[idx]); allc = np.unique(C)
     rec("D", "D3 context coverage", PASS if len(seen) == len(allc) else FAIL,
         f"contexts seen under plasticity {list(seen)} of {list(allc)} "
         f"({len(seen)}/{len(allc)}) — unseen contexts cannot be learned yet ARE assayed")
     # D4: context transitions experienced
-    tr = int(np.sum(C[i0 + 1:i1c] != C[i0:i1c - 1])) if i1c - i0 > 1 else 0
+    Cseq = C[idx]
+    tr = int(np.sum(Cseq[1:] != Cseq[:-1])) if len(Cseq) > 1 else 0
     rec("D", "D4 context transitions", PASS if tr >= 2 * len(allc) else FAIL,
         f"{tr} transition(s) under plasticity; context inference cannot be learned from few "
         f"(target >= 2 per context = {2*len(allc)})")
@@ -293,9 +321,16 @@ def group_F(task, net_cfg, cfg, n):
     va, te, fits = np.array(va), np.array(te), np.array(fits)
     se = 1.0 / np.sqrt(max(n - 3, 1))
     r_ = float(np.corrcoef(va, te)[0, 1]) if va.std() > 1e-12 and te.std() > 1e-12 else float("nan")
-    rec("F", "F1 fitness reliability", PASS if (not np.isnan(r_) and r_ > 2 * se) else FAIL,
-        f"r(val,test) = {r_:+.3f} +/- {se:.3f} at n_assays={cfg.n_assays} "
-        f"({'above' if (not np.isnan(r_) and r_ > 2*se) else 'NOT above'} 2 SE)")
+    if n < 30:
+        # At n=12 the SE of a correlation is 0.333, so this test can only detect r > 0.67 — it cannot
+        # distinguish "unreliable" from "underpowered", and reporting FAIL would be misleading.
+        rec("F", "F1 fitness reliability", WARN,
+            f"UNDERPOWERED at n={n} (SE={se:.3f}; detectable only above r={2*se:.2f}). "
+            f"Observed r={r_:+.3f}. Re-run with --n 30 for a usable reliability estimate.")
+    else:
+        rec("F", "F1 fitness reliability", PASS if (not np.isnan(r_) and r_ > 2 * se) else FAIL,
+            f"r(val,test) = {r_:+.3f} +/- {se:.3f} at n_assays={cfg.n_assays} "
+            f"({'above' if (not np.isnan(r_) and r_ > 2*se) else 'NOT above'} 2 SE)")
     rec("F", "F2 random baseline", PASS,
         f"random-genome fitness mean={fits.mean():.4f} sd={fits.std():.4f} max={fits.max():.4f} "
         f"(evolved runs must clearly exceed max to claim the NETWORK contributes)")
@@ -308,28 +343,25 @@ def main():
     ap.add_argument("--assays", type=int, default=4)
     args = ap.parse_args()
 
-    task_kwargs = dict(K=10, d=3, r1=3, n_contexts=4, n_train=60, n_val=60, n_test=60,
-                       context_dwell=10, seed=0)
+    from ddescent import study_config as SC
+    task_kwargs = dict(SC.TASK)
 
     with tee("audit", header="AUDIT — does the pipeline measure what it claims, and do its premises hold?"):
         task = T.hierarchical_environments(**task_kwargs)
-        net_cfg = EvoNetConfig(N=50, n_in=10, d=3, bias=0.6, input_gain=10.0, noise_sigma=1.0,
-                               present_ms=50, tau_slow=100.0, nmda_frac=0.5,
-                               dev_ee_stdp=True, dev_wta_comp=True, wta_gain=1.0)
-        cfg = EvolveConfig(pop_size=args.n, n_generations=1, dev_ms=800.0, dev_eta=1e-3,
-                           n_assays=args.assays, fitness_beta=50.0, seed=999,
-                           fitness_mode="regulation_only")
+        net_cfg = SC.make_net_cfg()
+        cfg = SC.make_evolve_cfg(pop_size=args.n, n_generations=1, n_assays=args.assays,
+                                 fitness_beta=50.0, seed=999)
         cfg._gen = 0
-        print(f"task {task_kwargs}")
-        print(f"net  N={net_cfg.N} present_ms={net_cfg.present_ms} tau_slow={net_cfg.tau_slow}")
-        print(f"evo  dev_ms={cfg.dev_ms} n_assays={cfg.n_assays} mode={cfg.fitness_mode}")
+        print(SC.summary())
+        print(f"evo  dev_ms={cfg.dev_ms:.0f} n_assays={cfg.n_assays} mode={cfg.fitness_mode}")
 
         # cheap groups always
         group_C(task, task_kwargs)
         group_D(task, net_cfg, cfg)
         group_E(task, net_cfg, cfg)
-        group_B(task, net_cfg, cfg, args.n, fast=True)
-        if not args.fast:
+        if args.fast:
+            group_B(task, net_cfg, cfg, args.n, fast=True)
+        else:
             group_A(task, net_cfg, cfg)
             group_B(task, net_cfg, cfg, args.n, fast=False)
             group_F(task, net_cfg, cfg, args.n)

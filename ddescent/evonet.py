@@ -558,12 +558,24 @@ class EvoNet:
         if seed is not None:
             b2.seed(seed)
         if dev_ms is None:
-            dev_ms = float(max(20.0 * E.shape[0] * c.present_ms / c.present_ms, 1000.0))
+            # DEFAULT = 3 full passes through the stimulus sequence. (The previous expression,
+            # 20 * E.shape[0] * present_ms / present_ms, cancelled present_ms and silently yielded
+            # 20*n_stimuli ms — a fraction of one pass. Dead code, but wrong; removed.)
+            dev_ms = float(3.0 * E.shape[0] * c.present_ms)
         if eta_e is None:
             eta_e = 0.5 * eta
 
+        # --- stimulus supply -------------------------------------------------------------------
+        # Brian2's TimedArray CLAMPS past its end (holds the final value) rather than looping, and the
+        # warmup CONSUMES stimulus time because the array is indexed by absolute simulation time. So a
+        # single copy of E supplies only n*present_ms of drive: with dev_ms beyond that, the last
+        # stimulus would be held constant for the remainder. TILE to cover warmup + dev_ms.
+        # (Audit D1-D4: at dev_ms=800 development saw 27% of stimuli, 2 of 4 contexts, ONE transition.)
         n = E.shape[0]
-        drive = np.zeros((n, c.N)); drive[:, :c.n_in] = c.input_gain * E
+        seq_ms = n * c.present_ms
+        n_tiles = int(np.ceil((warmup_ms + dev_ms) / max(seq_ms, 1e-9)))
+        E_drive = np.tile(E, (max(n_tiles, 1), 1))
+        drive = np.zeros((E_drive.shape[0], c.N)); drive[:, :c.n_in] = c.input_gain * E_drive
         ta = b2.TimedArray(drive, dt=c.present_ms * ms)
         self.net.restore("init")
         self.G.namespace["ta"] = ta

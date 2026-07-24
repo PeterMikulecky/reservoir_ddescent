@@ -1,0 +1,99 @@
+"""CANONICAL STUDY CONFIGURATION — the single source of truth.
+
+WHY THIS EXISTS. The `d=3` waist collapse (audit C1) happened because the task dimension was written
+out separately in every runner and probe. When one copy changed, the others silently disagreed with it
+and with the validated configuration, and nothing noticed for weeks. Parameters that define the STUDY
+belong in exactly one place; scripts import them rather than restating them.
+
+Anything that changes here changes everywhere, and `audit.py` checks THIS module's values.
+"""
+from __future__ import annotations
+import numpy as np
+
+from .evonet import EvoNetConfig
+from .evolve import EvolveConfig
+from . import tasks as T
+
+# =================================================================================================
+# TASK — the environment the networks are selected in
+# =================================================================================================
+# d=10 restores the VALIDATED configuration (audit C1). With d=3 we had r1 == min(K,d) == 3, so the
+# rank constraint was vacuous: any K->d map has rank <= d, there was no low-rank waist, and r1 was not
+# a free structural parameter — which makes H-B (the peak tracks r1, not the constraint count)
+# UNTESTABLE. d=10 gives min(K,d)=10, so r1=3 is a genuine waist and r1 is sweepable over ~{2,3,4,5}
+# for the H-B factorial.
+TASK = dict(
+    K=10,             # stimulus dimension. Its job is to make r1 << min(K,d) possible.
+    d=10,             # response dimension. RESTORED from 3 (audit C1).
+    r1=3,             # rank of every level-1 map. THE structural quantity H-B predicts the peak at.
+    n_contexts=4,
+    n_train=60,
+    n_val=60,         # D113: selection reads this split, never test.
+    n_test=60,        # D113: reporting only.
+    context_dwell=10, # the SLOW timescale = the memory demand. Do not shrink: it IS the H-C/H-D difficulty.
+    seed=0,
+)
+
+# =================================================================================================
+# NETWORK
+# =================================================================================================
+NET = dict(
+    N=50,
+    n_in=TASK["K"],
+    d=TASK["d"],
+    bias=0.6,
+    input_gain=10.0,
+    noise_sigma=1.0,
+    present_ms=50,
+    tau_slow=100.0,
+    nmda_frac=0.5,
+    dev_ee_stdp=True,
+    dev_wta_comp=True,
+    wta_gain=1.0,
+)
+
+# =================================================================================================
+# DEVELOPMENT & SELECTION
+# =================================================================================================
+DEV_PASSES = 3        # full sweeps of the training sequence under plasticity.
+                      # 1 pass fixes context COVERAGE but gives each context a single exposure;
+                      # 3 gives multiple exposures and multiple transitions per context, at ~1.5x the
+                      # cost of 1 (fixed per-evaluation overhead dominates the marginal simulated ms).
+WARMUP_MS = 200.0     # plasticity OFF; note it CONSUMES stimulus time, so it is added on top of the
+                      # passes rather than taken out of them.
+
+N_ASSAYS = 4          # D115: fitness reliability was ~0.05 at n_assays=1 — selection on ~pure noise.
+
+
+def sequence_ms() -> float:
+    """Simulated ms for ONE pass through the training stimulus sequence."""
+    return TASK["n_train"] * NET["present_ms"]
+
+
+def dev_ms() -> float:
+    """Development duration for DEV_PASSES full passes under plasticity."""
+    return DEV_PASSES * sequence_ms()
+
+
+def make_task(**overrides):
+    kw = {**TASK, **overrides}
+    return T.hierarchical_environments(**kw)
+
+
+def make_net_cfg(**overrides) -> EvoNetConfig:
+    return EvoNetConfig(**{**NET, **overrides})
+
+
+def make_evolve_cfg(**overrides) -> EvolveConfig:
+    base = dict(dev_ms=dev_ms(), dev_eta=1e-3, n_assays=N_ASSAYS,
+                fitness_mode="regulation_only", seed=12345)
+    return EvolveConfig(**{**base, **overrides})
+
+
+def summary() -> str:
+    return (f"TASK K={TASK['K']} d={TASK['d']} r1={TASK['r1']} "
+            f"contexts={TASK['n_contexts']} dwell={TASK['context_dwell']} "
+            f"n_train/val/test={TASK['n_train']}/{TASK['n_val']}/{TASK['n_test']}\n"
+            f"NET  N={NET['N']} present_ms={NET['present_ms']} tau_slow={NET['tau_slow']}\n"
+            f"DEV  {DEV_PASSES} passes = {dev_ms():.0f} ms (+{WARMUP_MS:.0f} ms warmup); "
+            f"one pass = {sequence_ms():.0f} ms; n_assays={N_ASSAYS}")
