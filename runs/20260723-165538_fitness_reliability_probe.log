@@ -1,0 +1,33 @@
+# analysis log: fitness_reliability_probe
+# timestamp: 2026-07-23T16:55:38.727099
+# command: scripts/fitness_reliability_probe.py --n 30 --assays 1 2 4
+# Is the fitness signal noise-dominated, and would averaging help? (val-vs-test reliability)
+#====================================================================
+
+[logging to runs\20260723-165538_fitness_reliability_probe.log]
+n_genomes=30, n_assays sweep=[1, 2, 4]
+val_err and test_err are INDEPENDENT estimates of the same genome's generalisation.
+
+  n_assays=1: reliability r(val,test) = -0.011
+      SD(val)=0.0121  SD(test)=0.0118  SD(val-test)=0.0169
+      implied true-signal fraction (heritability ceiling) = 0.188
+
+  n_assays=2: reliability r(val,test) = +0.228
+      SD(val)=0.0094  SD(test)=0.0073  SD(val-test)=0.0105
+      implied true-signal fraction (heritability ceiling) = 0.531
+
+  n_assays=4: reliability r(val,test) = +0.227
+      SD(val)=0.0074  SD(test)=0.0055  SD(val-test)=0.0081
+      implied true-signal fraction (heritability ceiling) = 0.652
+
+========================================================================
+VERDICT
+========================================================================
+  n_assays= 1  r=-0.011  h2_ceiling=0.188
+  n_assays= 2  r=+0.228  h2_ceiling=0.531
+  n_assays= 4  r=+0.227  h2_ceiling=0.652
+
+=> (c) MEASUREMENT-NOISE-LIMITED: reliability CLIMBS with averaging, so a real
+   between-genome signal exists and is being swamped. n_assays is a cheap lever —
+   it raises realised h2 and therefore the response to selection. Raise n_assays
+   before spending compute on longer/stronger selection runs.
