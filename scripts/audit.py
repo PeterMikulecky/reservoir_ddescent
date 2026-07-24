@@ -95,10 +95,12 @@ def group_B(task, net_cfg, cfg, n, fast=False):
     # "memoryless floor". Require the floor to be clearly better than a context-free expansion.
     margin = 0.005   # tie-detection only: FAIL if a static expansion MATCHES or beats the floor
     if static < ht["memoryless_floor"] + margin:
-        rec("B", "B1 memoryless floor", FAIL,
+        rec("B", "B1 memoryless floor", WARN,
             f"a STATIC context-free random {net_cfg.N}-dim expansion scores {static:.4f}, beating the "
-            f"'memoryless floor' {ht['memoryless_floor']:.4f} (margin {margin}) -> the floor measures CAPACITY, not "
-            f"memorylessness; beating it does not demonstrate context inference (D116)")
+            f"'memoryless floor' {ht['memoryless_floor']:.4f} (margin {margin}) -> the floor measures CAPACITY, "
+            f"not memorylessness. DOWNGRADED to WARN because the floor is no longer relied on for "
+            f"interpretation: the matched context-destroyed control (B4) is now the reference. The floor "
+            f"remains only as a constant offset in fitness, where it cancels in the softmax (D116).")
     else:
         rec("B", "B1 memoryless floor", PASS,
             f"static expansion {static:.4f} does not beat floor {ht['memoryless_floor']:.4f}")
@@ -121,9 +123,44 @@ def group_B(task, net_cfg, cfg, n, fast=False):
             r_ = float(np.corrcoef(x, y)[0, 1])
             spread = float(np.ptp(x - y))
             redundant = abs(r_) > 0.99 and spread < 1e-9
-            rec("B", f"B2 {keys[a]}~{keys[b]}", FAIL if redundant else PASS,
+            # encoding vs regulation being identical is KNOWN AND ACCEPTED (D112): both are the same
+            # validation error offset by a constant. D112's decision was to COLLAPSE the enc/car/reg
+            # decomposition for selection (it was an a priori engineering hypothesis about how the
+            # network ought to solve the task) and retain the components only as diagnostics. So this
+            # is a documented state, not an undetected defect -> WARN. Any OTHER pair collapsing would
+            # be new and unexplained -> FAIL.
+            known = {"encoding", "regulation"} == {keys[a], keys[b]}
+            status = PASS if not redundant else (WARN if known else FAIL)
+            rec("B", f"B2 {keys[a]}~{keys[b]}", status,
                 f"r={r_:+.4f}, range(x-y)={spread:.2e}"
-                + ("  <-- SAME measurement up to a constant (D112)" if redundant else ""))
+                + ("  <-- same measurement up to a constant; KNOWN and accepted (D112 collapsed the "
+                   "decomposition; components are diagnostics only)" if redundant and known
+                   else "  <-- SAME measurement up to a constant — unexplained (cf. D112)" if redundant
+                   else ""))
+    # B4: the matched control must be WIRED INTO REPORTING, not merely exist. It was built for D116
+    # and then nothing called it — an instrument that is never read is not a measurement.
+    gtest = random_genome(net_cfg, cfg.density, w0=cfg.w0, ei_split=cfg.ei_split, seed=901)
+    rep = evaluate(gtest, task, net_cfg, cfg, report=True)
+    have_ctrl = np.isfinite(rep.get("context_gain", float("nan")))
+    have_alpha = np.isfinite(rep.get("cov_powerlaw_alpha", float("nan")))
+    rec("B", "B4 matched control wired", PASS if have_ctrl else FAIL,
+        (f"evaluate(report=True) returns context_gain={rep.get('context_gain', float('nan')):+.4f} "
+         f"(destroyed {rep.get('context_destroyed_err', float('nan')):.4f} vs ordered "
+         f"{rep.get('test_err', float('nan')):.4f})") if have_ctrl
+        else "evaluate(report=True) does NOT return context_gain — the matched control is not wired in")
+    # E4b: effective criticality via the covariance power-law exponent (comparable to published data)
+    a = rep.get("cov_powerlaw_alpha", float("nan"))
+    if have_alpha:
+        near_cortex = 0.55 <= a <= 1.0
+        rec("B", "B5 effective criticality", PASS if near_cortex else WARN,
+            f"state covariance power-law exponent alpha={a:.2f}. Stringer et al. 2026: ~0.67 = "
+            f"critically-normalised symmetric, ~1.25 = non-symmetric, 0.7-0.85 observed in mouse "
+            f"cortex/brainwide, 0.4-0.5 in CA1. "
+            + ("within the cortical range" if near_cortex else
+               "OUTSIDE the cortical range — variance is concentrated in too few (or too many) modes"))
+    else:
+        rec("B", "B5 effective criticality", FAIL, "cov_powerlaw_alpha not returned by evaluate(report=True)")
+
     # B3: matched context control (D116)
     gains = []
     for i in range(3):
@@ -300,11 +337,11 @@ def group_E(task, net_cfg, cfg):
         W = np.array(getattr(g, "W", None), dtype=float)
         rhos.append(float(np.max(np.abs(np.linalg.eigvals(W)))))
     rho = float(np.mean(rhos))
-    rec("E", "E4 spectral radius", WARN if (rho > 2 or rho < 0.3) else PASS,
-        f"mean rho(W) = {rho:.2f} over 3 genomes. Stringer et al. 2026: long timescales require "
-        f"CRITICAL normalisation (rho ~ 1); incomplete normalisation destroys them. NOTE raw rho "
-        f"overstates gain in a spiking net (threshold/refractoriness clamp it) — an effective/linearised "
-        f"rho at the operating point is the quantity that matters and is NOT yet computed.")
+    rec("E", "E4 spectral radius (raw)", PASS,
+        f"mean rho(W) = {rho:.2f} over 3 genomes — REPORTED, not judged. Raw rho overstates loop gain "
+        f"in a spiking net (threshold/refractoriness/saturation clamp it), so it is not the quantity "
+        f"that matters. The effective criticality check is B5 (covariance power-law exponent), which "
+        f"measures the same observable Stringer et al. report and is directly comparable to their data.")
 
 
 # =============================================================================================
@@ -331,9 +368,15 @@ def group_F(task, net_cfg, cfg, n):
         rec("F", "F1 fitness reliability", PASS if (not np.isnan(r_) and r_ > 2 * se) else FAIL,
             f"r(val,test) = {r_:+.3f} +/- {se:.3f} at n_assays={cfg.n_assays} "
             f"({'above' if (not np.isnan(r_) and r_ > 2*se) else 'NOT above'} 2 SE)")
-    rec("F", "F2 random baseline", PASS,
-        f"random-genome fitness mean={fits.mean():.4f} sd={fits.std():.4f} max={fits.max():.4f} "
-        f"(evolved runs must clearly exceed max to claim the NETWORK contributes)")
+    # F2 must CHECK, not merely report. A configuration where every genome scores identically gives
+    # selection nothing to act on — the GA becomes pure drift — and this was missed once because the
+    # check had no threshold (fitness was identically 0.0 for all 30 genomes after a zero-clip).
+    degenerate = fits.std() < 1e-12
+    rec("F", "F2 fitness variance", FAIL if degenerate else PASS,
+        f"random-genome fitness mean={fits.mean():.4f} sd={fits.std():.4f} max={fits.max():.4f}"
+        + ("  <-- DEGENERATE: every genome scores identically, so selection has NOTHING to act on "
+           "and the GA is pure drift" if degenerate
+           else "  (evolved runs must clearly exceed max to claim the NETWORK contributes)"))
 
 
 def main():
