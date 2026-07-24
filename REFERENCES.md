@@ -737,6 +737,23 @@ term, not sign-flipped synapses. Units are "a neuron or a group of neurons," so 
 population-level matrix. The evidence for symmetry is anatomical RECIPROCITY (mesoscale connectome;
 reciprocal V1 pairs), which is Dale-compatible.
 
+**BIOLOGICAL GROUNDING OF THEIR TWO STRUCTURAL ASSUMPTIONS (PJM's challenge; D117 action 5).**
+- *Reciprocal excitation:* ENRICHED but not full. Song et al. 2005 (rat V1 L5 pairs) find reciprocal
+  connections ~4x overrepresented vs chance — robust — but pairwise connection probability is order 10%,
+  so most connections remain unidirectional, and WEIGHT MATCHING (W_ij ~ W_ji) is not established.
+- *Global inhibition:* dense nonspecific LOCAL inhibition is well grounded (PV+ "blanket of inhibition",
+  Fino & Yuste); anything brain-wide is not (inhibitory axons are spatially restricted; SOM/VIP
+  specificity is well documented). Their Fig. 4 actually sets inhibition proportional to LOCAL connection
+  probability — the global mean-subtraction is the dense-case idealisation, not the claim.
+- *Symmetry is doing mathematical work:* it yields real eigenvalues, a closed-form Lyapunov solution and
+  the semicircle law, hence the analytic 2/3 exponent; they concede the non-symmetric case is "an open
+  problem" (1.25 numerical only). Observed exponents 0.7–0.85 fall BETWEEN their two predictions, and the
+  rotational evidence comes from SPONTANEOUS activity in darkness — they report task-driven recordings DO
+  show rotational components.
+- **=> We DROP reciprocity and global inhibition as design variants (adopting them would build in the
+  mechanism under test, D038/D074). We KEEP critical normalisation: it is scalar, symmetry-independent,
+  and has a real biological implementation (homeostatic synaptic scaling, activity-dependent pruning).**
+
 **Two challenges to us.** (1) They benchmark ECHO-STATE networks — the class our noisy nonlinear spiking
 net most resembles — and find they cannot hold memory beyond ~0.5 s due to chaotic dynamics being
 noise-fragile, while symmetric critically-normalized dynamics work at multi-second lags. Our task needs

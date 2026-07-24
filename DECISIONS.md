@@ -4966,6 +4966,49 @@ moves rho. Both need doing properly.
 4. **Consider critical normalization as a swept axis** — normalize genomes to a target rho and sweep it.
    Given the context gain is currently EXACTLY ZERO, "the networks lack the timescales the task requires
    because they are 5x supercritical" is the most concrete explanation we have had.
-5. Consider the two other Dale-compatible architecture changes (reciprocal E->E; global inhibitory
-   feedback) as candidate design variants — NOT as defaults, since imposing them builds in the mechanism
-   under test (D038/D074) and would need the same both-ways-and-compare discipline.
+5. **AMENDED (PJM): DROP reciprocal-E->E and global-inhibition as design variants. Keep ONLY the rho->1
+   lead.** PJM asked whether fully reciprocal excitation and global inhibition are actually well grounded
+   biologically. Largely NOT, and the two sit on different footing:
+
+   **Reciprocal excitation — enriched, but nowhere near "full."** Song, Sjostrom, Reigl, Nelson &
+   Chklovskii 2005 (rat V1 L5 pyramidal pairs) found reciprocal connections OVERREPRESENTED relative to
+   chance by roughly 4x — robust and replicated. But overrepresentation is not symmetry: pairwise
+   connection probability is order 10%, so the great majority of connections remain UNIDIRECTIONAL. And
+   WEIGHT MATCHING is not established — reciprocal pairs are not known to satisfy W_ij ~ W_ji, and
+   cortical weight distributions are heavy-tailed in ways that argue against it. Area-level
+   bidirectionality (the mesoscale connectome they cite) is a far weaker claim than synapse-level weight
+   symmetry.
+
+   **"Global" inhibition — Claude's characterisation was too crude, and the biology is better than
+   implied.** Dense, largely nonspecific LOCAL inhibition IS well grounded (PV+ basket cells contact a
+   very high fraction of nearby pyramidal cells — the "blanket of inhibition", Fino & Yuste). What is NOT
+   grounded is anything brain-wide: inhibitory axons are spatially restricted, and specificity is well
+   documented (SOM targeting dendrites, VIP disinhibiting SOM). To their credit their Fig. 4 handles this
+   — in the sparse/clustered/spatial variants inhibition is set IN PROPORTION to local connection
+   probability. The global mean-subtraction is the dense-case IDEALISATION, not the claim.
+
+   **The deeper point: symmetry is doing enormous MATHEMATICAL work.** It is what makes the derivation
+   tractable — real eigenvalues, closed-form Lyapunov solution, Wigner semicircle law, hence the analytic
+   2/3 exponent. They are candid that the non-symmetric case defeated them (1.25 obtained numerically,
+   "we leave this as an open problem"). Symmetry is assumed for TRACTABILITY first and supported
+   empirically second. And the empirical support is thinner than the framing suggests: the observed
+   exponents 0.7-0.85 sit BETWEEN the symmetric (0.67) and non-symmetric (1.25) predictions — closer to
+   symmetric but not on it — and they concede partial symmetry gives intermediate exponents. The stronger
+   evidence is the rotational analysis (near-zero complex eigenvalues), but that is measured during
+   SPONTANEOUS activity in darkness, and they report that TASK-DRIVEN recordings DO show rotational
+   components. So "the brain is symmetric" may really be "spontaneous activity is non-rotational" — a
+   narrower claim.
+
+   **=> Adopting reciprocity/global-inhibition would be exactly the D038/D074 error: building in a
+   structure that makes the network work, then reporting that the network works. DROPPED.**
+
+6. **KEEP the critical-normalisation (rho -> 1) lead — it survives all of the above.** It is a SCALAR
+   property that does NOT depend on symmetry (they show partial symmetry still gives intermediate
+   exponents while normalisation remains necessary for long timescales), and it has a genuinely
+   well-grounded biological implementation that the paper itself points to: HOMEOSTATIC SYNAPTIC SCALING
+   and activity-dependent PRUNING (Turrigiano; Chechik/Meilijson/Ruppin; heterosynaptic E/I set-point
+   work). A network self-tuning toward rho ~ 1 is a real and much-studied phenomenon, not a convenience.
+   It is also the lead that speaks DIRECTLY to our 75x timescale gap (A3) and to the D116 zero-context-use
+   finding. **This is the one to pursue.** Note it also connects to our EXISTING machinery: the Vogels
+   iSTDP is a homeostatic mechanism — does it already move rho toward 1? (Unknown; the developed-W
+   measurement failed. Fix and check before treating supercriticality as established.)
