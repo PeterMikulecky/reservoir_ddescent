@@ -716,3 +716,31 @@ analogous to the readout-capacity hazard D111 rejects.
 Survey of evolutionary approaches to SNNs. Abstract-level only so far; positioning material for the
 write-up (checking whether anyone has asked the fitness-vs-P question of a biologically-structured SNN).
 Pull properly when drafting.
+
+### Pachitariu, Zhong, Gracias, Minisi, Lopez & Stringer 2026 — "A critical initialization for biological neural networks" (Nature 655:990–996)
+Large-scale mouse recordings (2p cortex, CA1, 8-probe Neuropixels) match linear dynamics under a random
+SYMMETRIC matrix that is CRITICALLY NORMALIZED (largest eigenvalue ≈ 0.998). Covariance eigenvalues decay
+as a power law: ~2/3 symmetric vs ~1.25 non-symmetric; cortex/brainwide give 0.7–0.85. CA1 is the
+exception (0.4–0.5, an efficient uncorrelated code). **Incomplete normalization destroys long-timescale
+macroscopic structure.** Survives sparse/clustered/spatial connectivity. Solves zero-shot working memory.
+Code: github.com/mouseland/critical_init.
+
+**Why it matters to us (D117).** Measured against their criteria our networks are ρ(W) ≈ 5.1 (≈5×
+supercritical), E→E reciprocity at chance, and inhibition sparse/specific rather than global — three
+Dale-COMPATIBLE differences. Critical normalization is their mechanism for producing long timescales from
+fast units, which is exactly the 75× timescale gap our task poses (A3), so this is a concrete mechanistic
+candidate for the D116 finding of ZERO context use.
+
+**Clarification (PJM corrected Claude's first reading):** their "symmetry" does NOT conflict with Dale's
+law. A is drawn all-POSITIVE (excitatory) and the mean is then subtracted — a global inhibitory feedback
+term, not sign-flipped synapses. Units are "a neuron or a group of neurons," so A is an effective/
+population-level matrix. The evidence for symmetry is anatomical RECIPROCITY (mesoscale connectome;
+reciprocal V1 pairs), which is Dale-compatible.
+
+**Two challenges to us.** (1) They benchmark ECHO-STATE networks — the class our noisy nonlinear spiking
+net most resembles — and find they cannot hold memory beyond ~0.5 s due to chaotic dynamics being
+noise-fragile, while symmetric critically-normalized dynamics work at multi-second lags. Our task needs
+0.5–1.5 s. (2) They hypothesize that "perhaps all the learning… is on the readout or feedforward
+connections" — the reservoir-computing position D111 rejected, here advanced as a claim about BIOLOGY. If
+true, "P = recurrent synapses" may not be the parameter count governing generalization. A live threat to
+the H-A/H-B framing worth tracking (they note an alternative: task-specific dynamics "turning on").

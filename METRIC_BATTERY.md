@@ -115,6 +115,20 @@ heritability. Testable, and it would link two open problems (D109 non-heritabili
 - **E/I identity vector** (Dale's-law assignments per neuron).
 - Cheap derived, stored for convenience: density; per-type connection counts (E→E, E→I, I→E, I→I);
   excitatory fraction; full weight distribution (small — store it, don't just summarize).
+- **DYNAMICAL INVARIANTS (D117; the N5 requirement, now with a target value).** Stringer et al. 2026 show
+  that CRITICAL NORMALIZATION (largest eigenvalue ≈ 1) is what produces long timescales from fast units,
+  and that incomplete normalization DESTROYS long-timescale macroscopic structure. Ours measured at
+  ρ(W) ≈ 5.1 — about 5× supercritical, never previously measured or controlled. Now core:
+  · **spectral radius ρ(W)** — raw, and an EFFECTIVE/linearized ρ at the operating point (the raw value
+    overstates gain in a spiking net with threshold/refractoriness/saturation, so both are needed).
+  · **E→E reciprocity** — fraction of excitatory connections that are reciprocal, vs the chance rate given
+    density; plus the weight correlation on reciprocal pairs. (Ours: 0.29 = chance, i.e. independent
+    draws. Theirs: fully reciprocal. NOTE this is Dale-COMPATIBLE — symmetry here means reciprocal
+    EXCITATORY interactions, not sign-flipped synapses.)
+  · **inhibitory fan-out** — how GLOBAL is our inhibition? (Ours: 0.30 ≈ density, i.e. sparse and
+    specific. Theirs: global, entering as a uniform mean-subtraction.)
+  These give "how dense is dense" an operational answer in dynamical terms (N4/N5) without putting a
+  non-count quantity on the P axis.
 
 ### 1b. Dynamical / activity (phenotype side; developed network under the assay)
 - **Full developed state matrix** (states × neurons) under test stimuli — cohort: full; population: summary.

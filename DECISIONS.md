@@ -4892,3 +4892,80 @@ one worth trusting on the next.
 **STANDING RULE.** Run `preflight.py` before ANY multi-hour launch. A FAILing check does not automatically
 mean stop — a KNOWN, DOCUMENTED failure that does not affect the contrast being measured may be
 acceptable — but it must then be a recorded DECISION, not an oversight discovered afterwards.
+
+### D117 — Stringer et al. 2026 (critical initialization): our networks are ~5x SUPERCRITICAL, non-reciprocal, and use specific rather than global inhibition. A concrete mechanistic candidate for the ZERO context gain. Spectral radius promoted to a core measurement.
+**2026-07-23 · Literature + measurement · Pachitariu, Zhong, ... Stringer, Nature 655:990-996 (2026)**
+
+**THE PAPER.** Large-scale mouse recordings (2p cortex, CA1, 8-probe Neuropixels) have eigenvalue spectra
+and dynamical properties matching **linear dynamics under a random SYMMETRIC matrix that is CRITICALLY
+NORMALIZED** (largest eigenvalue scaled to 0.998). Covariance eigenvalues decay as a power law with
+exponent ~2/3 (symmetric) vs ~1.25 (non-symmetric); cortical and brainwide data give 0.7-0.85. CA1 is the
+exception (0.4-0.5, resembling an efficient uncorrelated code). **Incomplete normalization DESTROYS the
+long-timescale macroscopic structure.** The phenomenon survives sparse (>=0.4% connectivity in 10k units),
+clustered and spatial connectivity. Critically normalized dynamics solve zero-shot working-memory tasks.
+
+**CORRECTION TO CLAUDE'S FIRST READING (PJM caught it).** Claude claimed symmetry and Dale's law are "in
+tension" and that mouse data "backs symmetry" against Dale. **Wrong.** Their A is drawn from a UNIFORM
+POSITIVE (all-excitatory) distribution and they then SUBTRACT THE MEAN, which they state "in the brain
+could be implemented with global inhibitory feedback." The negative entries are the residue of subtracting
+a GLOBAL inhibitory term from a positive excitatory matrix — **not** sign-flipped synapses. Further, their
+units are explicitly "a neuron or a group of neurons," so A is an EFFECTIVE (possibly population-level)
+interaction matrix, not a synaptic one; and the evidence cited for symmetry is anatomical RECIPROCITY
+(mesoscale connectome; reciprocally connected V1 pairs). **Symmetry here means reciprocal excitatory
+interactions, which is fully Dale-compatible** (if i and j are both excitatory, W_ij = W_ji > 0 breaks
+nothing). This makes the finding MORE actionable, not less.
+
+**MEASURED — we differ on THREE Dale-compatible counts (5 random genomes):**
+```
+property                ours                          theirs
+spectral radius rho(W)  ~5.1 (3.9-7.4)                ~1.0 (critically normalized)
+E->E reciprocity        0.29 == chance 0.29           fully reciprocal (symmetric)
+inhibition              sparse/specific, fanout 0.30  GLOBAL (uniform mean-subtraction)
+```
+Minor curiosity: among the reciprocal pairs that exist, weight magnitudes are ANTI-correlated (-0.20 to
+-0.30) where independent draws predict ~0; ~1.8 SE from zero but consistent across genomes. Possible
+genome-generator artifact; flagged, not chased.
+
+**WHY THIS IS A CANDIDATE EXPLANATION FOR THE D116 ZERO CONTEXT GAIN.** Critical normalization is the
+mechanism their paper identifies for producing LONG TIMESCALES FROM FAST UNITS. Our task needs context
+held across ~10 stimuli x 50 ms = 0.5-1.5 s from neurons with tau_m = 20 ms — the 75x timescale gap this
+project identified long ago (A3). If incomplete normalization destroys long-timescale structure, and we
+are 5x supercritical and never measured it, that is a concrete mechanistic reason the networks show ZERO
+measurable context use.
+
+**THE MORE ALARMING RESULT.** They benchmark ECHO-STATE NETWORKS — nonlinear, noisy, near-chaotic
+reservoirs, the class our spiking network most resembles — and find they "struggled to maintain more than
+half a second of memory, probably due to their chaotic dynamics not being robust to noise," whereas linear
+symmetric critically-normalized dynamics performed well at lags of SEVERAL SECONDS. **The architecture
+class we are using fails at precisely the timescale our task requires.** Our networks are also
+non-reciprocal, which is their worse regime (asymmetry -> rotational dynamics -> no stable representation
+across time, even though the information is present).
+
+**A CHALLENGE TO THE FRAMING (live hypothesis, not settled).** They close by suggesting "perhaps all the
+learning that needs to happen in such tasks is on the readout or feedforward connections from sensory
+inputs to the brainwide dynamical reservoir" — essentially the RESERVOIR-COMPUTING position this project
+rejected (D111). Here it is advanced as a claim about BIOLOGY rather than a methodological convenience. If
+the brain really is a critically-normalized random reservoir with learning at the readout, then
+"P = recurrent synapses" may not be the parameter count that governs generalization. They do note an
+alternative (task-specific dynamics "turning on"), so it is a live hypothesis. Worth tracking as a genuine
+threat to H-A/H-B's framing, and worth noting in the deck's open-questions appendix.
+
+**CAVEATS ON OUR OWN MEASUREMENT.** (a) Their dynamics are LINEAR; ours are spiking with threshold,
+refractoriness and saturation, so the EFFECTIVE gain around the operating point is clamped well below what
+raw rho(W) implies — rho=5 does NOT mean our networks are unstable. The right quantity is an effective /
+linearized spectral radius at the operating point, which we have not computed. (b) The developed-matrix
+measurement silently fell back to the initial W (bad accessor), so we do NOT yet know whether development
+moves rho. Both need doing properly.
+
+**ACTIONS.**
+1. **Promote SPECTRAL RADIUS to a core measurement** (METRIC_BATTERY 1a) — it is exactly the dynamical
+   invariant queue N5 called for, and we now have a target value (~1) plus evidence it is load-bearing.
+   Measure raw rho(W), and an effective/linearized rho at the operating point.
+2. Also core: **E->E reciprocity** and **inhibitory fan-out** (how global is our inhibition?).
+3. Fix the developed-W accessor and measure whether development moves rho.
+4. **Consider critical normalization as a swept axis** — normalize genomes to a target rho and sweep it.
+   Given the context gain is currently EXACTLY ZERO, "the networks lack the timescales the task requires
+   because they are 5x supercritical" is the most concrete explanation we have had.
+5. Consider the two other Dale-compatible architecture changes (reciprocal E->E; global inhibitory
+   feedback) as candidate design variants — NOT as defaults, since imposing them builds in the mechanism
+   under test (D038/D074) and would need the same both-ways-and-compare discipline.
