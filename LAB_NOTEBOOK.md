@@ -406,3 +406,82 @@ substrate. See QUEUE.md.
 - type `exp` · stage `E9` · git `g4786765` (D099: build step-3 pilot harness (scripts/run_pilot.py) as a grid of independent (P,seed) cells - full apparatus (develop + 3-term fitness + D095 readout + D098b carry + selection), n_workers=6 default, provenanced per cell, VM-ready. evolve.py history now records per-generation component means/bests (enc/car/reg) so the pilot can watch whether capabilities COMPOUND under selection. Parallel determinism VERIFIED (clears D097 flag): serial==parallel bit-identical, content-hash seeds -> reproducible across worker counts and machines. Pilot grid: densities [0.2,0.4,0.6,0.8]x1seed, pop30, 50gen, ~1.1hr on 6 cores. Q: does fitness climb + components compound over 50 gens?) · status **complete**
 - result: Step-3 pilot: fitness climbed 2/4 cells, capability compounded 2/4, clean=True. apparatus behaves.
 - _interpretation:_ 
+
+
+## 2026-07-23 / 07-24 — apparatus audit, and a task redesign
+
+A long stretch with almost no science in it, and a lot of instrumentation. Worth recording because
+the pattern turned out to matter more than any individual fix.
+
+**Seven defects, all found by reading rather than running.** Over roughly a day: `encoding` and
+`regulation` turned out to be the same measurement offset by a constant (D112); fitness had been
+computed from TEST error since D094, so selection was optimising the quantity we report as
+generalisation (D113); fitness reliability at `n_assays=1` was ~0.05, meaning every run to date had
+selected on approximately pure noise (D115); the "memoryless floor" measured representational capacity
+rather than memorylessness — a static random projection matched it (D116); development at `dev_ms=800`
+saw 27% of stimuli, 2 of 4 contexts and ONE context transition; `d=3` had collapsed the low-rank waist
+so H-B was untestable; and spectral radius sat at ~4.4, never measured or controlled (D117).
+
+None of these needed a long run to find. All were cheap static checks nobody had run. The through-line:
+we had consistently validated that code EXECUTES — smoke tests, single-cell trials, checkpoint writes —
+and never that it MEASURES WHAT IT CLAIMS. Those are different questions and only the first was being
+asked.
+
+**Hence `audit.py`**, which asks the second: fitness provenance (destroy a split, confirm fitness moves
+iff it should), measurement identity (does each named quantity measure its name?), task invariants,
+exposure coherence, config coherence, reliability and power. It reproduces every known defect, which is
+the validation that matters. It has since found two on its own — a train/test context-coverage mismatch,
+and a degenerate fitness where every genome scored identically after a zero-clip.
+
+**Two of my own checks were wrong on first writing**, both because I wrote them from assumptions about
+the code rather than from reading it — the identical failure mode the audit exists to catch. Worth
+remembering that a validator is not exempt from the discipline it enforces.
+
+**The operating point moved and moved back.** Calibration against readout-free criteria
+(responsiveness / health / dimensionality) picked gain 5 / noise 2.0. The follow-up audit failed on the
+criterion the calibration never included: fitness reliability collapsed 0.465 → 0.066, because doubling
+`noise_sigma` quadruples the measurement noise in every fitness estimate. α wants high noise, reliability
+wants low noise, and reliability is the binding one — without it selection cannot work at all. Reverted
+(D119). The lesson is not the setting but the omission: reliability belongs IN the calibration grid.
+
+Also retired along the way: the RC-era skill gate, which scores a full mixing readout that D095 forbids,
+and which was the original justification for `input_gain=10` (D118). And the "5× supercritical" framing —
+spectral normalisation moves α by less than 0.1 over a 9× ρ range, because threshold and refractoriness
+clamp the loop gain in a spiking network. Input drive is the operative knob, not recurrent gain.
+
+**Then the task itself turned out to be wrong.** Bayes-optimal context inference from the
+covariance-context stimuli is 98.6% accurate from a SINGLE sample. The task required no memory at all,
+and the matched control — shuffling stimulus order — removed nothing, because every stimulus
+independently announced its own context. So `context_gain ≈ 0` was never evidence about the substrate;
+it was a control that doesn't control.
+
+PJM's replacement: present a cue, allow a delay, then present a discrimination stimulus whose response
+must be modulated by the prior context. I initially resisted on the grounds that the original design
+deliberately made context inferred rather than signalled — but that hazard applies to a dedicated
+labelled channel, and PJM's cue is a stimulus like any other on shared channels. The four things the
+network must acquire (encode cue, hold it, encode probe, bind them) are exactly right, and step 2 is a
+memory requirement the old task simply did not have.
+
+The XOR target is the load-bearing choice: cue-only and probe-only rules score exactly 0.500, joint
+scores 1.000. **The floor is chance by construction** — unbeatable by capacity, static expansion, or a
+lucky projection. Every reference problem this project has fought traces to not having a trustworthy
+zero point. This design has one.
+
+**Where it stands.** Audit clean at the reverted operating point. New task built with both controls
+validated. Still to build: trial-structured evaluation and development, an audit C-group for the new
+task's invariants, and a cost re-measurement (the new task is ~2.7× per assay, not cheaper as I had
+guessed).
+
+_interpretation:_ Almost nothing was learned about the science and a great deal was learned about the
+apparatus. The honest summary is that most measurements taken before this week were not measuring what
+their names claimed. That is worth knowing before committing compute, and it is the reason the audit
+now gates expensive runs. The one substantive scientific residue: context use has never actually been
+measured, because the instrument for measuring it was broken.
+
+**Provenance gap noted:** the tooling built this week (`audit.py`, `calibrate_operating_point.py`, the
+probes, the runners) uses `runlog.tee()` and bypasses the `provenance` system entirely — so these runs
+have only a `.log`, with no `config.snapshot.json`, `manifest.json` or `env.txt`, and no automatic
+notebook stub. Older runs (`T0_*`, `E9_*`, `AN_*`) have the full record. This is a regression and should
+be fixed by routing the new scripts through `provenance.RunContext` rather than by hand-writing entries
+like this one.
+

@@ -5123,9 +5123,109 @@ shallower than the undeveloped sweep suggested.
 whether the operating point was recorded anywhere and it was NOT: it had been recommended in discussion
 and written nowhere, which is exactly the drift failure `study_config` was created to prevent.)
 
+**⚠️ REVERTED (2026-07-24, same day). The re-baselining audit this entry called for FAILED on the
+criterion this entry never checked.** At gain 5 / noise 2.0, fitness reliability collapsed:
+`r(val,test) = +0.066 +/- 0.192` (FAIL) against `+0.465` (PASS) at gain 10 / noise 1.0. **Mechanism:
+reliability IS measurement precision, and noise_sigma was DOUBLED — noise variance scales as sigma^2,
+so every fitness estimate carries 4x the measurement noise.** alpha wants HIGH noise (it fills
+dimensions); reliability wants LOW noise. Claude optimised one and broke the other.
+
+**The calibration criteria were incomplete: responsiveness, health, dimensionality — no RELIABILITY.**
+That is the substantive lesson. Reliability is the BINDING constraint (without a reliable fitness signal
+selection cannot work at all, which makes the study impossible); alpha is a cortex-likeness criterion —
+desirable, not load-bearing. Recovering sigma^2=4 measurement noise by averaging would need ~4x the
+assays, so noise 2.0 at n_assays=16 buys the same reliability as noise 1.0 at n_assays=4 for four times
+the evaluation time — a poor trade.
+
+**`study_config` reverted to input_gain=10.0, noise_sigma=1.0.** The gain-5 measurements stand as a
+recorded characterisation of the alpha/reliability opposition; they are not the adopted setting.
+Any future calibration MUST include reliability as a grid criterion rather than a post-hoc check.
+
 **RE-BASELINING REQUIRED BEFORE THE H-A SWEEP.** Changing gain and noise changes the fitness
 distribution, so all three of these must be re-measured, not extrapolated:
 1. per-evaluation COST at 3-pass development,
 2. fitness RELIABILITY -> n_assays (D115's n_assays=4 was measured at the OLD operating point),
 3. BETA from the new fitness spread (beta*SD ~ 1; this figure has already moved twice today).
 Also re-run the audit: E4/B5 read from `study_config`, so the criticality numbers will change.
+
+
+### D120 — TASK REDESIGN: cue -> delay -> probe with an XOR target. The covariance-context task required NO memory and its control removed nothing. The new floor is chance BY CONSTRUCTION.
+**2026-07-24 · Design decision (PJM) · ddescent/trial_task.py**
+
+**WHY THE OLD TASK WAS ABANDONED — two defects, both fatal for the hypotheses it was built to test.**
+1. **No memory requirement.** Bayes-optimal context inference from the covariance-context stimuli is
+   **98.6% accurate from a SINGLE sample** (100% from five). Context was instantaneously available in
+   every stimulus, so nothing ever had to be held across the dwell window. This undercuts the A3 framing
+   entirely — the "75x timescale gap", the memory problem, and much of the justification for `tau_slow`
+   and `context_dwell` as THE difficulty. The task was: infer context from the current stimulus (easy),
+   apply the right mapping. No temporal integration required.
+2. **The matched control removed nothing.** `context_destroyed_score` shuffles stimulus ORDER — but if
+   each stimulus independently carries its context, shuffling removes no information. **So
+   `context_gain ~ 0` was EXPECTED and said nothing about whether the network uses context.** D116's
+   "properly-exposed networks show no context use" and audit B3/B4's readings are VOID. Claude built a
+   control that does not remove the thing it claims to remove, then read its null as a substrate finding.
+
+**PJM'S DESIGN (adopted).** Present a context cue; allow a delay during which it propagates; then
+present a discrimination stimulus whose response must be modulated by the prior context.
+
+**CLAUDE'S OBJECTION, AND WHY IT WAS WRONG.** Claude initially resisted on the grounds that the original
+design deliberately made context INFERRED rather than SIGNALLED ("tell the network the context and
+detection is a switch, not learning"). But that hazard applies to a DEDICATED LABELLED CHANNEL — a
+one-hot context vector on its own input lines, where detection is reading a wire. PJM's cue is **a
+stimulus like any other, on shared channels, with no label**: the network must learn to discriminate
+cue patterns exactly as it learns to discriminate probes. PJM's four steps are the correct account of
+what must be acquired:
+    1. encode the cue                    -- development can build
+    2. MAINTAIN it across the delay      -- development can build (Hebbian strengthening of whatever
+                                            recurrence sustains a cue-specific assembly in the silence)
+    3. encode the probe                  -- development can build
+    4. bind held-cue x probe -> response -- SELECTION ALONE (the assignment is arbitrary, so no
+                                            unsupervised rule can discover it)
+Step 2 is a genuine memory requirement imposed BY CONSTRUCTION; the old task had no step 2 at all.
+Step 4 is literally H-C's modulating level: a held representation gating the response to another input.
+
+**THE XOR TARGET IS THE LOAD-BEARING CHOICE.** Target = +1 when cue and probe indices agree, -1 when
+they differ. This makes every degenerate strategy score EXACTLY chance (measured, n=200):
+```
+best PROBE-only rule : 0.500
+best CUE-only rule   : 0.500
+JOINT cue x probe    : 1.000
+```
+**The floor is chance BY CONSTRUCTION.** It cannot be beaten by extra capacity, a static nonlinear
+expansion, or a lucky random projection — which is precisely the confound that made the old memoryless
+floor uninterpretable (D116: a static random expansion MATCHED it). Without the held cue the probe
+carries ZERO information about the sign. There is nothing left to confound. Every reference problem this
+project has fought — capacity-confounded floors, expansions matching the baseline, controls that remove
+nothing — traces to not having a trustworthy zero point. This design has one.
+
+**CONTROLS (validated; unlike the shuffle control, these remove what they claim to).**
+- `omit_cue` — cue segment blanked. Information absent from the input; nothing can be held.
+- `scramble` — TARGETS permuted against stimuli. Oracle accuracy 0.510. Binding destroyed, task
+  unlearnable, stimulus statistics untouched. (A first implementation permuted probe indices and then
+  computed the target from the permuted pairing, which merely generates a different VALID trial set and
+  removes nothing — the same error as the old shuffle control, caught before use.)
+- delay sweep — lengthen past tau_slow; where performance breaks is what H-D is about.
+
+**STARTING CONFIGURATION (PJM: start simple, ramp later).** 2 cues, 2 probes, 1 delay segment (sub-100ms,
+so passive decay through tau_slow can carry the cue — steps 1/3/4 tested with step 2 on trainer wheels),
+40 trials/split, cue and probe patterns orthonormal on shared input channels. **Ramps once evolvability
+is established:** longer delay; FILLED delay (hold the cue WHILE processing other input); less distinct
+cues; more contexts/probes; and the strongest version — cue and probe drawn from the SAME pattern set so
+role is signalled by TIMING alone.
+
+**COMPETITION STAYS SWEPT, NOT FIXED.** Claude flagged that WTA competition might extinguish delay-period
+persistence (it suppresses activity, and during a silent delay there is no drive to sustain anything).
+PJM: *"many inhibitory configurations mitigate against recurrence/memory. a few support it. finding
+those is the job of selection."* Correct, with one caveat: the genome's OWN inhibitory structure is
+evolvable (I->E, E->I, I->I, and per-neuron E/I identity), but `wta_gain` is CONFIG, not genome — so one
+inhibitory configuration is fixed by fiat while the rest evolve. Resolution: **sweep `wta_gain`
+including 0** rather than fixing it at 1.0. If competition suppresses persistence, that appears as the
+wta_gain=0 row outperforming — a measurement, not a prediction.
+
+**COST.** 40 trials x 4 segments x 50 ms = 8000 ms per behave vs 3000 ms for the old task: ~2.7x per
+assay. Claude earlier guessed this task would be CHEAPER; it is not.
+
+**STILL TO BUILD.** `evaluate()` for trials (score from READ rows, three-way split preserved);
+development over trials (and how many passes); audit C-group replacement (the low-rank waist and
+r1/n_env invariants are specific to the old task; the new invariants are the degenerate-strategy checks);
+cost re-measurement.
