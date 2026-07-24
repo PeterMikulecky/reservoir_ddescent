@@ -42,8 +42,20 @@ NET = dict(
     n_in=TASK["K"],
     d=TASK["d"],
     bias=0.6,
-    input_gain=10.0,
-    noise_sigma=1.0,
+    # OPERATING POINT (D119). Set by calibration on DEVELOPED networks against readout-free criteria
+    # (responsiveness / health / dimensionality), NOT by the retired RC-era skill gate that originally
+    # justified input_gain=10 (D118).
+    #   gain 5, noise 2.0 -> responsiveness 0.360, alpha 1.23
+    # alpha 1.23 sits essentially ON Stringer et al.'s NON-SYMMETRIC prediction (~1.25), which is our
+    # correct reference: the cortical band 0.7-0.85 assumes the symmetric connectivity we declined to
+    # impose (D117), so measuring against it was measuring against the wrong target.
+    # Responsiveness has an OPTIMUM, not a monotone preference: too low and the network ignores its
+    # input (T0 rev3's failure mode); too high and the state is a passive relay of the stimulus with
+    # nothing left for recurrent dynamics to compute or development to shape. gain 10 / noise 1.0 was
+    # the latter (responsiveness 0.54, alpha 2.49 - variance concentrated near the 10-dim input
+    # subspace). gain 5 is mid-range on both axes.
+    input_gain=5.0,
+    noise_sigma=2.0,
     present_ms=50,
     tau_slow=100.0,
     nmda_frac=0.5,
@@ -97,3 +109,28 @@ def summary() -> str:
             f"NET  N={NET['N']} present_ms={NET['present_ms']} tau_slow={NET['tau_slow']}\n"
             f"DEV  {DEV_PASSES} passes = {dev_ms():.0f} ms (+{WARMUP_MS:.0f} ms warmup); "
             f"one pass = {sequence_ms():.0f} ms; n_assays={N_ASSAYS}")
+
+# =================================================================================================
+# DRIVE NORMALISATION ACROSS THE P SWEEP
+# =================================================================================================
+# Measured confound: holding per-synapse magnitude fixed while sweeping density makes TOTAL synaptic
+# drive scale linearly with P — a 5x swing from density 0.1 to 0.5 (4.07 -> 19.44 per neuron). An
+# error-vs-P curve measured that way confounds CAPACITY with DRIVE, and no peak could be attributed.
+#
+# Scaling: w0 ~ 1/sqrt(K), where K = expected inputs per neuron = density * N. This is the canonical
+# BALANCED-STATE scaling (van Vreeswijk & Sompolinsky): it holds input FLUCTUATIONS O(1) while E/I
+# balance cancels the mean. The alternative w0 ~ 1/K (constant mean drive) would SUPPRESS fluctuations
+# as P grows — and H-D is specifically about the fluctuation-driven regime, so 1/K would quietly
+# destroy the regime our hypothesis is about along the very axis we sweep.
+#
+# This normalises a nuisance variable so the P axis measures P. It does NOT build in the mechanism
+# under test (that is regulation, not drive) — same status as the E/I balance precondition (A5).
+DENSITY_REF = 0.3          # reference density at which W0_REF was characterised
+W0_REF = 0.6
+
+
+def w0_for_density(density: float) -> float:
+    """Per-synapse magnitude that holds input FLUCTUATIONS constant as density (hence P) varies."""
+    if density <= 0:
+        return W0_REF
+    return W0_REF * float(np.sqrt(DENSITY_REF / density))

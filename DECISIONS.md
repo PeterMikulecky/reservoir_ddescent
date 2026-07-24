@@ -5073,3 +5073,59 @@ retires the "5x supercritical" framing from D117.
 **NEXT.** Run the rebuilt calibration on DEVELOPED networks and adopt the responsive+healthy cell closest
 to the cortical band into `study_config`. Then AUDIT THE REMAINING PARAMETERS for RC-era justifications
 that no longer transfer.
+
+### D119 — OPERATING POINT SET: input_gain=5.0, noise_sigma=2.0. Chosen on DEVELOPED networks by readout-free criteria. Also: alpha's correct reference is the NON-SYMMETRIC prediction (~1.25), not the cortical band.
+**2026-07-24 · Decision · runs/*calibrate_operating_point* · supersedes the RC-era justification (D118)**
+
+**THE CALIBRATION** (15 cells, developed networks, criteria: responsiveness > 0.20 / healthy / alpha).
+Every cell was responsive and healthy — the RC-era skill gate had been disqualifying everything, not
+the substrate (D118). Excluding two artifact cells (below):
+```
+gain  noise | responsiveness | alpha | |alpha - 1.25|
+ 1.0   2.0  |     0.330      | 1.07  |     0.18
+ 2.0   2.0  |     0.336      | 1.11  |     0.14
+ 5.0   2.0  |     0.360      | 1.23  |     0.02   <- ADOPTED
+10.0   2.0  |     0.398      | 1.45  |     0.20
+10.0   1.0  |     0.539      | 2.49  |     1.24   <- previous setting
+```
+
+**THE REFERENCE CORRECTION (matters more than the choice).** The calibration reported "no cell reaches
+the cortical band 0.7-0.85" — but that band is **the wrong target for us.** It is measured in a regime
+Stringer et al. model with SYMMETRIC connectivity, and D117 declined to impose reciprocity/symmetry
+because doing so would build in structure that makes the network work (D038/D074). For a NON-SYMMETRIC
+network their prediction is **~1.25**. Against the correct reference, several operating points already
+sit at the right dimensionality, and gain 5 / noise 2.0 is essentially ON it. **Caveat: 1.25 is their
+NUMERICAL result for LINEAR dynamics at N=10,000; ours is nonlinear, spiking, N=50, so matching to 0.02
+is over-precision. The honest claim is that gain 1-10 at noise 2.0 all sit in a band consistent with
+non-symmetric random dynamics; gain 5 was chosen for being mid-range on BOTH axes.**
+
+**RESPONSIVENESS HAS AN OPTIMUM, NOT A MONOTONE PREFERENCE** (Claude initially treated higher as
+better; wrong). Too LOW and the network ignores its input — T0 rev3's documented failure. Too HIGH and
+the state is a passive RELAY of the stimulus, leaving nothing for recurrent dynamics to compute or for
+development to shape. The previous setting (gain 10 / noise 1.0) was the latter: responsiveness 0.54
+with alpha 2.49, i.e. variance concentrated near the 10-dimensional input subspace. We set a floor
+(0.20) but never a ceiling, and there should be one.
+
+**NOISE, NOT GAIN, IS THE alpha LEVER.** At fixed gain 10, raising noise 1.0 -> 2.0 drops alpha
+2.49 -> 1.45 while keeping responsiveness at 0.40. The responsiveness/alpha trade is therefore much
+shallower than the undeveloped sweep suggested.
+
+**TWO MEASUREMENT CORRECTIONS MADE ALONG THE WAY.**
+1. **alpha = 19.87 and 51.66 (low noise, high gain) were ARTIFACTS, not findings.** At low noise and
+   strong drive the state's true rank collapses below the fit window (ranks 3-25), so the power-law fit
+   ran on numerical noise and the slope exploded. A rank-collapse guard is now in
+   `covariance_powerlaw_exponent`.
+2. **Claude's claim that "development lowers alpha" was WITHDRAWN.** It compared the audit's B5 (1.92)
+   against an undeveloped sandbox number (2.56) — different measurement paths. Same path, same cells:
+   developed gain-10/noise-1 gives 2.49 vs 2.56 undeveloped. **Development moves alpha by ~0.07.**
+
+**MEMORIALISED IN `study_config.NET`** — not left in conversation. (This entry exists because PJM asked
+whether the operating point was recorded anywhere and it was NOT: it had been recommended in discussion
+and written nowhere, which is exactly the drift failure `study_config` was created to prevent.)
+
+**RE-BASELINING REQUIRED BEFORE THE H-A SWEEP.** Changing gain and noise changes the fitness
+distribution, so all three of these must be re-measured, not extrapolated:
+1. per-evaluation COST at 3-pass development,
+2. fitness RELIABILITY -> n_assays (D115's n_assays=4 was measured at the OLD operating point),
+3. BETA from the new fitness spread (beta*SD ~ 1; this figure has already moved twice today).
+Also re-run the audit: E4/B5 read from `study_config`, so the criticality numbers will change.
