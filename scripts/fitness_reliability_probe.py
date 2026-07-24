@@ -97,23 +97,48 @@ def main():
         print("VERDICT")
         print("=" * 72)
         r0 = rows[0]["r"]; rN = rows[-1]["r"]
+        se = 1.0 / np.sqrt(max(args.n - 3, 1))     # SE of a correlation at this n
         for row in rows:
-            print(f"  n_assays={row['n_assays']:>2}  r={row['r']:+.3f}  h2_ceiling={row['h2_ceiling']:.3f}")
+            print(f"  n_assays={row['n_assays']:>2}  r={row['r']:+.3f} (+/-{se:.3f})  "
+                  f"h2_ceiling={row['h2_ceiling']:.3f}")
+        print(f"\n  SE of a correlation at n={args.n} is {se:.3f}; a difference must exceed ~2 SE "
+              f"({2*se:.3f}) to be meaningful.")
+        print(f"  observed r(last)-r(first) = {rN-r0:+.3f} = {abs(rN-r0)/se:.2f} SE")
+
+        # --- variance decomposition: far more statistically efficient than the raw correlations -----
+        kk = np.array([row["n_assays"] for row in rows], dtype=float)
+        v_obs = np.array([(row["sd_val"]**2 + row["sd_test"]**2) / 2.0 for row in rows])
+        if len(kk) >= 2:
+            A = np.vstack([np.ones_like(kk), 1.0 / kk]).T
+            (v_true, v_noise), *_ = np.linalg.lstsq(A, v_obs, rcond=None)
+            v_true = max(v_true, 0.0)
+            print(f"\n  variance fit V_obs(k) = V_true + V_noise/k:")
+            print(f"    V_true ={v_true:.3e} (SD {np.sqrt(v_true):.4f})   "
+                  f"V_noise={v_noise:.3e} (SD {np.sqrt(max(v_noise,0)):.4f} per assay)")
+            if v_true > 0:
+                print(f"    noise:signal SD ratio at n_assays=1 = {np.sqrt(v_noise/v_true):.1f}x")
+                print("    implied reliability by n_assays: " + "  ".join(
+                    f"k={k:g}:{v_true/(v_true+v_noise/k):.2f}" for k in [1, 2, 4, 8, 16, 32]))
+                print(f"    replication worthwhile until V_noise/k ~ V_true  ->  k* ~ {v_noise/v_true:.0f}")
+            print("    (NOTE: V_true is fit from few points and is poorly determined; treat k* as an "
+                  "order-of-magnitude guide, not a target.)")
         print()
         if np.isnan(r0):
             print("=> DEGENERATE: no spread in one of the estimates. Investigate before interpreting.")
-        elif rN > r0 + 0.15:
-            print("=> (c) MEASUREMENT-NOISE-LIMITED: reliability CLIMBS with averaging, so a real")
+        elif (rN - r0) > 2 * se:
+            print(f"=> (c) MEASUREMENT-NOISE-LIMITED: reliability climbs by >2 SE with averaging, so a real")
             print("   between-genome signal exists and is being swamped. n_assays is a cheap lever —")
             print("   it raises realised h2 and therefore the response to selection. Raise n_assays")
             print("   before spending compute on longer/stronger selection runs.")
-        elif rN < 0.2:
-            print("=> (a)/(b) NO RECOVERABLE SIGNAL: reliability stays ~0 even with averaging, so there is")
+        elif rN < 2 * se:
+            print("=> (a)/(b) NO SIGNAL DISTINGUISHABLE FROM ZERO at this n: reliability stays within 2 SE")
             print("   little true between-genome variance to find here. Averaging cannot help. The fix is")
             print("   to CHANGE THE LANDSCAPE (density/P sweep) or the substrate (queue N2), not to")
             print("   measure the current one more precisely.")
         else:
-            print("=> INTERMEDIATE: some real signal, partly noise-limited. Averaging helps but is not")
+            print("=> INTERMEDIATE / UNDERPOWERED: r is above 2 SE but the trend is not. Prefer the")
+            print("   variance decomposition above; consider a larger n before concluding.")
+            print("   (Legacy note) some real signal, partly noise-limited: averaging helps but is not")
             print("   sufficient on its own; pursue both n_assays and a landscape change.")
 
 

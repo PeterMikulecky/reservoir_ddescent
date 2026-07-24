@@ -31,14 +31,24 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import numpy as np
 from ddescent.runlog import tee
 from ddescent.evonet import EvoNetConfig, random_genome
-from ddescent.evolve import EvolveConfig, run_evolution, evaluate, _fitness
+from ddescent.evolve import (EvolveConfig, run_evolution, evaluate, _fitness,
+                             assert_no_test_leakage)
 from ddescent import tasks as T
 
-CODE_VERSION = "D111-regsel-1"
+CODE_VERSION = "D115-regsel-2-threeway-nassays4"
 
-# (fitness_mode, beta) cells
-CELLS = [("regulation_only", 5.0), ("regulation_only", 20.0), ("regulation_only", 50.0),
-         ("hybrid", 5.0)]
+# (fitness_mode, beta) cells. D114 showed beta*SD ~ 1 is needed for sharp discrimination and that even
+# beta=50 was sub-saturation, so we push higher. beta=0 is the DRIFT CONTROL (uniform selection): any
+# improvement above it is attributable to selection rather than mutation drift.
+CELLS = [("regulation_only", 0.0),      # drift control
+         ("regulation_only", 50.0),
+         ("regulation_only", 100.0),
+         ("regulation_only", 200.0)]
+
+# D115: fitness reliability at n_assays=1 is ~0.05 -- every prior run selected on approximately pure
+# noise. Replication is the cheap lever (noise averages down as 1/sqrt(k)). n_assays=4 costs ~2.1x the
+# old baseline per evaluation and lifts reliability off the floor. Raise to 8 if results stay ambiguous.
+N_ASSAYS = 4
 
 # density is FIXED at the default here (D108 parity). Density is P_dev and is the NEXT experiment
 # (H-A/H-B axis) -- deliberately held constant so this run isolates the SELECTION-BASIS change.
@@ -53,7 +63,7 @@ def net_config():
 
 def cell_hash(mode, beta, pop, gens):
     payload = dict(mode=mode, beta=beta, pop=pop, gens=gens, wta_gain=WTA_GAIN,
-                   dev_ms=800.0, dev_eta=1e-3, eta_e=5e-3, n_assays=1, seed=12345,
+                   dev_ms=800.0, dev_eta=1e-3, eta_e=5e-3, n_assays=N_ASSAYS, seed=12345,
                    N=50, noise_sigma=1.0, task="hier_K10_d3_r1-3_ctx4_dwell10_seed0",
                    code_version=CODE_VERSION)
     return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()[:16]
@@ -108,7 +118,7 @@ def run_cell(mode, beta, args, task, out_dir):
     t0 = time.time()
     net_cfg = net_config()
     cfg = EvolveConfig(pop_size=args.pop, n_generations=args.gens, dev_ms=800.0, dev_eta=1e-3,
-                       n_assays=1, fitness_beta=beta, seed=12345, fitness_mode=mode)
+                       n_assays=N_ASSAYS, fitness_beta=beta, seed=12345, fitness_mode=mode)
     print(f"[cell {cid}] START mode={mode} beta={beta} pop={args.pop} gens={args.gens} hash={h}",
           flush=True)
     history, _ = run_evolution(task, net_cfg, cfg, n_workers=args.workers, verbose=True)
@@ -135,19 +145,22 @@ def main():
     ap.add_argument("--pop", type=int, default=30)
     ap.add_argument("--gens", type=int, default=40)
     ap.add_argument("--workers", type=int, default=6)
-    ap.add_argument("--out", default="runs/reg_select")
+    ap.add_argument("--out", default="runs/reg_select_v2")
     args = ap.parse_args()
     out_dir = pathlib.Path(args.out); out_dir.mkdir(parents=True, exist_ok=True)
 
     with tee("regulation_selection_run", log_dir=str(out_dir),
              header=f"D111: regulation-only selection vs hybrid control; pop={args.pop} gens={args.gens}"):
-        task = T.hierarchical_environments(K=10, d=3, r1=3, n_contexts=4, n_train=60, n_test=60,
+        task = T.hierarchical_environments(K=10, d=3, r1=3, n_contexts=4,
+                                           n_train=60, n_val=60, n_test=60,
                                            context_dwell=10, seed=0)
+        assert_no_test_leakage(task)      # D113: fitness must never see the reporting split
         hr = task.headroom()
         print(f"task floor={hr['memoryless_floor']:.3f} ceiling={hr['oracle_ceiling']:.3f}")
         print(f"cells: {[cell_id(m,b) for m,b in CELLS]}")
-        print("NOTE: beta is scale-dependent; regulation_only fitness spread is ~4.3x smaller than")
-        print("      hybrid, so regulation_only@beta20 ~ hybrid@beta5. Bracketed with 5 and 50.\n")
+        print(f"n_assays={N_ASSAYS} (D115: reliability ~0.05 at n_assays=1 -- prior runs selected on noise)")
+        print("THREE-WAY SPLIT (D113): develop on train, SELECT on val, REPORT on test.")
+        print("THE QUESTION: does TEST error improve when selection can no longer see it?\n")
         cells, t_start = [], time.time()
         for i, (mode, beta) in enumerate(CELLS):
             cells.append(run_cell(mode, beta, args, task, out_dir))
