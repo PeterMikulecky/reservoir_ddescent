@@ -95,6 +95,7 @@ def trial_evaluate(genome: Genome, task, net_cfg: EvoNetConfig, cfg=None,
         train_acc=float(np.mean(tra)) if tra else _nan,
         cov_powerlaw_alpha=float(np.nanmean(alpha)) if alpha else _nan,
         n_params=int(np.count_nonzero(genome.mag)),
+        exc_frac=genome.exc_fraction(),              # run_evolution's history reads this per genome
         dev_converged=dev_converged, dev_aborted=dev_aborted,
         n_assays=n_assays,
         # kept so `_fitness` and the existing history machinery keep working unchanged

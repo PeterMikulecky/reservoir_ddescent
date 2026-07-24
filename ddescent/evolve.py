@@ -462,7 +462,7 @@ def _eval_payload(item):
 
 
 def run_evolution(task, net_cfg: EvoNetConfig, cfg: EvolveConfig,
-                  eval_fn=None, n_workers: int = 1, verbose: bool = True) -> tuple:
+                  eval_fn=None, report_fn=None, n_workers: int = 1, verbose: bool = True) -> tuple:
     """Evolve W. Returns (history_rows, final_population).
 
     Records BOTH best-individual and population-mean training error (D059): interpolation
@@ -476,6 +476,12 @@ def run_evolution(task, net_cfg: EvoNetConfig, cfg: EvolveConfig,
     # (one process, ~1 core). Caught by PJM watching Task Manager: "only 1 Python process at 12%".
     use_pool = (n_workers > 1) and (eval_fn is None)
     eval_fn = eval_fn or (lambda g: evaluate(g, task, net_cfg, cfg))
+    # The per-generation best-genome REPORT must use the SAME scorer family as the population, not a
+    # hardcoded covariance evaluate(). Defaults preserve the covariance path EXACTLY; a trial arm
+    # passes report_fn=lambda g: trial_evaluate(g, task, net_cfg, cfg, report=True) alongside its
+    # eval_fn. (Was a hardcoded evaluate(report=True) below, which errors on a TrialTask — it has no
+    # covariance interface. trial_evaluate(report=True) supplies the same train_err/test_err keys.)
+    report_fn = report_fn or (lambda g: evaluate(g, task, net_cfg, cfg, report=True))
 
     pop = [random_genome(net_cfg, cfg.density, w0=cfg.w0, ei_split=cfg.ei_split,
                          seed=cfg.seed + i) for i in range(cfg.pop_size)]
@@ -500,7 +506,7 @@ def run_evolution(task, net_cfg: EvoNetConfig, cfg: EvolveConfig,
           # population (that was ~2/3 of all evaluation cost). Re-evaluate ONLY the current best
           # genome with report=True — one extra evaluation per generation instead of pop_size x 2
           # extra behaves per assay, which is what makes a useful n_assays affordable.
-          rep = evaluate(pop[order[0]], task, net_cfg, cfg, report=True)
+          rep = report_fn(pop[order[0]])
           errs = np.full(len(res), np.nan); tests = np.full(len(res), np.nan)
           errs[order[0]] = rep["train_err"]; tests[order[0]] = rep["test_err"]
           history.append(dict(
