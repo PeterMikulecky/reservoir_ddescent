@@ -42,10 +42,15 @@ NET = dict(
     n_in=TASK["K"],
     d=TASK["d"],
     bias=0.6,
-    # OPERATING POINT (D119). Set by calibration on DEVELOPED networks against readout-free criteria
-    # (responsiveness / health / dimensionality), NOT by the retired RC-era skill gate that originally
-    # justified input_gain=10 (D118).
-    #   gain 5, noise 2.0 -> responsiveness 0.360, alpha 1.23
+    # OPERATING POINT — REVERTED to gain 10 / noise 1.0 (PJM, 2026-07-24) alongside the move to the
+    # cue-delay-probe task. D119 had adopted gain 5 / noise 2.0 on responsiveness+alpha grounds, but a
+    # subsequent audit showed that choice broke FITNESS RELIABILITY (r 0.465 -> 0.066, FAIL): doubling
+    # noise_sigma quadruples the measurement noise in every fitness estimate. Reliability is the
+    # BINDING constraint — without it selection cannot work at all — whereas alpha is a
+    # cortex-likeness criterion: desirable, not load-bearing. Reverted to the reliability-verified
+    # setting while the new task is established.
+    #   gain 10, noise 1.0 -> responsiveness 0.539, alpha 2.49, RELIABILITY 0.465 (PASS)
+    #   gain  5, noise 2.0 -> responsiveness 0.360, alpha 1.23, reliability 0.066 (FAIL)
     # alpha 1.23 sits essentially ON Stringer et al.'s NON-SYMMETRIC prediction (~1.25), which is our
     # correct reference: the cortical band 0.7-0.85 assumes the symmetric connectivity we declined to
     # impose (D117), so measuring against it was measuring against the wrong target.
@@ -54,8 +59,8 @@ NET = dict(
     # nothing left for recurrent dynamics to compute or development to shape. gain 10 / noise 1.0 was
     # the latter (responsiveness 0.54, alpha 2.49 - variance concentrated near the 10-dim input
     # subspace). gain 5 is mid-range on both axes.
-    input_gain=5.0,
-    noise_sigma=2.0,
+    input_gain=10.0,
+    noise_sigma=1.0,
     present_ms=50,
     tau_slow=100.0,
     nmda_frac=0.5,
