@@ -5229,3 +5229,74 @@ assay. Claude earlier guessed this task would be CHEAPER; it is not.
 development over trials (and how many passes); audit C-group replacement (the low-rank waist and
 r1/n_env invariants are specific to the old task; the new invariants are the degenerate-strategy checks);
 cost re-measurement.
+
+D121 — CRITICAL: clock-offset bug in `EvoNet.behave` voided every DEVELOPED assay
+Status: FIXED and verified against the real code in a Brian2 2.10.1 sandbox on the trial config.
+Files touched: `evonet.py` only — two functional lines in `EvoNet.behave`. `behave_batch` UNCHANGED
+(comments only). This append supersedes the pre-freeze D121 note on three points (marked ⚠ below).
+The bug
+Brian2's `TimedArray(values, dt)` is indexed by absolute simulation time: at run time `t` it reads
+`values[round(t/dt)]`. `develop()` re-calls `self.net.store("init")` at line 621 after running
+`warmup_ms + dev_ms`, so the stored snapshot carries an advanced clock (with the trial config:
+200 + 16000 = 16200 ms). `behave()` then calls `self.net.restore("init")`, which faithfully restores
+that advanced clock — the drive, built to start at row 0, is read from row `round(16200/present_ms)`
+= row 324. Since `E_test` has only 160 rows, the TimedArray clamps at its last value and every
+DEVELOPED network is assayed on time-shifted / clamped stimulus, with targets misaligned from the
+inputs that produced them. D088 fixed only the monitor-timestamp half (`t = t - t[0]`), which made
+the remaining stimulus misalignment invisible — undeveloped nets (fresh `self.net`, clock 0) looked
+fine while every developed net was scored on garbage.
+⚠ Correction 1 to the pre-freeze note. The mechanism is not merely "restore doesn't reset the
+clock." It is that `develop()`'s own `store("init")` at line 621 captures the advanced clock; that
+is why restore returns it advanced. A fresh (never-developed) net's `store("init")` is captured at
+clock 0, so undeveloped `behave()` was never affected — which is exactly why the bug hid.
+Symptom (reproduced on the real trial config, noise 1.0, seed 1)
+undeveloped cue decode = 1.00; zero-plasticity `develop()` then `behave()` cue decode = 0.62.
+Zero plasticity means development changes nothing, so the two MUST be identical; the 0.62 was the
+clock shift alone. `max|state|` differed by 3.5.
+The fix (both halves in `EvoNet.behave`)
+Drive padding (alignment). After `restore("init")`, compute
+`offset_rows = round(self.net.t / present_ms)` and prepend that many zero rows to `drive` before
+building the `TimedArray`. The pad rows map to absolute times that are never simulated (the run
+starts at `t_now`), so they are inert — this re-indexes, it does not change dynamics. This restores
+correct stimulus→target alignment.
+Sample-grid snap (windowing). Padding alone left a residual `max|Δ| = 0.427` at noise=0, traced
+to floating-point: monitor times are stored in seconds (16.205 s is not exactly representable),
+so `t - t[0]` at a large absolute clock leaves ~1e-11 ms of error that flips whether a sample lying
+exactly on a readout-window boundary counts as inside. That made windowing clock-dependent — a
+developed net (clock ~16200) and a fresh net windowed the same rate trace differently. Samples are
+emitted on the exact `sample_ms` grid, so snapping the rebased times (`t = round((t-t[0])/sample_ms) *sample_ms`) removes the error and makes window membership identical at any clock offset. This is the
+second half of D088's rebase; both halves together restore bit-identity.
+⚠ Correction 2. The pre-freeze note treated D121 as one drive-padding fix. It is TWO changes; the
+padding alone does not pass the noise=0 bit-identity check.
+Verification (sandbox, Brian2 2.10.1, real trial config)
+Bit-identity, noise=0: undeveloped vs zero-plasticity develop `max|Δ| = 0.000e+00` (was 0.427).
+Decodability, real config (noise 1.0): cue 1.00/1.00, delay 1.00/1.00, probe 0.85/0.85, read
+within noise (undeveloped vs zeroDev) — the load-bearing cue/delay stages are exactly restored.
+`verify_batch_equivalence` at noise=0, plain config (WTA/eSTDP off): PASS at clock 0 AND after a
+clock advance.
+`behave_batch` — NOT affected by D121, and two separate facts to record
+⚠ Correction 3. `behave_batch` does not have the clock bug and needs no change. It builds a
+FRESH `b2.Network` every call, and a fresh Brian2 Network runs from t=0 regardless of the global
+`defaultclock` (verified directly: `net.t == 0` after a prior 8 s run). The clock bug is specific to
+`behave()`, whose PERSISTENT `self.net` is advanced by `develop()` and re-stored at that advanced clock.
+An initial attempt to "mirror" the fix into `behave_batch` (padding by `defaultclock.t`) actively BROKE
+it — the pad was read as leading silence — and was reverted. `behave_batch` in the shipped file is
+functionally identical to the committed version (added explanatory comments only).
+Two consequences worth logging:
+`behave_batch` is not on the GA critical path. It is called ONLY by `verify_batch_equivalence`;
+`run_evolution` uses single-genome `evaluate()`/`trial_evaluate()` → `net.behave()` (optionally via a
+multiprocessing pool). So the single-genome `behave()` fix is the one that matters for the trial-task
+arm. The pre-freeze note's "batched=True is the GA default → this is on the critical path" is not true
+of the committed code.
+`behave_batch` is stale relative to D103 (separate issue, not D121). With `dev_wta_comp` /
+`dev_ee_stdp` ON, `verify_batch_equivalence` FAILS in the ORIGINAL code too — `behave_batch`'s
+equations omit the D103 `I_wta` competition and the eSTDP synapses, so it cannot match single-genome
+`behave()` when those features are active. This is orthogonal to D121 and predates it. Because
+`behave_batch` is dormant it is not urgent, but it should NOT be wired into the GA (or re-adopted as a
+speedup) until it is brought up to the D103 substrate and re-passes `verify_batch_equivalence` at the
+real operating point. → open a follow-up item (suggest D122) to either update or retire it.
+Scope of impact (what must be re-run)
+Any result computed from a developed phenotype via single-genome `behave()` before this fix is
+invalid (stimulus misaligned). Undeveloped/birth-scored measurements are unaffected. Re-run any trial
+GA runs and any developed-net diagnostics taken since `develop()` began advancing the clock into the
+re-stored "init".

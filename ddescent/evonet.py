@@ -511,8 +511,23 @@ class EvoNet:
             b2.seed(noise_seed)
         drive = np.zeros((n, c.N))
         drive[:, :c.n_in] = c.input_gain * E          # environment enters the input neurons
-        ta = b2.TimedArray(drive, dt=c.present_ms * ms)
         self.net.restore("init")
+        # ---- CLOCK-OFFSET CORRECTION (D121) -----------------------------------------------------
+        # Brian2's TimedArray is indexed by ABSOLUTE simulation time. develop() re-calls
+        # net.store("init") AFTER running warmup+dev_ms, so the stored snapshot carries an ADVANCED
+        # clock; restore("init") therefore returns the clock to (e.g.) 16200 ms, not 0. A drive
+        # built to start at row 0 is then read from row floor(t_now/present_ms) -> every DEVELOPED
+        # network was assayed on TIME-SHIFTED stimuli, targets misaligned with the inputs that
+        # produced them. D088 fixed only the MONITOR-timestamp half (the `t = t - t[0]` rebase
+        # below), which made the remaining stimulus misalignment invisible. Fix: pad the drive with
+        # that many leading zero rows, computed AFTER restore() (restore itself moves the clock), so
+        # absolute-time lookup lands on row 0 of E at run start. The pad rows map to absolute times
+        # that are never simulated (the run starts at t_now), so they are inert — this re-indexes,
+        # it does not change the dynamics.
+        offset_rows = int(round(float(self.net.t / (c.present_ms * ms))))
+        if offset_rows:
+            drive = np.vstack([np.zeros((offset_rows, c.N), dtype=drive.dtype), drive])
+        ta = b2.TimedArray(drive, dt=c.present_ms * ms)
         self.G.namespace["ta"] = ta
         mon = b2.StateMonitor(self.G, "r", record=True, dt=c.sample_ms * ms, name="mon")
         self.net.add(mon)
@@ -523,8 +538,16 @@ class EvoNet:
         # Brian2's clock is GLOBAL and monotonic: develop() advances it, and restore("init") does
         # NOT reset clock time. Rebase to run-start so the window arithmetic (which assumes
         # t in [0, n*present_ms]) is correct regardless of prior clock advance (D088 baseline fix).
+        # D121: ALSO snap to the sample grid. Monitor times are stored in SECONDS (e.g. 16.205 s is
+        # not exactly representable), so rebasing at a large absolute clock leaves ~1e-11 ms of float
+        # error that flips whether a sample sitting exactly on a readout-window boundary counts as
+        # inside -- a CLOCK-DEPENDENT windowing, so a developed net (clock ~16200 ms) and a fresh net
+        # windowed the SAME rate trace differently. Samples are emitted on the exact sample_ms grid,
+        # so snapping removes the error and makes window membership identical at any clock offset
+        # (this is the second half of the D088 rebase; together with the drive padding above it
+        # restores bit-identity at noise_sigma=0).
         if len(t):
-            t = t - t[0]
+            t = np.round((t - t[0]) / c.sample_ms) * c.sample_ms
 
         # D078: windowing now lives in the shared _window_readout helper so the single-genome
         # and batched paths cannot diverge.
@@ -734,6 +757,11 @@ def behave_batch(genomes, cfg, E):
         S.w_fast = gwf; S.w_slow = gws
 
     # ---- drive: same E into every block's input neurons ---------------------------------
+    # NOTE (D121): unlike single-genome EvoNet.behave, this runner does NOT need a clock-offset
+    # correction. It builds a FRESH Network every call, and a fresh Brian2 Network runs from t=0
+    # regardless of the global defaultclock (verified: fresh net1.t == 0 after a prior 8 s run), so
+    # the absolute-time TimedArray already lands on row 0. The clock bug is specific to behave(),
+    # whose PERSISTENT self.net is advanced by develop() and re-stored at that advanced clock.
     drive = np.zeros((n, NT))
     for b in range(P):
         drive[:, b * N : b * N + c.n_in] = c.input_gain * E
@@ -745,7 +773,8 @@ def behave_batch(genomes, cfg, E):
     r_all = np.asarray(mon.r)            # (NT, samples)
     t = np.asarray(mon.t / ms)
     if len(t):
-        t = t - t[0]                     # rebase to run-start (D088), same as single-genome path
+        t = t - t[0]                     # rebase to run-start (D088); fresh net starts at t=0 so
+                                         # there is no large-clock float error to snap away here
 
     # ---- split back into per-genome results via the SHARED windowing helper -------------
     out = []
