@@ -1,0 +1,64 @@
+# analysis log: audit
+# timestamp: 2026-07-23T22:55:41.801233
+# command: scripts/audit.py
+# AUDIT — does the pipeline measure what it claims, and do its premises hold?
+#====================================================================
+
+[logging to runs\20260723-225541_audit.log]
+task {'K': 10, 'd': 3, 'r1': 3, 'n_contexts': 4, 'n_train': 60, 'n_val': 60, 'n_test': 60, 'context_dwell': 10, 'seed': 0}
+net  N=50 present_ms=50 tau_slow=100.0
+evo  dev_ms=800.0 n_assays=4 mode=regulation_only
+
+C. TASK INVARIANTS — do the hypotheses' design premises hold?
+  [FAIL] C1 low-rank waist: r1=3 == min(K,d)=3: the rank constraint is VACUOUS (any K->d map has rank<=d). There is NO low-rank structure, so r1 is not a free structural parameter and H-B (peak tracks r1, not the constraint count) is UNTESTABLE in this configuration.
+  [PASS] C2 realised rank: per-context map ranks [3, 3, 3, 3] (r1=3)
+  [PASS] C3 contexts mean-zero: max per-context mean z-score = 2.25 over 40 tests (crit ~5.5). Context must live in COVARIANCE only; a real mean offset would make it linearly decodable and trivialise the task.
+  [PASS] C4 headroom (val): floor=1.014 ceiling=0.385 headroom=0.628
+  [PASS] C4 headroom (test): floor=0.870 ceiling=0.343 headroom=0.527
+  [PASS] C5 r1 / n_env independence: varying r1 changes map rank (2); varying n_train leaves it (3)
+
+D. EXPOSURE COHERENCE — does development see what it needs to?
+  [PASS] D1 stimulus supply: development window fits inside the 3000 ms sequence
+  [FAIL] D2 stimulus coverage: plasticity sees stimuli 4..19 = 16/60 = 27% (0.27 passes)
+  [FAIL] D3 context coverage: contexts seen under plasticity [np.int64(0), np.int64(2)] of [np.int64(0), np.int64(1), np.int64(2), np.int64(3)] (2/4) — unseen contexts cannot be learned yet ARE assayed
+  [FAIL] D4 context transitions: 1 transition(s) under plasticity; context inference cannot be learned from few (target >= 2 per context = 8)
+
+E. CONFIG COHERENCE — are parameters consistent with what the science requires?
+  [PASS] E1 readout saturation: 60 assay samples per output vs 2 fitted readout parameters (gain+offset) = ratio 30. Capacity-constrained readout (D095): cannot mix neurons, so readout parameters are NOT uncounted P (D111).
+  [PASS] E2 memory demand: context must be held ~500 ms; slowest substrate timescale tau_slow=100 ms (gap 5.0x). A large gap is the known memory problem (A3).
+  [PASS] E3 n_assays: n_assays=4; D115 measured fitness reliability ~0.05 at n_assays=1 (selection on approximately pure noise). >= 4 required.
+  [WARN] E4 spectral radius: mean rho(W) = 4.42 over 3 genomes. Stringer et al. 2026: long timescales require CRITICAL normalisation (rho ~ 1); incomplete normalisation destroys them. NOTE raw rho overstates gain in a spiking net (threshold/refractoriness clamp it) — an effective/linearised rho at the operating point is the quantity that matters and is NOT yet computed.
+
+B. MEASUREMENT IDENTITY — do named quantities measure what they claim?
+  [PASS] B1 memoryless floor: static expansion 0.8713 does not beat floor 0.8702
+
+A. FITNESS PROVENANCE — which splits actually influence fitness?
+  [PASS] A TEST split: destroying TEST did NOT change fitness (expected no change)
+  [PASS] A VAL split: destroying VAL changed fitness (expected change)
+  [PASS] A TRAIN split: destroying TRAIN changed fitness (expected change)
+
+B. MEASUREMENT IDENTITY — do named quantities measure what they claim?
+  [PASS] B1 memoryless floor: static expansion 0.8713 does not beat floor 0.8702
+  [PASS] B2 encoding~carrying: r=+0.2035, range(x-y)=4.20e-02
+  [FAIL] B2 encoding~regulation: r=+1.0000, range(x-y)=0.00e+00  <-- SAME measurement up to a constant (D112)
+  [PASS] B2 carrying~regulation: r=+0.2035, range(x-y)=4.20e-02
+  [WARN] B3 context use (matched): context gain (destroyed - ordered) = +0.0040 over 3 nets (NO measurable context use)
+
+F. RELIABILITY & POWER
+  [FAIL] F1 fitness reliability: r(val,test) = +0.022 +/- 0.333 at n_assays=4 (NOT above 2 SE)
+  [PASS] F2 random baseline: random-genome fitness mean=0.0323 sd=0.0064 max=0.0451 (evolved runs must clearly exceed max to claim the NETWORK contributes)
+
+==============================================================================
+  FAIL: [C] C1 low-rank waist
+  FAIL: [D] D2 stimulus coverage
+  FAIL: [D] D3 context coverage
+  FAIL: [D] D4 context transitions
+  WARN: [E] E4 spectral radius
+  FAIL: [B] B2 encoding~regulation
+  WARN: [B] B3 context use (matched)
+  FAIL: [F] F1 fitness reliability
+
+6 FAIL, 2 WARN, 17 PASS
+
+Do not launch an expensive run until each FAIL is either fixed or recorded as a
+deliberate, documented DECISION that does not affect the contrast being measured.

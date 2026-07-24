@@ -1,0 +1,29 @@
+{
+  "fit_slope": 0.0002105956346230661,
+  "reg_slope": 0.0002105956346230661,
+  "fit_start": 0.03125480804372141,
+  "fit_end": 0.035448037753104344,
+  "reg_best_start": 0.0431014479722201,
+  "reg_best_end": 0.05586027598428073,
+  "reg_mean_start": 0.03125480804372141,
+  "reg_mean_end": 0.035448037753104344,
+  "best_test_start": 0.9507120721903574,
+  "best_test_end": 0.9616582592457438,
+  "best_test_min": 0.9507120721903574,
+  "audit": {
+    "random_mean": 0.025895238623550858,
+    "random_sd": 0.003803560674569702,
+    "random_max": 0.03246325889061091,
+    "n": 10,
+    "evolved_minus_random": 0.009552799129553487
+  },
+  "cell": "regulation_only_beta0",
+  "config_hash": "ff8434603e0592cb",
+  "code_version": "D115-regsel-2-threeway-nassays4",
+  "fitness_mode": "regulation_only",
+  "beta": 0.0,
+  "pop": 30,
+  "gens": 40,
+  "seconds": 11402.9,
+  "timestamp": "2026-07-23T21:01:14.430491"
+}

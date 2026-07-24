@@ -1,0 +1,24 @@
+# analysis log: regulation_selection_run
+# timestamp: 2026-07-23T17:51:11.519782
+# command: scripts/regulation_selection_run.py --pop 30 --gens 40 --workers 6
+# D111: regulation-only selection vs hybrid control; pop=30 gens=40
+#====================================================================
+
+[logging to runs\reg_select_v2\20260723-175111_regulation_selection_run.log]
+task floor=0.870 ceiling=0.343
+cells: ['regulation_only_beta0', 'regulation_only_beta50', 'regulation_only_beta100', 'regulation_only_beta200']
+n_assays=4 (D115: reliability ~0.05 at n_assays=1 -- prior runs selected on noise)
+THREE-WAY SPLIT (D113): develop on train, SELECT on val, REPORT on test.
+THE QUESTION: does TEST error improve when selection can no longer see it?
+
+[cell regulation_only_beta0] START mode=regulation_only beta=0.0 pop=30 gens=40 hash=ff8434603e0592cb
+  gen    0: best_train=0.983 best_test=0.951 |W|=735±23 exc=0.80
+  gen   20: best_train=0.966 best_test=0.972 |W|=756±11 exc=0.75
+  gen   39: best_train=0.976 best_test=0.962 |W|=753±5 exc=0.72
+[cell regulation_only_beta0] DONE 11402.9s | fit_slope=+0.00021 reg_slope=+0.00021 | reg_mean 0.0313->0.0354 | best_test 0.951->0.962 (min 0.951)
+    [audit] random-network mean=0.0259 (max 0.0325) vs evolved 0.0354 | gap=+0.0096
+  [heartbeat] 1/4 cells | elapsed 190.0min | eta 570.1min
+
+[cell regulation_only_beta50] START mode=regulation_only beta=50.0 pop=30 gens=40 hash=db5f863b23a2cb2e
+  gen    0: best_train=0.983 best_test=0.951 |W|=735±23 exc=0.80
+  gen   20: best_train=0.985 best_test=0.955 |W|=756±0 exc=0.76
