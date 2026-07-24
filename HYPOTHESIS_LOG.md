@@ -151,6 +151,20 @@ post-hoc DIAGNOSTICS. This also means the discriminating tests for H-Cv2 vs H-C 
 what the evolved networks actually built, and how it changed with P" rather than "which pre-defined
 component climbed."
 
+**SECOND CORRECTION (2026-07-23, D115) — the heritability leg is WITHDRAWN, not merely restated.**
+D112 restated support #1 as "performance vs carrying." D115 goes further and withdraws it entirely: at
+n=30 the SE of a correlation is 0.192, so D109's regulation heritability r=0.29 sits 1.5 SE from zero
+(p≈0.13) and is **not significantly different from zero, nor from the fitness r=0.03 it was contrasted
+with.** There was never a measured heritability dissociation. Compounding this, D115 showed fitness
+reliability at n_assays=1 is ≈0.05 — so D109's measurements were taken on an essentially unreliable
+signal in the first place.
+
+**H-Cv2's remaining support: #2 (deep networks natively find distributed solutions), #3 (biology's clean
+linear encoders are structurally specified rather than emergent), #4 (D110 nonlinear decodability — a
+LARGE effect: RF 0.60–0.69 vs 0.25 chance, and the only one of the four that is statistically robust).**
+H-Cv2 is therefore NOT refuted, but it now rests on one empirical result plus two arguments from the
+literature. Its status remains PROVISIONAL, with a weaker evidential base than when it was advanced.
+
 ---
 
 ## Revision history (chronological)
@@ -162,3 +176,7 @@ component climbed."
   (dissociation is performance-vs-carrying, not regulation-vs-encoding). H-Cv2 remains PROVISIONAL on
   supports #2–#4. enc/car/reg decomposition collapsed for selection; components retained as diagnostics.
   H-Cv2's discriminating tests move to decodability / structural descriptors / the fitness-vs-P curve.
+- **2026-07-23 (correction, D115)** — heritability leg of H-Cv2 WITHDRAWN: D109's r=0.29 was never
+  significant at n=30 (SE=0.192, p≈0.13), and fitness reliability at n_assays=1 is ≈0.05, so the
+  measurement was unreliable regardless. H-Cv2 now rests on D110 plus two literature arguments.
+  Standing rule added: compute the SE before calling a correlation a finding.

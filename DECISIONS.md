@@ -4747,3 +4747,77 @@ generalisation.**
 TEST error move when selection can no longer see it?** If yes, genuine. If val improves while test stays
 flat, this entire signal was leak. ALSO ADD as a standing diagnostic: **train-vs-test divergence is a cheap,
 sensitive leak detector** we could have had all along.
+
+### D115 — ⚠️ FITNESS RELIABILITY AT n_assays=1 IS ~0.05. Every run to date selected on approximately pure noise. Also: D109's heritability result was NEVER statistically significant — withdrawn.
+**2026-07-23 · Result + correction · runs/20260723-165538_fitness_reliability_probe.log**
+
+**THE MEASUREMENT.** With the D113 three-way split, `evaluate()` returns val_err and test_err: two
+INDEPENDENT estimates of the same genome's generalisation. Their correlation across genomes is a
+split-half RELIABILITY of the fitness signal. n=30 genomes, n_assays sweep {1,2,4}:
+```
+n_assays   r(val,test)   SD(val)   SD(test)   SD(val-test)
+   1         -0.011      0.0121    0.0118       0.0169
+   2         +0.228      0.0094    0.0073       0.0105
+   4         +0.227      0.0074    0.0055       0.0081
+```
+
+**FIRST — CORRECT THE PROBE'S OWN VERDICT (it overread).** At n=30 the SE of a correlation is 0.192.
+r(2)-r(1) = 1.24 SE; r(4)-r(2) = 0.01 SE; r(4) vs zero = 1.18 SE. **NONE of these correlations differs
+significantly from the others or from zero.** The probe's built-in threshold (`rN > r0 + 0.15`) fired on a
+1.2-SE difference — badly calibrated, Claude's error. Fix the threshold to account for SE before reuse.
+
+**SECOND — THE VARIANCE DECOMPOSITION IS FAR MORE INFORMATIVE, AND IS CLEAN.**
+- SD(val-test) shrinks almost exactly as 1/sqrt(k) (observed/predicted ratios 1.00, 0.88, 0.96) => the
+  val-test discrepancy IS genuine measurement noise, averaging down exactly as theory requires.
+- Fitting V_obs(k) = V_true + V_noise/k over the three points:
+  **V_true ~ 6.5e-6 (SD_true ~ 0.0026); V_noise ~ 1.35e-4 (SD_noise ~ 0.0116 per single assay).**
+  **Noise exceeds signal by ~4.6x in SD, ~21x in VARIANCE, at n_assays=1.**
+- Implied reliability V_true/(V_true+V_noise/k): **0.046 (k=1)**, 0.088 (2), 0.161 (4), 0.278 (8),
+  0.435 (16), 0.606 (32).
+
+**HEADLINE: at n_assays=1 the fitness signal has reliability ~0.05. EVERY RUN TO DATE — the D108 dev x beta
+sweep and the D111/D114 regulation-selection run — used n_assays=1 and therefore selected on approximately
+PURE NOISE.** This substantially explains the flat landscapes WITHOUT needing any substrate or architecture
+explanation. Note the config DEFAULT is n_assays=3; the runners explicitly overrode it to 1 — the worst
+available setting.
+
+**THIRD — CORRECTION TO D109 (withdraw the heritability claim).** D109 reported regulation heritability
+r=0.29 at n=30 and treated it as a real dissociation against fitness r=0.03. **At SE=0.192, r=0.29 is 1.5 SE
+from zero (p~0.13) — never statistically significant, and not significantly different from 0.03 either.**
+Claude should have computed the SE at the time. Combined with D112 (encoding is identical to regulation up
+to a constant, so the claimed regulation-vs-encoding dissociation could not exist), **the heritability leg
+of the H-Cv2 reframe is withdrawn.** The reframe retains supports #2 (deep nets find distributed solutions),
+#3 (biology's linear encoders are structurally specified), and #4 (D110 nonlinear decodability — a LARGE
+effect, RF 0.60-0.69 vs 0.25 chance), so it is not refuted; but it no longer rests on any heritability
+evidence. Update HYPOTHESIS_LOG accordingly.
+
+**CAVEAT ON OUR OWN ESTIMATE.** V_true is fit from three points and is poorly determined; a two-point
+estimate gives V_true ~ 3e-5, which would put useful replication nearer k~4 than k~21. Honest range:
+**"between 4 and 20 assays," not a precise target.** What IS solid: reliability at k=1 is ~0, and noise
+averages down as 1/sqrt(k) exactly as predicted, so replication works.
+
+**FOURTH — A LARGE, FREE COST SAVING FOUND WHILE COSTING THIS OUT.** Development sits OUTSIDE the n_assays
+loop, so replication repeats only `behave()`. But each assay runs THREE behave() calls — train, val, test —
+and post-D113 **only val feeds selection**; train and test are pure REPORTING overhead computed on every
+genome, every generation. At 60 stimuli x 50 ms that is ~3000 ms simulated each vs ~1000 ms for development,
+so **two-thirds of every evaluation is waste during selection.**
+```
+per-eval simulated ms   current(3 behaves)   val-only during selection
+   n_assays=1               10,000                  4,000
+   n_assays=4               37,000                 13,000
+   n_assays=8               73,000                 25,000
+```
+=> Skipping the reporting behaves during selection buys **n_assays=8 for ~2.5x current cost** (~3 h/cell
+instead of ~70 min). Without it, n_assays=8 would be ~7x and unaffordable.
+
+**DECIDED / NEXT (in this order — running the beta sweep at n_assays=1 would repeat D108's mistake with
+better bookkeeping).**
+1. Optimise `evaluate()`: compute train/test behaves ONLY when reporting is requested, not during selection.
+2. Raise **n_assays to 8** for selection runs (reliability ~0.28 on the conservative fit; ~6x better than
+   every prior run).
+3. THEN run beta 50/100/200 on the three-way split.
+4. Fix the reliability probe's verdict threshold to be SE-aware.
+
+**STANDING RULE ADDED.** **Compute the standard error before calling a correlation a finding.** Two
+correlation-based results in this project (D109's heritability, this probe's verdict) were over-read at
+n=30 where SE~0.19. Any r below ~0.4 at n=30 is not distinguishable from zero.

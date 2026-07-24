@@ -266,7 +266,7 @@ def assert_no_test_leakage(task) -> None:
         )
 
 
-def evaluate(genome: Genome, task, net_cfg: EvoNetConfig, cfg: "EvolveConfig | None" = None) -> dict:
+def evaluate(genome: Genome, task, net_cfg: EvoNetConfig, cfg: "EvolveConfig | None" = None, report: bool = False) -> dict:
     """DEVELOP then score the DEVELOPED phenotype (D083), averaged over K NOISE ASSAYS for
     noise-robustness (D085c): a single lucky/unlucky noise draw must not be mistaken for signal.
     Returns the three D094 components read through the capacity-constrained designated-slice
@@ -308,20 +308,27 @@ def evaluate(genome: Genome, task, net_cfg: EvoNetConfig, cfg: "EvolveConfig | N
         s_tr = (gseed + gen_off + 4 * a + 1) & 0x7FFFFFFF
         s_te = (gseed + gen_off + 4 * a + 2) & 0x7FFFFFFF
         s_ca = (gseed + gen_off + 4 * a + 3) & 0x7FFFFFFF
-        B_tr = net.behave(task.E_train, noise_seed=s_tr)
+        # D115 COST: development sits outside this loop, so replication repeats only behave().
+        # Only the VALIDATION behave feeds selection (D113); train/test are pure REPORTING and were
+        # being recomputed for every genome every generation (~2/3 of all evaluation cost). They are
+        # now computed ONLY when report=True, which makes raising n_assays affordable.
         B_va = net.behave(_val_E(task), noise_seed=s_te)
-        B_te = net.behave(task.E_test, noise_seed=s_te)
-        e_tr = _affine_nmse(task.Y_train, B_tr["rates"])
-        e_va = _affine_nmse(_val_Y(task), B_va["rates"])     # D113: SELECTION error
-        e_te = _affine_nmse(task.Y_test, B_te["rates"])      # D113: REPORTING only
-        etr.append(e_tr); eva.append(e_va); ete.append(e_te)
+        e_va = _affine_nmse(_val_Y(task), B_va["rates"])      # D113: SELECTION error
+        eva.append(e_va)
+        if report:
+            B_tr = net.behave(task.E_train, noise_seed=s_tr)
+            B_te = net.behave(task.E_test, noise_seed=s_te)
+            etr.append(_affine_nmse(task.Y_train, B_tr["rates"]))
+            ete.append(_affine_nmse(task.Y_test, B_te["rates"]))   # D113: REPORTING only
         # --- every fitness component derives from VALIDATION error (D113) ---------------------
         enc.append(max(0.0, 1.0 - e_va))
         reg.append(max(0.0, floor - e_va))
         car.append(_carry_covdecay(net, task, net_cfg, noise_seed=s_ca))  # uses E_train only: no test contact
 
-    return dict(train_err=float(np.mean(etr)), val_err=float(np.mean(eva)),
-                test_err=float(np.mean(ete)),
+    _nan = float("nan")
+    return dict(train_err=float(np.mean(etr)) if etr else _nan,
+                val_err=float(np.mean(eva)),
+                test_err=float(np.mean(ete)) if ete else _nan,
                 n_params=genome.n_params(), exc_frac=genome.exc_fraction(),
                 encoding=float(np.mean(enc)), carrying=float(np.mean(car)),
                 regulation=float(np.mean(reg)),
@@ -387,19 +394,25 @@ def run_evolution(task, net_cfg: EvoNetConfig, cfg: EvolveConfig,
             res = pool.map(_eval_payload, [(g, gen) for g in pop])  # ship genome + gen
           else:
             res = [eval_fn(g) for g in pop]
-          errs = np.array([r["train_err"] for r in res])
-          tests = np.array([r["test_err"] for r in res])
           nps = np.array([r["n_params"] for r in res])
           fits = np.array([_fitness(r, r["n_params"], cfg) for r in res])
 
           order = np.argsort(-fits)
+          # D115: train/test errors are REPORTING only and are no longer computed for the whole
+          # population (that was ~2/3 of all evaluation cost). Re-evaluate ONLY the current best
+          # genome with report=True — one extra evaluation per generation instead of pop_size x 2
+          # extra behaves per assay, which is what makes a useful n_assays affordable.
+          rep = evaluate(pop[order[0]], task, net_cfg, cfg, report=True)
+          errs = np.full(len(res), np.nan); tests = np.full(len(res), np.nan)
+          errs[order[0]] = rep["train_err"]; tests[order[0]] = rep["test_err"]
           history.append(dict(
             gen=gen,
             # best individual — the right convention for Gate B0 (can ANY genome interpolate?)
             best_train=float(errs[order[0]]), best_test=float(tests[order[0]]),
             best_params=int(nps[order[0]]),
             # population mean — the right convention for R&N's class-level Occam factor
-            mean_train=float(errs.mean()), mean_test=float(tests.mean()),
+            # D115: population-wide train/test no longer computed (reporting-only); NaN by design.
+            mean_train=float("nan"), mean_test=float("nan"),
             mean_params=float(nps.mean()), std_params=float(nps.std()),
             mean_exc_frac=float(np.mean([r["exc_frac"] for r in res])),
             fit_mean=float(fits.mean()), fit_std=float(fits.std()),
