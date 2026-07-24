@@ -267,6 +267,54 @@ def assert_no_test_leakage(task) -> None:
 
 
 
+
+def covariance_powerlaw_exponent(state, rank_lo=3, rank_hi=None) -> float:
+    """EFFECTIVE criticality statistic (audit E4). Raw rho(W) overstates gain in a spiking network,
+    because threshold, refractoriness and saturation clamp the loop gain — so rho(W) is not the
+    quantity that matters. This measures the OBSERVABLE that Stringer et al. 2026 use instead: the
+    power-law decay exponent of the state covariance eigenspectrum.
+
+    Their reference points, which make our number directly comparable to published data:
+      ~0.67  critically normalised SYMMETRIC random dynamics (their analytic 2/3)
+      ~1.25  NON-symmetric random dynamics
+      0.7-0.85 observed in mouse cortex and brainwide recordings
+    A much LARGER exponent means variance is concentrated in few modes (low effective dimensionality,
+    incomplete normalisation); their CA1 exception sat at 0.4-0.5.
+
+    Fitted by weighted least squares in log-log space over an intermediate rank band, following their
+    method (weights = 1/log(rank), avoiding rank 1 and the noise-dominated tail).
+    """
+    X = np.asarray(state, dtype=float)
+    X = X - X.mean(0)
+    if X.shape[0] < 4 or X.shape[1] < 8:
+        return float("nan")
+    ev = np.linalg.svd(X, compute_uv=False) ** 2
+    ev = ev[ev > 0]
+    if rank_hi is None:
+        rank_hi = max(rank_lo + 3, len(ev) // 2)
+    rank_hi = min(rank_hi, len(ev))
+    if rank_hi - rank_lo < 3:
+        return float("nan")
+    # GUARD: if the state's true rank collapses below the fit window, the eigenvalues being fitted are
+    # numerical noise and the slope explodes. A local calibration produced alpha = 19.9 and 51.7 at
+    # low noise + high gain for exactly this reason — those were broken measurements, not findings.
+    # Require the fit band to carry real variance relative to the leading mode.
+    if ev[rank_lo - 1] < 1e-9 * ev[0]:
+        return float("nan")
+    r = np.arange(rank_lo, rank_hi + 1, dtype=float)
+    y = ev[rank_lo - 1:rank_hi]
+    if np.min(y) < 1e-12 * ev[0]:
+        keep = y > 1e-12 * ev[0]
+        if keep.sum() < 4:
+            return float("nan")
+        r, y = r[keep], y[keep]
+    w = 1.0 / np.log(r + 1.0)
+    A = np.vstack([np.log(r), np.ones_like(r)]).T
+    Aw, yw = A * w[:, None], np.log(y) * w
+    coef, *_ = np.linalg.lstsq(Aw, yw, rcond=None)
+    return float(-coef[0])          # exponent alpha in lambda_n ~ n^-alpha
+
+
 def context_destroyed_score(net, task, split: str = "test", noise_seed: int = 0,
                             rng_seed: int = 12345) -> float:
     """D116 MATCHED FLOOR. Score the SAME network on the SAME stimuli with the temporal CONTEXT
@@ -325,6 +373,7 @@ def evaluate(genome: Genome, task, net_cfg: EvoNetConfig, cfg: "EvolveConfig | N
         dev_aborted = (dev_res.get("reason", "ok") != "ok" and "NaN" in dev_res.get("reason", ""))
 
     enc, car, reg, etr, eva, ete = [], [], [], [], [], []
+    cdest, cgain, alpha = [], [], []            # matched control + criticality (report only)
     # generation component in the seed (fix b): with n_assays=1, an unchanged ELITE must NOT see the
     # identical noise draw every generation (frozen noise -- the determinism-audit failure mode). The
     # generation is folded in so elites get FRESH noise each gen while the whole run stays reproducible.
@@ -344,14 +393,31 @@ def evaluate(genome: Genome, task, net_cfg: EvoNetConfig, cfg: "EvolveConfig | N
             B_tr = net.behave(task.E_train, noise_seed=s_tr)
             B_te = net.behave(task.E_test, noise_seed=s_te)
             etr.append(_affine_nmse(task.Y_train, B_tr["rates"]))
-            ete.append(_affine_nmse(task.Y_test, B_te["rates"]))   # D113: REPORTING only
+            e_te_a = _affine_nmse(task.Y_test, B_te["rates"])       # D113: REPORTING only
+            ete.append(e_te_a)
+            # D116/audit B1: the "memoryless floor" is capacity-confounded — a STATIC context-free
+            # random expansion matches it — so it cannot license any claim about context inference.
+            # The valid reference is the MATCHED control: the same network on the same stimuli with
+            # the temporal context structure destroyed. Report the gap; it IS the context-use measure.
+            cdest.append(context_destroyed_score(net, task, split="test", noise_seed=s_te))
+            cgain.append(cdest[-1] - e_te_a)
+            # audit E4: effective criticality, comparable to Stringer et al. (cortex 0.7-0.85).
+            alpha.append(covariance_powerlaw_exponent(B_te["state"]))
         # --- every fitness component derives from VALIDATION error (D113) ---------------------
-        enc.append(max(0.0, 1.0 - e_va))
-        reg.append(max(0.0, floor - e_va))
+        # NO CLIP AT ZERO. `max(0, floor - e)` silently destroys ALL selection signal whenever the
+        # population sits above the floor: with d=10 no random genome beat the val floor, so every
+        # genome scored exactly 0.0 and selection had nothing to act on (audit F2/B2, 2026-07-24).
+        # `floor` is a constant and cancels in the replicator softmax, so these are simply
+        # sign-flipped error. Kept as offsets for continuity of reported scale.
+        enc.append(1.0 - e_va)
+        reg.append(floor - e_va)
         car.append(_carry_covdecay(net, task, net_cfg, noise_seed=s_ca))  # uses E_train only: no test contact
 
     _nan = float("nan")
-    return dict(train_err=float(np.mean(etr)) if etr else _nan,
+    return dict(context_destroyed_err=float(np.mean(cdest)) if cdest else _nan,
+                context_gain=float(np.mean(cgain)) if cgain else _nan,
+                cov_powerlaw_alpha=float(np.nanmean(alpha)) if alpha else _nan,
+                train_err=float(np.mean(etr)) if etr else _nan,
                 val_err=float(np.mean(eva)),
                 test_err=float(np.mean(ete)) if ete else _nan,
                 n_params=genome.n_params(), exc_frac=genome.exc_fraction(),
