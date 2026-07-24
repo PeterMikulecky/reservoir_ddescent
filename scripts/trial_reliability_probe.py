@@ -1,137 +1,215 @@
-"""TRIAL-TASK FITNESS RELIABILITY - is selection on the cue->delay->probe XOR task measuring signal,
-or noise? Re-baselines n_assays for the NEW task (D119: "D115's n_assays=4 was measured at the OLD
-operating point" -- the trial task has a different, smaller fitness spread, so its reliability is
-unknown).
+"""TRIAL-TASK FITNESS RELIABILITY (proper). Is the trial_xor fitness a SELECTABLE signal, or noise --
+and if noise, WHICH kind, and which lever fixes it cheapest?
 
-WHY THIS EXISTS. D115 found fitness reliability ~0.05 at n_assays=1 on the covariance task -- selection
-on approximately pure noise -- and lifted it with n_assays=4. Reliability is the BINDING constraint
-(D119): without a reproducible fitness signal, selection cannot work and a 40-generation arm just
-reproduces the D115 failure. The trial-task fitness (trial_score = 1 - val_err) is bounded differently
-and, on unselected genomes, has a small spread, so n_assays=4 may or may not clear the floor here.
+Built for the cue->delay->probe XOR task (D120). The covariance-era fitness_reliability_probe.py is
+RETIRED with its task; this is not an alias of it. It keeps that probe's one genuinely task-independent
+idea -- separate true between-genome variance from measurement variance by how the estimate sharpens as
+you average more -- and drops everything covariance-specific.
 
-WHAT IT MEASURES (across a population of unselected genomes):
-  * RELIABILITY (primary)    -- a variance decomposition. Single-draw fitness variance splits into
-                                SIGNAL (true between-genome differences) and NOISE (within-genome
-                                measurement scatter across noise draws). reliability at n_assays=k =
-                                signal / (signal + noise/k) -- the fraction of the fitness a k-draw
-                                estimate carries that is real. Well-defined at k=1, and it exposes the
-                                signal/noise split directly (the interpretation note below turns on it).
-  * r(val, test)             -- correlate the val-based fitness (what SELECTION sees) with the
-                                test-based fitness (held-out) across genomes. D119's reported metric,
-                                kept as a cross-check; it also folds in generalisation. (Needs enough
-                                genomes to be stable -- use >=12; a handful of genomes makes it noise.)
+FOUR DECISIONS (PJM), each load-bearing:
 
-Each genome is DEVELOPED ONCE (with the arm's real dev_eta/dev_ms) and then scored over many
-independent noise draws, so sweeping n_assays is cheap -- no redevelopment per assay level.
+1. TWO POPULATIONS, reported side by side.
+   * RANDOM        -- unselected genomes. On a chance-by-construction task these cluster near the XOR
+                      floor, so low reliability here can mean "no true variance yet" (a gen-0 GRADIENT
+                      fact about the task) rather than "too noisy" -- a distinction random-only cannot
+                      make.
+   * LIGHTLY-EVOLVED -- a few generations of selection first, so genomes actually DIFFER in the ability
+                      the task rewards (cue-holding, binding). Reliability HERE answers the question
+                      that matters for selection: once genomes differ in skill, can the fitness
+                      estimate TELL THEM APART? High on evolved but near-zero on random -> the arm has
+                      no gen-0 gradient but IS selectable once moving (argues for a curriculum/seed,
+                      not more assays).
 
-CRITICAL INTERPRETATION. Low reliability has TWO causes and they need different responses:
-  (a) too much MEASUREMENT NOISE  -> more assays fix it (signal_sd >> per-draw noise once averaged);
-  (b) no TRUE fitness VARIANCE among unselected genomes (all ~chance on the XOR, since binding is
-      selection-only) -> more assays DON'T help; the arm may simply have nothing to grip at gen 0.
-The probe reports between-genome signal SD vs within-genome noise SD so you can tell which you have.
-If (b), that is a statement about the TASK's gen-0 gradient, not a fixable measurement problem.
+2. BOTH BASES, side by side.
+   * trial_score = 1 - val_err  -- the fitness selection actually optimises (NMSE-based, continuous).
+   * val_acc                    -- the task's native meaning (binary, chance = 0.5). Different noise
+                                   floor; reported so you can see whether the continuous fitness is
+                                   noisier than the thing you care about.
 
-Usage:  python trial_reliability_probe.py [--genomes 8] [--draws 16] [--dev-ms 16000] [--delay 1]
+3. TWO LEVERS SWEPT, because near the chance floor they trade off differently in COST.
+   * n_assays -- average a independent noise draws over the full val set. Cost = a val-behaves (a x
+                 per-behave overhead).
+   * n_val    -- score over more trials per split. Cost = 1 behave with v trials (overhead paid once).
+   Both cut measurement noise ~ 1/sqrt(total trials); n_val amortises the per-behave overhead, so if
+   the two give equal reliability per trial, n_val is cheaper per unit reliability. The probe reports
+   the noise under each so you can pick.
+
+4. BOTH DECOMPOSITIONS, cross-checked.
+   * ICC        -- from replication: noise_var = mean within-genome variance; signal_var =
+                   var(genome means) - noise_var/draws; reliability(a) = signal/(signal + noise/a).
+   * REGRESSION -- fit V_obs(a) = V_true + V_noise/a across the n_assays grid (uses the whole sweep;
+                   better determined). Agreement is the confidence check; disagreement flags too-few
+                   genomes or non-Gaussian noise.
+
+EFFICIENCY. Each genome is DEVELOPED ONCE and behaved `draws` times on the val stream; every
+(population x basis x n_assays x n_val) cell is then computed from the STORED readouts with no further
+simulation. n_val is a subset of the stored val trials; n_assays is a subset of the stored draws.
+
+Usage:
+  python trial_reliability_probe.py [--n 30] [--draws 8] [--nval 20 40 80] [--assays 1 2 4 8]
+                                    [--evolve-gens 5] [--dev-ms 16000] [--delay 1]
+  --n>=30 per the standing statistical rule; drop it for a quick look. Cost scales as
+  n x draws x max(nval) behaves x 2 populations -- a real (pre-arm, one-time) measurement.
 """
 import sys, argparse, pathlib, zlib
 _here = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(_here.parent))
-import numpy as np
+import numpy as np, warnings
+warnings.filterwarnings("ignore")
 
 from ddescent import study_config as SC
 from ddescent.evonet import EvoNet, random_genome
-from ddescent.trial_eval import _score_split
+from ddescent.evolve import _affine_nmse, run_evolution
+from ddescent.trial_eval import trial_evaluate
 
 
-def _pearson(a, b):
-    a = np.asarray(a, float); b = np.asarray(b, float)
-    if a.std() < 1e-12 or b.std() < 1e-12:
-        return float("nan")            # no variance to correlate (see interpretation note)
-    return float(np.corrcoef(a, b)[0, 1])
+# --- scoring: replicate trial_eval._score_split on the FIRST v trials of a stored readout ----------
+def score_subset(R, Y, v):
+    """(trial_score, accuracy) from readout R (n_val x d) and targets Y (n_val x 1) on first v trials.
+    Uses the SAME in-sample per-output affine readout as _score_split (D095), so numbers match the arm."""
+    Rv, Yv = R[:v], Y[:v]
+    err = float(_affine_nmse(Yv, Rv))
+    acc_cols = []
+    for j in range(Yv.shape[1]):
+        A = np.vstack([Rv[:, j], np.ones(len(Rv))]).T
+        coef, *_ = np.linalg.lstsq(A, Yv[:, j], rcond=None)
+        acc_cols.append(np.sign(A @ coef + 1e-12) == np.sign(Yv[:, j]))
+    return 1.0 - err, float(np.mean(acc_cols))
 
 
-def develop_and_sample(g, task, net_cfg, cfg, n_draws, base_seed):
-    """Develop ONE genome once (as the arm would), then draw n_draws independent val/test fitnesses."""
-    net = EvoNet(g, net_cfg)
-    gseed = (zlib.crc32(g.mag.tobytes()) ^ (cfg.seed & 0xFFFFFFFF)) & 0x7FFFFFFF
-    if cfg.dev_ms and cfg.dev_ms > 0:
-        net.develop(task.E_train, eta=cfg.dev_eta, dev_ms=cfg.dev_ms, warmup_ms=SC.WARMUP_MS,
-                    n_checkpoints=4, seed=gseed)
-    vals, tests = [], []
-    for i in range(n_draws):
-        ev, _ = _score_split(net, task, "val",  (base_seed + 7 * i + 1) & 0x7FFFFFFF)
-        et, _ = _score_split(net, task, "test", (base_seed + 7 * i + 2) & 0x7FFFFFFF)
-        vals.append(1.0 - ev)          # trial_score = 1 - val_err (the fitness basis)
-        tests.append(1.0 - et)
-    return np.array(vals), np.array(tests)
+# --- collect: develop each genome once, store `draws` independent val readouts ----------------------
+def collect(genomes, task, net_cfg, cfg, draws, base_seed):
+    rows = task.response_rows("val")
+    Y = task.Y_val
+    stored = []
+    for gi, g in enumerate(genomes):
+        net = EvoNet(g, net_cfg)
+        gseed = (zlib.crc32(g.mag.tobytes()) ^ (cfg.seed & 0xFFFFFFFF)) & 0x7FFFFFFF
+        if cfg.dev_ms and cfg.dev_ms > 0:
+            net.develop(task.E_train, eta=cfg.dev_eta, dev_ms=cfg.dev_ms, warmup_ms=SC.WARMUP_MS,
+                        n_checkpoints=4, seed=gseed)
+        d = [net.behave(task.E_val, noise_seed=(base_seed + 131 * gi + 7 * k + 1) & 0x7FFFFFFF)["rates"][rows]
+             for k in range(draws)]
+        stored.append(np.stack(d))                 # (draws, n_val, d)
+        print("    genome %2d done" % gi, flush=True)
+    return stored, Y
 
 
-def run(genomes=12, draws=8, dev_ms=None, delay=None, assays_grid=(1, 2, 4, 8), verbose=True):
-    task = SC.make_trial_task(delay_segments=(SC.TRIAL["delay_segments"] if delay is None else delay))
-    net_cfg = SC.make_net_cfg()
-    cfg = SC.make_trial_evolve_cfg()
-    if dev_ms is not None:
-        cfg.dev_ms = dev_ms
-    assays_grid = tuple(k for k in assays_grid if k <= draws)
+# --- decomposition at one (n_val, basis): ICC + regression across the n_assays grid -----------------
+def decompose(stored, Y, v, basis, assays):
+    M = len(stored); K = stored[0].shape[0]
+    S = np.zeros((M, K))
+    for gi in range(M):
+        for k in range(K):
+            ts, acc = score_subset(stored[gi][k], Y, v)
+            S[gi, k] = ts if basis == "trial_score" else acc
 
-    V = np.zeros((genomes, draws)); T = np.zeros((genomes, draws))
-    for m in range(genomes):
-        g = random_genome(net_cfg, cfg.density, w0=cfg.w0, ei_split=cfg.ei_split, seed=2000 + m)
-        v, t = develop_and_sample(g, task, net_cfg, cfg, draws, base_seed=1000 + 101 * m)
-        V[m] = v; T[m] = t
-        if verbose:
-            print("  genome %2d: fitness %.4f +/- %.4f (per-draw)" % (m, v.mean(), v.std()), flush=True)
+    noise_var = float(np.mean(S.var(axis=1, ddof=1)))                 # within-genome measurement var
+    between   = float(S.mean(axis=1).var(ddof=1))                    # var of K-averaged genome means
+    Vt_icc    = max(0.0, between - noise_var / K)                    # ICC signal variance
 
-    # --- one-way random-effects variance decomposition (the reliability core) --------------------
-    # Single-draw fitness variance = SIGNAL (true between-genome) + NOISE (within-genome measurement).
-    # Estimate each; reliability at n_assays=k is the fraction of variance that is signal once k draws
-    # are averaged (noise falls as noise_var/k, signal does not). This is well-defined at k=1, unlike
-    # a correlation over few genomes, and it cleanly separates the two causes of low reliability.
-    noise_var = float(np.mean(V.var(axis=1, ddof=1)))            # mean within-genome variance
-    between   = float(V.mean(axis=1).var(ddof=1))               # variance of per-genome mean estimates
-    signal_var = max(0.0, between - noise_var / draws)          # unbiased true between-genome variance
+    aa = np.array([a for a in assays if a <= K], float)
+    Vobs = np.array([S[:, :int(a)].mean(axis=1).var(ddof=1) for a in aa])
+    A = np.vstack([np.ones_like(aa), 1.0 / aa]).T
+    (Vt_reg, Vn_reg), *_ = np.linalg.lstsq(A, Vobs, rcond=None)
+    Vt_reg = max(float(Vt_reg), 0.0); Vn_reg = float(Vn_reg)
 
-    rows = []
-    for k in assays_grid:
-        denom = signal_var + noise_var / k
-        reliability = (signal_var / denom) if denom > 1e-18 else float("nan")
-        val_k = V[:, :k].mean(1); test_k = T[:, :k].mean(1)     # D119 cross-check at this n_assays
-        rows.append(dict(n_assays=k, reliability=reliability, r_val_test=_pearson(val_k, test_k)))
-    return dict(rows=rows, signal_sd=signal_var ** 0.5, noise_sd=noise_var ** 0.5,
-                fitness_mean=float(V.mean()), n_genomes=genomes, draws=draws)
+    def _clip01(x):
+        return float(min(1.0, max(0.0, x))) if x == x else x     # keep nan as nan
+    rel = {}
+    for a in assays:
+        icc_a = (Vt_icc / (Vt_icc + noise_var / a)) if (Vt_icc + noise_var / a) > 1e-18 else float("nan")
+        # regression reliability is only meaningful if the fit is physical (noise falls with a, i.e.
+        # V_noise > 0). A degenerate fit (too few assay points / genomes) -> report nan, not nonsense.
+        if Vn_reg > 1e-18 and (Vt_reg + Vn_reg / a) > 1e-18:
+            reg_a = Vt_reg / (Vt_reg + Vn_reg / a)
+        else:
+            reg_a = float("nan")
+        rel[int(a)] = (_clip01(icc_a), _clip01(reg_a))
+    return dict(noise_var=noise_var, signal_var_icc=Vt_icc, signal_var_reg=Vt_reg, noise_var_reg=Vn_reg,
+                rel=rel, fitness_mean=float(S.mean()))
+
+
+def make_population(kind, task, net_cfg, cfg, n, evolve_gens, seed0=2000):
+    randoms = [random_genome(net_cfg, cfg.density, w0=cfg.w0, ei_split=cfg.ei_split, seed=seed0 + i)
+               for i in range(n)]
+    if kind == "random":
+        return randoms
+    # lightly-evolved: a few generations of real selection, then take the final population
+    ecfg = SC.make_trial_evolve_cfg(pop_size=n, n_generations=evolve_gens,
+                                    dev_ms=cfg.dev_ms, n_assays=max(1, min(2, cfg.n_assays)))
+    print("  evolving population for %d generations (this is the expensive part) ..." % evolve_gens, flush=True)
+    _, pop = run_evolution(task, net_cfg, ecfg,
+                           eval_fn=lambda g: trial_evaluate(g, task, net_cfg, ecfg),
+                           report_fn=lambda g: trial_evaluate(g, task, net_cfg, ecfg, report=True),
+                           worker_scorer="trial", n_workers=1, verbose=False)
+    return pop
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--genomes", type=int, default=8)
-    ap.add_argument("--draws", type=int, default=16, help="independent noise draws per genome (>= 2*max n_assays)")
-    ap.add_argument("--dev-ms", type=float, default=None, help="override dev_ms (default = trial config)")
+    ap.add_argument("--n", type=int, default=30)
+    ap.add_argument("--draws", type=int, default=8)
+    ap.add_argument("--nval", type=int, nargs="+", default=[20, 40, 80])
+    ap.add_argument("--assays", type=int, nargs="+", default=[1, 2, 4, 8])
+    ap.add_argument("--evolve-gens", type=int, default=5)
+    ap.add_argument("--dev-ms", type=float, default=None)
     ap.add_argument("--delay", type=int, default=None)
+    ap.add_argument("--populations", nargs="+", default=["random", "evolved"],
+                    choices=["random", "evolved"])
     args = ap.parse_args()
-    import warnings; warnings.filterwarnings("ignore")
 
-    print("TRIAL-TASK FITNESS RELIABILITY  (%d genomes, %d draws each, dev_ms=%s)"
-          % (args.genomes, args.draws, args.dev_ms if args.dev_ms is not None else int(SC.trial_dev_ms())))
-    print("developing genomes and sampling the noise ...")
-    out = run(genomes=args.genomes, draws=args.draws, dev_ms=args.dev_ms, delay=args.delay)
+    nval_max = max(args.nval)
+    task = SC.make_trial_task(delay_segments=(SC.TRIAL["delay_segments"] if args.delay is None else args.delay),
+                              n_val=nval_max)
+    net_cfg = SC.make_net_cfg()
+    cfg = SC.make_trial_evolve_cfg()
+    if args.dev_ms is not None:
+        cfg.dev_ms = args.dev_ms
+    assays = [a for a in args.assays if a <= args.draws]
 
-    print("\n fitness mean=%.4f | SIGNAL sd (true between-genome)=%.4f | NOISE sd (per-draw)=%.4f"
-          % (out["fitness_mean"], out["signal_sd"], out["noise_sd"]))
-    snr = out["signal_sd"] / out["noise_sd"] if out["noise_sd"] > 1e-12 else float("inf")
-    print(" single-draw signal/noise ratio = %.2f" % snr)
-    print("\n n_assays | reliability | r(val,test)")
-    print(" ---------+-------------+------------")
-    for r in out["rows"]:
-        print("    %2d    |    %5.3f    |   %+6.3f" % (r["n_assays"], r["reliability"], r["r_val_test"]))
-    print("\n reliability = fraction of fitness variance that is TRUE signal after averaging n_assays")
-    print(" draws (0=pure noise, 1=perfect). r(val,test) is D119's cross-check (COVARIANCE ref: 0.465")
-    print(" PASS / 0.066 FAIL -- a different task, so read the trend, not the absolute threshold).")
-    print("\n INTERPRETATION:")
-    print("  - reliability RISES toward 1 with n_assays  -> noise-limited; n_assays is the right lever.")
-    print("  - reliability stays LOW and SIGNAL sd tiny   -> little true variance among unselected")
-    print("    genomes (XOR binding is selection-only): a gen-0 GRADIENT problem, not a noise problem;")
-    print("    more assays won't help and the arm may not climb from random init at this difficulty.")
-    print("  Rule of thumb: n_assays where reliability first clears ~0.3-0.4 is the cheapest usable set.")
+    print("TRIAL-TASK FITNESS RELIABILITY (proper)")
+    print("n=%d genomes, draws=%d, n_val sweep=%s (built %d), n_assays sweep=%s, dev_ms=%s, delay=%d"
+          % (args.n, args.draws, args.nval, nval_max, assays,
+             int(cfg.dev_ms) if cfg.dev_ms else 0, task.meta["delay_segments"]))
+    if args.n < 30:
+        print("  (n < 30: below the standing statistical rule; treat correlations/variances as indicative)")
+
+    for pop_kind in args.populations:
+        print("\n" + "=" * 84)
+        print("POPULATION: %s" % pop_kind.upper())
+        print("=" * 84)
+        genomes = make_population(pop_kind, task, net_cfg, cfg, args.n, args.evolve_gens)
+        print("  developing + sampling %d genomes x %d draws ..." % (len(genomes), args.draws), flush=True)
+        stored, Y = collect(genomes, task, net_cfg, cfg, args.draws, base_seed=5000)
+
+        for basis in ("trial_score", "val_acc"):
+            print("\n  --- basis: %s ---" % basis)
+            print("   n_val | signal_sd | noise_sd(1 draw) | reliability by n_assays (ICC / regression)")
+            print("   ------+-----------+------------------+" + "-" * 44)
+            noise_by_v = {}
+            for v in args.nval:
+                d = decompose(stored, Y, v, basis, assays)
+                noise_by_v[v] = d["noise_var"]
+                relstr = "  ".join("a%d:%.2f/%.2f" % (a, d["rel"][a][0], d["rel"][a][1]) for a in assays)
+                print("    %3d  |  %.4f   |     %.4f       | %s"
+                      % (v, d["signal_var_icc"] ** 0.5, d["noise_var"] ** 0.5, relstr))
+            # lever comparison: does noise fall ~ 1/n_val (i.e. n_val interchangeable with n_assays)?
+            vs = np.array(sorted(noise_by_v)); nv = np.array([noise_by_v[x] for x in vs])
+            if len(vs) >= 2 and nv[-1] > 0:
+                prod = nv * vs                                   # noise_var * n_val ; ~constant if ~1/n_val
+                ratio = float(prod[0] / (prod[-1] + 1e-18))
+                verdict = ("~constant -> more trials cut noise like more assays (cheaper: overhead paid once)"
+                           if 0.5 < ratio < 2 else "NOT ~1/n_val -> n_val and n_assays are not interchangeable here")
+                print("   n_val scaling: noise_var*n_val ratio across sweep = %.2f  (%s)" % (ratio, verdict))
+
+    print("\nREAD:")
+    print("  * RANDOM low + EVOLVED high  -> no gen-0 gradient but selectable once moving: use a")
+    print("    curriculum/seed (D120 ramp), not more assays.")
+    print("  * BOTH low, signal_sd tiny   -> little true variance anywhere: change the landscape.")
+    print("  * reliability CLIMBS with n_assays and ICC~regression -> noise-limited; pick the n_assays")
+    print("    (or n_val, if its scaling is ~constant above) where reliability first clears ~0.3-0.4.")
+    print("  * ICC and regression DISAGREE -> too few genomes or non-Gaussian noise; raise --n.")
 
 
 if __name__ == "__main__":
