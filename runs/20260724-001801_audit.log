@@ -1,0 +1,57 @@
+# analysis log: audit
+# timestamp: 2026-07-24T00:18:01.129832
+# command: scripts/audit.py --n 30
+# AUDIT — does the pipeline measure what it claims, and do its premises hold?
+#====================================================================
+
+[logging to runs\20260724-001801_audit.log]
+TASK K=10 d=10 r1=3 contexts=4 dwell=10 n_train/val/test=60/60/60
+NET  N=50 present_ms=50 tau_slow=100.0
+DEV  3 passes = 9000 ms (+200 ms warmup); one pass = 3000 ms; n_assays=4
+evo  dev_ms=9000 n_assays=4 mode=regulation_only
+
+C. TASK INVARIANTS — do the hypotheses' design premises hold?
+  [PASS] C1 low-rank waist: r1=3 << min(K,d)=10: genuine waist
+  [PASS] C2 realised rank: per-context map ranks [3, 3, 3, 3] (r1=3)
+  [PASS] C3 contexts mean-zero: max per-context mean z-score = 2.76 over 40 tests (crit ~5.5). Context must live in COVARIANCE only; a real mean offset would make it linearly decodable and trivialise the task.
+  [PASS] C4 headroom (val): floor=0.862 ceiling=0.447 headroom=0.415
+  [PASS] C4 headroom (test): floor=0.766 ceiling=0.404 headroom=0.362
+  [PASS] C6 context coverage per split: all 4 contexts present in every split
+  [PASS] C5 r1 / n_env independence: varying r1 changes map rank (2); varying n_train leaves it (3)
+
+D. EXPOSURE COHERENCE — does development see what it needs to?
+  [PASS] D1 stimulus supply: drive tiled to cover warmup+dev_ms = 9200 ms (3.07 sequence-lengths)
+  [PASS] D2 stimulus coverage: plasticity sees 60/60 distinct stimuli = 100% over 3.00 passes (180 presentations)
+  [PASS] D3 context coverage: contexts seen under plasticity [np.int64(0), np.int64(1), np.int64(2), np.int64(3)] of [np.int64(0), np.int64(1), np.int64(2), np.int64(3)] (4/4) — unseen contexts cannot be learned yet ARE assayed
+  [PASS] D4 context transitions: 12 transition(s) under plasticity; context inference cannot be learned from few (target >= 2 per context = 8)
+
+E. CONFIG COHERENCE — are parameters consistent with what the science requires?
+  [PASS] E1 readout saturation: 60 assay samples per output vs 2 fitted readout parameters (gain+offset) = ratio 30. Capacity-constrained readout (D095): cannot mix neurons, so readout parameters are NOT uncounted P (D111).
+  [PASS] E2 memory demand: context must be held ~500 ms; slowest substrate timescale tau_slow=100 ms (gap 5.0x). A large gap is the known memory problem (A3).
+  [PASS] E3 n_assays: n_assays=4; D115 measured fitness reliability ~0.05 at n_assays=1 (selection on approximately pure noise). >= 4 required.
+  [PASS] E4 spectral radius (raw): mean rho(W) = 4.42 over 3 genomes — REPORTED, not judged. Raw rho overstates loop gain in a spiking net (threshold/refractoriness/saturation clamp it), so it is not the quantity that matters. The effective criticality check is B5 (covariance power-law exponent), which measures the same observable Stringer et al. report and is directly comparable to their data.
+
+A. FITNESS PROVENANCE — which splits actually influence fitness?
+  [PASS] A TEST split: destroying TEST did NOT change fitness (expected no change)
+  [PASS] A VAL split: destroying VAL changed fitness (expected change)
+  [PASS] A TRAIN split: destroying TRAIN changed fitness (expected change)
+
+B. MEASUREMENT IDENTITY — do named quantities measure what they claim?
+  [PASS] B1 memoryless floor: static expansion 0.7958 does not beat floor 0.7662
+  [PASS] B2 encoding~carrying: r=+0.1166, range(x-y)=5.66e-02
+  [WARN] B2 encoding~regulation: r=+1.0000, range(x-y)=0.00e+00  <-- same measurement up to a constant; KNOWN and accepted (D112 collapsed the decomposition; components are diagnostics only)
+  [PASS] B2 carrying~regulation: r=+0.1166, range(x-y)=5.66e-02
+  [PASS] B4 matched control wired: evaluate(report=True) returns context_gain=+0.0064 (destroyed 0.9730 vs ordered 0.9667)
+  [WARN] B5 effective criticality: state covariance power-law exponent alpha=1.92. Stringer et al. 2026: ~0.67 = critically-normalised symmetric, ~1.25 = non-symmetric, 0.7-0.85 observed in mouse cortex/brainwide, 0.4-0.5 in CA1. OUTSIDE the cortical range — variance is concentrated in too few (or too many) modes
+  [WARN] B3 context use (matched): context gain (destroyed - ordered) = -0.0045 over 3 nets (NO measurable context use)
+
+F. RELIABILITY & POWER
+  [PASS] F1 fitness reliability: r(val,test) = +0.465 +/- 0.192 at n_assays=4 (above 2 SE)
+  [PASS] F2 fitness variance: random-genome fitness mean=-0.0859 sd=0.0032 max=-0.0756  (evolved runs must clearly exceed max to claim the NETWORK contributes)
+
+==============================================================================
+  WARN: [B] B2 encoding~regulation
+  WARN: [B] B5 effective criticality
+  WARN: [B] B3 context use (matched)
+
+0 FAIL, 3 WARN, 24 PASS

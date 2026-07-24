@@ -5012,3 +5012,64 @@ moves rho. Both need doing properly.
    finding. **This is the one to pursue.** Note it also connects to our EXISTING machinery: the Vogels
    iSTDP is a homeostatic mechanism — does it already move rho toward 1? (Unknown; the developed-W
    measurement failed. Fix and check before treating supercriticality as established.)
+
+### D118 — RC-ERA CRITERIA ARE OBSOLETE. The skill gate is dropped, `input_gain=10`'s justification does not transfer, and the substrate is now CONSTRUCTED (ready-to-learn, E/I-balanced, near-critical) rather than tuned by reservoir criteria.
+**2026-07-24 · Framing correction + calibration rebuild (PJM)**
+
+**THE ERROR.** Calibrating the operating point, Claude reinstated the T0-era SKILL GATE — does a ridge
+on the 50-dim state beat a ridge on the raw stimulus — as the primary criterion, citing the D-entry that
+invalidated T0's original objective. PJM: *"why are we leaning on criteria established when we are still
+building a reservoir? that was a whole earlier and abandoned phase of the project."*
+
+**Correct.** Skill measures "would this make a good RESERVOIR": it scores a FULL MIXING READOUT. But
+D095's readout is gain+offset per output, reading output j from neuron j, and **cannot mix neurons at
+all**. The gate scored a decoder the project deliberately forbids. Worse, it is the criterion by which
+`input_gain=10` was originally chosen ("the reservoir first beats baseline at 10") — so **that
+parameter's justification does not transfer to the current framing.** Applied to undeveloped genomes it
+also produced a spurious alarm (skill 0.85-0.86 everywhere, "no operating point passes"), which was an
+artifact of the obsolete gate, NOT a substrate finding.
+
+**WHAT SURVIVES FROM T0.** The RC-era CRITERION is obsolete; the PHENOMENON T0 rev3 found is
+framing-independent and still matters: at low input gain the state becomes nearly independent of the
+input, and a network that ignores its input has nothing to learn from. Keep the concern, drop the
+decoder-based way of testing it.
+
+**PJM'S THREE GOVERNING PRINCIPLES (adopted).**
+  1. We are NOT building a reservoir anymore. Criteria inherited from that phase are artifacts and must
+     not be reused unexamined. **Any parameter still justified only by RC-era reasoning needs
+     re-justification** — `input_gain` is one; there may be others.
+  2. **The substrate is CONSTRUCTED, not evolved:** serve up a ready-to-learn, E/I-balanced,
+     near-critical context for development and selection to operate on. Same status as Dale's law and
+     E/I balance (A5) — a precondition, not a hypothesis. This is what licenses imposing near-criticality
+     by construction WITHOUT it being the D038/D074 error (criticality is not the mechanism under test;
+     regulation is).
+  3. Code must be reliable, interpretable, maintainable — which here means criteria must be
+     **READOUT-FREE**, so no abandoned framing can smuggle itself back in.
+
+**REBUILT CALIBRATION (readout-free, on DEVELOPED networks).**
+  1. RESPONSIVENESS — var(state across STIMULI) / (that + var across NOISE SEEDS). No decoder. Directly
+     tests the T0 rev3 concern.
+  2. HEALTHY — not silent, not saturated.
+  3. DIMENSIONALITY — covariance power-law exponent alpha in the CORTICAL band 0.7-0.85 (Stringer et al.
+     2026): an EXTERNAL published target, not an internal preference.
+
+**FIRST RESULT (quick, undeveloped).** With the skill gate removed, **every cell is responsive and
+healthy** — the gate was disqualifying everything, not the substrate. The genuine trade is now visible:
+```
+gain  noise | responsiveness | alpha
+ 1.0   2.0  |     0.336      | 1.08
+ 5.0   1.0  |     0.756      | 1.78
+10.0   1.0  |     0.905      | 2.56   <- current operating point
+```
+**Stimulus-responsiveness and cortex-like dimensionality pull in OPPOSITE directions along input gain** —
+T0's opposition restated in framing-independent terms. No cell falls below the responsiveness floor, so
+this is a genuine CHOICE rather than a constraint.
+
+**ALSO SETTLED (measured).** SPECTRAL NORMALISATION IS NOT THE FIX for alpha: rescaling magnitudes to
+targets spanning 0.5-4.42 moved alpha by <0.1 (2.43->2.50), because threshold/refractoriness/saturation
+clamp the loop gain in a spiking net. Raw rho(W) is not the operative quantity — INPUT DRIVE is. This
+retires the "5x supercritical" framing from D117.
+
+**NEXT.** Run the rebuilt calibration on DEVELOPED networks and adopt the responsive+healthy cell closest
+to the cortical band into `study_config`. Then AUDIT THE REMAINING PARAMETERS for RC-era justifications
+that no longer transfer.
