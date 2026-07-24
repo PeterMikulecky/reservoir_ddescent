@@ -5300,3 +5300,78 @@ Any result computed from a developed phenotype via single-genome `behave()` befo
 invalid (stimulus misaligned). Undeveloped/birth-scored measurements are unaffected. Re-run any trial
 GA runs and any developed-net diagnostics taken since `develop()` began advancing the clock into the
 re-stored "init".
+
+
+### D122 — TRIAL ARM WIRED: `run_evolution` made task-agnostic so the cue→delay→probe task (D120) can be selected on. Two covariance holdovers in the GA driver were the only thing between the redesigned task and a first arm.
+**2026-07-24 · Infrastructure + fix · ddescent/evolve.py, ddescent/trial_eval.py, scripts/trial_selection_run.py, scripts/delay_persistence_probe.py · verified in a Brian2 2.10.1 sandbox**
+
+**WHY THIS WAS OWED.** D120 retired the covariance task and built the trial task's *scoring* half
+(`trial_task.py`, `trial_eval.py`, the `trial_xor` branch of `_fitness`), but the *driver* half was
+never finished: there was no runner, and `run_evolution` — written for the covariance task — could not
+actually run a trial arm. The transition left the GA loop half-generalised.
+
+**THE TWO HOLDOVERS (found by reading `run_evolution`, confirmed by running it).** The population
+scoring already went through the pluggable `eval_fn`, and `_fitness` already had a `trial_xor` branch,
+and `trial_evaluate` already emitted `encoding`/`carrying`/`regulation` aliases *specifically* so "the
+existing history machinery keeps working unchanged" (its own comment). So `run_evolution` WAS the
+intended driver. But its per-generation REPORT block still assumed the covariance task in exactly two
+places:
+1. it read `r["exc_frac"]` for every genome — a key `trial_evaluate` did not emit → `KeyError`;
+2. it hardcoded `rep = evaluate(pop[order[0]], ...)` — the *covariance* scorer — for the best-genome
+   train/test report, instead of routing through `eval_fn` → wrong scorer on a `TrialTask`, which has
+   no covariance interface.
+Neither is a design problem; both are "the generic driver's report block didn't get the D120 memo."
+
+**THE FIX (small, and the covariance path is byte-identical).**
+- `trial_evaluate` (`trial_eval.py`): emit `exc_frac=genome.exc_fraction()` in the result dict. One
+  line; `Genome.exc_fraction()` already existed and `evolve.evaluate` already returned it.
+- `run_evolution` (`evolve.py`): add a `report_fn` parameter and route the best-genome report through
+  it. **Its default — `lambda g: evaluate(g, task, net_cfg, cfg, report=True)` — reproduces the
+  deleted hardcoded call verbatim**, so a covariance caller that passes nothing behaves exactly as
+  before. A trial arm passes `report_fn=lambda g: trial_evaluate(g, task, net_cfg, cfg, report=True)`.
+- **Parallelism for trials** (`evolve.py`): the pool cannot ship a lambda across a `spawn` boundary, so
+  it dispatches on a picklable string `worker_scorer` ("covariance" → `evaluate`, "trial" →
+  `trial_evaluate`) set on `_init_worker`/`_eval_payload`. `use_pool` was widened to
+  `(n_workers > 1) and (eval_fn is None or worker_scorer != "covariance")` — which preserves the
+  original behaviour for any covariance caller (with or without a custom `eval_fn`) and enables a
+  *parallel* trial arm. Covariance callers (e.g. `regulation_selection_run.py`, which passes neither
+  `eval_fn` nor `worker_scorer`) are unaffected.
+
+**NEW ARTIFACTS.**
+- `scripts/trial_selection_run.py` — the trial-arm runner, mirroring `regulation_selection_run.py`'s
+  operational discipline (self-invalidating config/code-hash checkpoints, `tee` disk logging,
+  heartbeat/ETA). Drives the trial task via the three hooks above. Runs a **pre-arm gate** that
+  aborts before spending compute if the trial invariants fail — LEAKAGE is hard-fail (destroying
+  `Y_test` must not move val-based fitness, D113), controls are reported — and a **decisive post-arm
+  control test** on the evolved best, where a genuine solution has `normal` above chance while
+  `omit_cue`/`scramble` stay at 0.5.
+- `scripts/delay_persistence_probe.py` — the trial-task invariants the audit's C-group needs (D120's
+  "STILL TO BUILD"): (1) the **D121 regression** (zero-plasticity `develop()` == no development,
+  `max|Δ|=0` at noise 0), (2) the **delay-persistence sweep** — cue decodability at the last delay
+  segment vs delay length, i.e. the H-D boundary made concrete (measured undeveloped: 1.00 held at
+  50 ms, degrading past `tau_slow`), and (3) the **degenerate-strategy controls**. Rebuilt and tested;
+  the frozen-chat original lived only in that sandbox and was never committed.
+
+**VERIFICATION (sandbox, Brian2 2.10.1, real trial config).**
+- Trial arm runs end-to-end through `run_evolution` **serial** and with **2 workers** (the trial-aware
+  pool); the history dict is fully populated (`mean_exc_frac` etc. present — the `exc_frac` fix).
+- Covariance backward-compat is guaranteed **by construction** (defaults reproduce the deleted calls
+  exactly); the only covariance failure seen in-sandbox was a missing `baseline.py` (not copied into
+  the sandbox), which fails in the *unchanged* `eval_fn → evaluate → headroom` path, i.e. not a
+  regression.
+- ⚠ **These were MACHINERY checks, not a result.** Runs used tiny pop / few generations / reduced
+  `dev_ms`, so fitness did not climb and nothing here says whether selection *can* build the binding.
+  The first real arm (pop 30, gens 40, full `dev_ms`, `wta_gain` swept incl. 0 per D120) is the actual
+  experiment and has NOT been run.
+
+**PERFORMANCE.** Passing `eval_fn` for the serial path had disabled the pool; the `worker_scorer` route
+restores parallelism, so `--workers 6` now parallelises a trial arm (PJM's local setting). Serial is
+the default; run one serial arm to confirm it climbs before sweeping.
+
+**RENUMBERING.** D121's append forward-referenced "D122" for the `behave_batch` retire-or-update
+follow-up (it is stale relative to D103 and dormant). That item is now **D123**; D122 is this wiring
+work.
+
+**LESSON.** A task swap should not require editing the GA driver. `run_evolution` is now task-agnostic
+(scoring, reporting, and the pool all pluggable), so the next environment change touches the task and
+the runner, not the loop — the coupling that made this a loose end is removed.

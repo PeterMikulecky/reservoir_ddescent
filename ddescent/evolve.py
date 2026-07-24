@@ -439,15 +439,20 @@ def evaluate(genome: Genome, task, net_cfg: EvoNetConfig, cfg: "EvolveConfig | N
 _WORKER = {}
 
 
-def _init_worker(task, net_cfg, cfg=None):
+def _init_worker(task, net_cfg, cfg=None, scorer="covariance"):
     """Set the task/net_cfg/cfg ONCE per worker (D064).
 
     Without this, `pool.map` re-pickles the task (E/Y arrays + W_ctx) and net_cfg for **every
     individual, every generation** — real overhead that ate most of the parallel speedup.
+
+    `scorer` selects which evaluator the worker runs: "covariance" -> evaluate (the original path),
+    "trial" -> trial_evaluate. It is a picklable string, unlike an eval_fn lambda, which is why the
+    pool path dispatches on it rather than on the caller's eval_fn.
     """
     _WORKER["task"] = task
     _WORKER["net_cfg"] = net_cfg
     _WORKER["cfg"] = cfg
+    _WORKER["scorer"] = scorer
 
 
 def _eval_payload(item):
@@ -456,13 +461,18 @@ def _eval_payload(item):
     cfg = _WORKER.get("cfg")
     if cfg is not None:
         cfg._gen = gen
-    r = evaluate(genome, _WORKER["task"], _WORKER["net_cfg"], cfg)
+    if _WORKER.get("scorer") == "trial":
+        from .trial_eval import trial_evaluate
+        r = trial_evaluate(genome, _WORKER["task"], _WORKER["net_cfg"], cfg)
+    else:
+        r = evaluate(genome, _WORKER["task"], _WORKER["net_cfg"], cfg)
     r.pop("state", None); r.pop("state_var", None)   # do not ship big arrays back
     return r
 
 
 def run_evolution(task, net_cfg: EvoNetConfig, cfg: EvolveConfig,
-                  eval_fn=None, report_fn=None, n_workers: int = 1, verbose: bool = True) -> tuple:
+                  eval_fn=None, report_fn=None, n_workers: int = 1, verbose: bool = True,
+                  worker_scorer: str = "covariance") -> tuple:
     """Evolve W. Returns (history_rows, final_population).
 
     Records BOTH best-individual and population-mean training error (D059): interpolation
@@ -474,7 +484,13 @@ def run_evolution(task, net_cfg: EvoNetConfig, cfg: EvolveConfig,
     # The old order set `eval_fn` to a lambda first, then tested `eval_fn is None` — which was
     # therefore ALWAYS FALSE, so the pool was NEVER created and every run was silently SERIAL
     # (one process, ~1 core). Caught by PJM watching Task Manager: "only 1 Python process at 12%".
-    use_pool = (n_workers > 1) and (eval_fn is None)
+    # Pool whenever parallel. The pool CANNOT ship a lambda across a spawn boundary, so it runs a
+    # picklable top-level worker (`_eval_payload`) whose evaluator is selected by `worker_scorer`
+    # ("covariance" -> evaluate, "trial" -> trial_evaluate); the SERIAL path uses `eval_fn`. A caller
+    # wanting a PARALLEL trial arm passes worker_scorer="trial" (plus the matching eval_fn/report_fn
+    # for the serial fallback and the per-gen report). The guard preserves the original behaviour for
+    # any caller that passed a custom serial eval_fn without opting into a pooled scorer.
+    use_pool = (n_workers > 1) and (eval_fn is None or worker_scorer != "covariance")
     eval_fn = eval_fn or (lambda g: evaluate(g, task, net_cfg, cfg))
     # The per-generation best-genome REPORT must use the SAME scorer family as the population, not a
     # hardcoded covariance evaluate(). Defaults preserve the covariance path EXACTLY; a trial arm
@@ -490,7 +506,7 @@ def run_evolution(task, net_cfg: EvoNetConfig, cfg: EvolveConfig,
     if use_pool:
         import multiprocessing as mp
         pool = mp.get_context("spawn").Pool(n_workers, initializer=_init_worker,
-                                            initargs=(task, net_cfg, cfg))
+                                            initargs=(task, net_cfg, cfg, worker_scorer))
     try:
       for gen in range(cfg.n_generations):
           cfg._gen = gen                          # fold generation into per-assay seeds (fix b)
