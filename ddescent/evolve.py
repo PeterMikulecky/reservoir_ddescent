@@ -266,6 +266,31 @@ def assert_no_test_leakage(task) -> None:
         )
 
 
+
+def context_destroyed_score(net, task, split: str = "test", noise_seed: int = 0,
+                            rng_seed: int = 12345) -> float:
+    """D116 MATCHED FLOOR. Score the SAME network on the SAME stimuli with the temporal CONTEXT
+    STRUCTURE DESTROYED (sample order shuffled, so consecutive stimuli come from different contexts
+    and nothing can be accumulated across the dwell period).
+
+    Why this replaces `headroom()['memoryless_floor']` as the reference for "no context inference":
+    the old floor was a ridge on the RAW 10-dim stimulus, so it conflated MEMORYLESSNESS with
+    REPRESENTATIONAL CAPACITY -- a static random 50-dim tanh expansion of the same input beats it
+    (0.942 vs 1.020), with no network, no dynamics and no context. Beating that floor therefore
+    demonstrated nonlinear expansion, not context inference.
+
+    This control holds capacity FIXED (identical network, identical readout, identical stimuli) and
+    removes ONLY the usable context structure. The gap
+        context_destroyed_score - actual_score
+    is the contribution attributable to context inference.
+    """
+    E_s, Y_s, _ = task._split(split)
+    rng = np.random.default_rng(rng_seed)
+    perm = rng.permutation(len(E_s))
+    B = net.behave(E_s[perm], noise_seed=noise_seed)
+    return float(_affine_nmse(Y_s[perm], B["rates"]))
+
+
 def evaluate(genome: Genome, task, net_cfg: EvoNetConfig, cfg: "EvolveConfig | None" = None, report: bool = False) -> dict:
     """DEVELOP then score the DEVELOPED phenotype (D083), averaged over K NOISE ASSAYS for
     noise-robustness (D085c): a single lucky/unlucky noise draw must not be mistaken for signal.

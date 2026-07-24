@@ -4821,3 +4821,74 @@ better bookkeeping).**
 **STANDING RULE ADDED.** **Compute the standard error before calling a correlation a finding.** Two
 correlation-based results in this project (D109's heritability, this probe's verdict) were over-read at
 n=30 where SE~0.19. Any r below ~0.4 at n=30 is not distinguishable from zero.
+
+### D116 — The "memoryless floor" measures REPRESENTATIONAL CAPACITY, not memorylessness. Matched control built. Networks show ZERO measurable context use. Plus: PRE-FLIGHT SUITE adopted, because every multi-hour run so far has been invalidated by a cheap-to-find bug.
+**2026-07-23 · Correction + build + standing process change**
+
+**THE FINDING.** `headroom()['memoryless_floor']` is a ridge regression from the RAW 10-dim stimulus E to
+Y. Our networks read out from 50 NONLINEAR features. Measured: **a completely STATIC, memoryless,
+context-free random tanh expansion of the same input scores 0.9424, BEATING the "floor" of 1.0197** (a
+200-dim expansion: 0.9179). No network, no dynamics, no time, no context.
+**=> The floor conflates MEMORYLESSNESS with REPRESENTATIONAL CAPACITY, and is dominated by the latter.
+"Beating the floor" demonstrates nonlinear expansion, NOT context inference.** Every prior statement of
+that form is confounded. (The oracle CEILING is computed the same way — per-context ridge on raw E — so
+both ends of the headroom band are miscalibrated and "% of headroom captured" is meaningless as computed.)
+
+**WHAT IT DOES AND DOESN'T INVALIDATE.** Selection is UNAFFECTED: `floor` is a constant in
+`reg = floor - e_va` and cancels in the replicator softmax. What is invalidated is the INTERPRETATION of
+absolute scores and all headroom framing. The D114 contrasts stand; their absolute readings do not.
+
+**THE MATCHED CONTROL (built: `context_destroyed_score()` in evolve.py).** Score the SAME network on the
+SAME stimuli with the temporal CONTEXT STRUCTURE DESTROYED (sample order shuffled, so consecutive stimuli
+come from different contexts and nothing accumulates across the dwell period). Capacity, readout, stimuli
+and noise are all held fixed; ONLY usable context is removed. The gap
+`context_destroyed - ordered` is the contribution attributable to context inference.
+
+**FIRST RESULT FROM IT — networks show NO measurable context use.** Four developed random networks:
+```
+genome   ordered   ctx-destroyed   context gain
+  0      0.9904      0.9880          -0.0024
+  1      0.9930      0.9864          -0.0066
+  2      0.9938      0.9951          +0.0013
+  3      0.9780      0.9839          +0.0059
+mean context gain = -0.0004
+```
+Destroying the context structure costs them NOTHING. This is exactly what the old floor concealed: they
+appeared to "beat the floor" (0.96 vs 1.014) while deriving zero benefit from context. (n=4 — a clean
+measurement DESIGN, not yet a powered result.)
+
+**SECOND, UNEXPECTED OBSERVATION.** Developed spiking networks score ~0.985 while the STATIC random 50-dim
+tanh projection scores 0.942. **Our 50-neuron spiking network is WORSE than a trivial static projection of
+the same dimensionality** at the memoryless part of the task. Not perfectly matched (the static version
+has no noise and no temporal blurring), but it suggests the dynamics may be DESTROYING information rather
+than adding to it. Connects to the density/activity threads and to queue N2 (landscape smoothness).
+
+---
+
+**PROCESS CHANGE — PRE-FLIGHT VALIDATION SUITE (PJM's observation, and it is the more important half of
+this entry).** PJM: *"it seems like every time we launch a multi-hour simulation, we discover new problems
+that invalidate the data."* True, and the pattern has ONE root cause:
+- D112 (encoding == regulation + const) — found by READING evaluate().
+- D113 (test leakage) — found by TRACING which split a variable came from.
+- D116 (floor measures capacity) — found by a 30-SECOND baseline comparison.
+**None required a long run to discover. All three were cheap STATIC checks we never ran.** Validation had
+consistently confirmed that code EXECUTES (smoke tests, single-cell trials, checkpoint writes) but never
+that it MEASURES WHAT IT CLAIMS. Different questions; we were only asking the first.
+
+**BUILT: `scripts/preflight.py`** — runs in minutes, gates any expensive launch (exit status 1 on failure):
+  A **LEAKAGE (empirical):** destroy Y_test, confirm fitness is BIT-IDENTICAL. Stronger than any
+    assertion about code structure.
+  B **COMPONENT REDUNDANCY:** correlations among enc/car/reg; FAIL at |r|>0.99.
+  C **FITNESS RELIABILITY:** split-half r(val,test) at the CONFIGURED n_assays, with SE; FAIL below 2 SE.
+  D **FLOOR VALIDITY:** does a static random expansion beat the floor? plus the matched context-destroyed
+    control.
+  E **READOUT POWER:** random-network fitness baseline that evolved runs must clearly exceed.
+
+**VALIDATED AGAINST OUR OWN HISTORY — the suite reproduces all three known bugs:** A PASSes (confirming
+the D113 fix empirically), B FAILs on encoding-vs-regulation with r=+1.0000 and range(x-y)=0.00e+00
+(D112), D FAILs on the old floor (D116). A validator that catches every bug we have already paid for is
+one worth trusting on the next.
+
+**STANDING RULE.** Run `preflight.py` before ANY multi-hour launch. A FAILing check does not automatically
+mean stop — a KNOWN, DOCUMENTED failure that does not affect the contrast being measured may be
+acceptable — but it must then be a recorded DECISION, not an oversight discovered afterwards.
