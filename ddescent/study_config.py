@@ -139,3 +139,57 @@ def w0_for_density(density: float) -> float:
     if density <= 0:
         return W0_REF
     return W0_REF * float(np.sqrt(DENSITY_REF / density))
+
+# =================================================================================================
+# TRIAL TASK (D120) — cue -> delay -> probe with an XOR target
+# =================================================================================================
+# Replaces the covariance-context task, which required NO memory (context was 98.6% identifiable from
+# a single stimulus) and whose control removed nothing. Here the memory demand is imposed by
+# construction and the floor is chance BY CONSTRUCTION: with the XOR target, every cue-blind and
+# every probe-blind strategy scores exactly 0.500.
+TRIAL = dict(
+    K=10,                 # shared input channels; cue and probe live in the same space
+    n_cues=2,             # start minimal (PJM); ramp later
+    n_probes=2,
+    n_trials=40,          # per split
+    n_val=40,
+    n_test=40,
+    delay_segments=1,     # 1 x present_ms = 50 ms: BELOW tau_slow, so passive decay can carry the
+                          # cue. Steps 1/3/4 tested with step 2 on trainer wheels. SWEEP THIS -- where
+                          # maintenance must become active is what H-D is about.
+    seed=0,
+)
+
+# Development passes over the TRIAL sequence. One pass = n_trials x n_seg x present_ms.
+# At 40 trials x 4 segments x 50 ms that is 8000 ms/pass, so passes are ~2.7x more expensive than on
+# the old task; 2 passes gives 20 exposures of each of the 4 trial types.
+TRIAL_DEV_PASSES = 2
+
+
+def trial_sequence_ms() -> float:
+    from .trial_task import seg_layout
+    lay = seg_layout(TRIAL["delay_segments"])
+    return TRIAL["n_trials"] * lay["n_seg"] * NET["present_ms"]
+
+
+def trial_dev_ms() -> float:
+    return TRIAL_DEV_PASSES * trial_sequence_ms()
+
+
+def make_trial_task(**overrides):
+    from .trial_task import cue_delay_probe
+    return cue_delay_probe(**{**TRIAL, **overrides})
+
+
+def make_trial_evolve_cfg(**overrides) -> EvolveConfig:
+    base = dict(dev_ms=trial_dev_ms(), dev_eta=1e-3, n_assays=N_ASSAYS,
+                fitness_mode="trial_xor", seed=12345)
+    return EvolveConfig(**{**base, **overrides})
+
+
+def trial_summary() -> str:
+    return (f"TRIAL {TRIAL['n_cues']} cues x {TRIAL['n_probes']} probes, "
+            f"delay={TRIAL['delay_segments']}x{NET['present_ms']}ms, "
+            f"{TRIAL['n_trials']}/{TRIAL['n_val']}/{TRIAL['n_test']} trials\n"
+            f"DEV   {TRIAL_DEV_PASSES} passes = {trial_dev_ms():.0f} ms "
+            f"(one pass = {trial_sequence_ms():.0f} ms); n_assays={N_ASSAYS}")

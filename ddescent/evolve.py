@@ -127,6 +127,13 @@ def _fitness(comp: dict, n_params: int, cfg: EvolveConfig) -> float:
         base = (cfg.w_e * comp["encoding"]
                 + cfg.w_c * comp["carrying"]
                 + cfg.w_r * (comp["carrying"] * comp["regulation"]))
+    elif mode == "trial_xor":
+        # Cue->delay->probe XOR task (D120). `trial_score` = 1.0 - val_err, so 0.0 is exactly
+        # "no better than predicting the mean" -- a zero point that is EXACT rather than estimated,
+        # because the XOR target puts every cue-blind and probe-blind strategy at chance by
+        # construction. No clip: clipping at zero once flattened fitness to a constant and left
+        # selection with nothing to act on (audit F2).
+        base = comp["trial_score"] if "trial_score" in comp else (1.0 - comp["val_err"])
     else:
         raise ValueError(f"unknown fitness_mode {mode!r}")
     return base - cfg.c_syn * n_params
