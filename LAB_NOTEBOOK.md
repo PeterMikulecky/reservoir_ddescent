@@ -408,80 +408,103 @@ substrate. See QUEUE.md.
 - _interpretation:_ 
 
 
-## 2026-07-23 / 07-24 — apparatus audit, and a task redesign
-
-A long stretch with almost no science in it, and a lot of instrumentation. Worth recording because
-the pattern turned out to matter more than any individual fix.
-
-**Seven defects, all found by reading rather than running.** Over roughly a day: `encoding` and
-`regulation` turned out to be the same measurement offset by a constant (D112); fitness had been
-computed from TEST error since D094, so selection was optimising the quantity we report as
-generalisation (D113); fitness reliability at `n_assays=1` was ~0.05, meaning every run to date had
-selected on approximately pure noise (D115); the "memoryless floor" measured representational capacity
-rather than memorylessness — a static random projection matched it (D116); development at `dev_ms=800`
-saw 27% of stimuli, 2 of 4 contexts and ONE context transition; `d=3` had collapsed the low-rank waist
-so H-B was untestable; and spectral radius sat at ~4.4, never measured or controlled (D117).
-
-None of these needed a long run to find. All were cheap static checks nobody had run. The through-line:
-we had consistently validated that code EXECUTES — smoke tests, single-cell trials, checkpoint writes —
-and never that it MEASURES WHAT IT CLAIMS. Those are different questions and only the first was being
-asked.
-
-**Hence `audit.py`**, which asks the second: fitness provenance (destroy a split, confirm fitness moves
-iff it should), measurement identity (does each named quantity measure its name?), task invariants,
-exposure coherence, config coherence, reliability and power. It reproduces every known defect, which is
-the validation that matters. It has since found two on its own — a train/test context-coverage mismatch,
-and a degenerate fitness where every genome scored identically after a zero-clip.
-
-**Two of my own checks were wrong on first writing**, both because I wrote them from assumptions about
-the code rather than from reading it — the identical failure mode the audit exists to catch. Worth
-remembering that a validator is not exempt from the discipline it enforces.
-
-**The operating point moved and moved back.** Calibration against readout-free criteria
-(responsiveness / health / dimensionality) picked gain 5 / noise 2.0. The follow-up audit failed on the
-criterion the calibration never included: fitness reliability collapsed 0.465 → 0.066, because doubling
-`noise_sigma` quadruples the measurement noise in every fitness estimate. α wants high noise, reliability
-wants low noise, and reliability is the binding one — without it selection cannot work at all. Reverted
-(D119). The lesson is not the setting but the omission: reliability belongs IN the calibration grid.
-
-Also retired along the way: the RC-era skill gate, which scores a full mixing readout that D095 forbids,
-and which was the original justification for `input_gain=10` (D118). And the "5× supercritical" framing —
-spectral normalisation moves α by less than 0.1 over a 9× ρ range, because threshold and refractoriness
-clamp the loop gain in a spiking network. Input drive is the operative knob, not recurrent gain.
-
-**Then the task itself turned out to be wrong.** Bayes-optimal context inference from the
-covariance-context stimuli is 98.6% accurate from a SINGLE sample. The task required no memory at all,
-and the matched control — shuffling stimulus order — removed nothing, because every stimulus
-independently announced its own context. So `context_gain ≈ 0` was never evidence about the substrate;
-it was a control that doesn't control.
-
-PJM's replacement: present a cue, allow a delay, then present a discrimination stimulus whose response
-must be modulated by the prior context. I initially resisted on the grounds that the original design
+2026-07-21/24 — the sweep comes back flat, the diagnosis takes the apparatus apart, and the task turns out not to require memory
+The intended experiment. Development × selection sweep: 16 cells, `wta_gain` 0/0.5/1/2 ×
+`fitness_beta` 1/5/20/50, pop 30 × gen 40, ~18 h. Flat. `fit_slope` spanned only
+[−0.0003, +0.0008] with no structure across the grid — competition-on rows did not beat
+competition-off, high beta did not beat low. Best `best_test` touched 0.890 against a floor of
+1.014 but no cell held it. Two real signals inside the flatness: excitatory fraction fell
+reproducibly 0.80 → 0.66–0.73 in nearly every cell, and regulation drifted slightly positive in the
+competition-on × higher-beta corner. Selection was moving the population, but not toward
+generalisation.
+Why it was flat, found three probes later. Split-half reliability of the fitness signal, n=30,
+`n_assays` ∈ {1,2,4}: r(val,test) = −0.011 / +0.228 / +0.227. None significant at SE 0.192 — but
+the variance decomposition is far better determined. Fitting V_obs(k) = V_true + V_noise/k gives
+noise ≈ 4.6× signal in SD at `n_assays=1`, with SD(val−test) shrinking as 1/√k to within 12% of
+prediction. Reliability at `n_assays=1` is ≈ 0.05. Every run to that point — including the 18-hour
+sweep and the step-3 pilot whose stub records "fitness climbed 2/4 cells" — had selected on
+approximately pure noise. That alone accounts for the flat landscape; no substrate story required
+(D115).
+Heritability probe (n=30 parent–child pairs) had pointed the same way earlier: aggregate fitness
+r ≈ 0 (+0.028 / −0.025 across two conditions), regulation r ≈ +0.29. Read at the time as a
+dissociation — the process looking selectionist rather than Darwinian. Withdrawn: at n=30 the SE
+of a correlation is 0.192, so r = 0.29 sits 1.5 SE from zero and never differed significantly from
+the aggregate. I should have computed the SE before calling it a finding (D109 → D115).
+Nonlinear decodability probe (n=12, decoder ladder, chance 0.250) — the one large result that
+still stands. Linear ridge 0.44/0.47; covariance-linear 0.41/0.47; random forest 0.60/0.69
+(competition off/on). The covariance-linear decoder used in earlier probes, which had concluded
+"context not decodable above chance", is among the worst on the same states: those nulls were a
+decoder-format artifact. Competition also improved nonlinear decodability 0.60 → 0.69, which no
+linear probe had detected (D110).
+Regulation-only selection run (4 cells, pop 30 × gen 40). Selection strength dominated over
+selection basis: at matched strength (calibrated β = 20 vs hybrid β = 5) the two were
+indistinguishable, 0.0332 vs 0.0334; an advantage appeared only at β = 50, 2.5× beyond the match. The
+hybrid control reproduced a prior cell to every digit — `fit_slope +0.00015`, `test_min 0.912` — so
+the apparatus is deterministic across independent runs days apart. Two further results: hybrid
+selection moved regulation down (−0.00008) while fitness moved up, and under hybrid fitness the
+best of ten random networks beat the evolved population mean by 1.7× (0.1120 vs 0.0661). All test
+numbers from this run are void — it predates the split fix, and train stagnating (0.986 → 0.993)
+while test improved (0.960 → 0.928) is the leak's signature (D114).
+Seven defects, all found by reading rather than running. `encoding` and `regulation` were the same
+measurement offset by a constant, 1.0 − e and floor − e, r = 1.0000 exactly (D112). Fitness had been
+computed from TEST error since D094, so ~1200 selective evaluations per run optimised the quantity we
+report as generalisation (D113). The "memoryless floor" measured capacity, not memorylessness — a
+static random 50-dim tanh expansion scored 0.9424 against the floor's 1.0197, beating it with no
+network, no dynamics, no context (D116). Development at `dev_ms=800` saw 16/60 stimuli, 2 of 4
+contexts, one context transition. `d=3` had collapsed the low-rank waist (r₁ = min(K,d) = 3), so
+H-B was untestable. Spectral radius sat at ρ ≈ 4.42, never measured. None of these needed a long run
+to find. The through-line: we had validated that code executes — smoke tests, single-cell trials,
+checkpoint writes — never that it measures what it claims.
+Hence `audit.py`, which asks the second question across six groups: fitness provenance (destroy a
+split, confirm fitness moves iff it should), measurement identity, task invariants, exposure
+coherence, config coherence, reliability and power. It reproduces every known defect — the validation
+that matters — and went 6 FAIL → 0 FAIL as fixes landed. It has since found two on its own: a
+train/test context-coverage mismatch (context 2 in test but absent from train and val, 17% of the
+reporting split never developed on), and a degenerate fitness where all 30 genomes scored exactly
+0.0000 after a zero-clip interacted with the `d=10` fix. Two of my own checks were wrong on first
+writing, both because I wrote them from assumptions about the code rather than reading it — the same
+failure mode the audit exists to catch.
+Operating point: moved, then moved back. Calibration on developed networks against readout-free
+criteria (responsiveness / health / covariance power-law α) gave 15 responsive, healthy cells with α
+1.07 → 2.56 and responsiveness 0.33 → 0.74 in opposition. Picked gain 5 / noise 2.0 (responsiveness
+0.360, α 1.23). The follow-up audit failed on the criterion the calibration never included:
+reliability collapsed 0.465 → 0.066. Doubling `noise_sigma` quadruples measurement-noise variance in
+every fitness estimate. α wants high noise, reliability wants low noise, and reliability is binding —
+without it selection cannot work at all. Reverted to gain 10 / noise 1.0 (D118, D119).
+Retired along the way: the RC-era skill gate, which scores a full mixing readout D095 forbids and
+was the original justification for `input_gain=10`; and the "5× supercritical" framing — rescaling
+magnitudes across ρ 0.5 → 4.42 moved α by < 0.1 (2.43 → 2.50), because threshold and refractoriness
+clamp the loop gain. Input drive, not recurrent gain, sets dimensionality. Also measured: holding
+per-synapse magnitude fixed while sweeping density scales total drive 5× (4.07 → 19.44 per neuron
+from density 0.1 → 0.5), which would have confounded capacity with drive in the P sweep. Now w ∝ 1/√K.
+Then the task collapsed. Bayes-optimal context inference from the covariance-context stimuli, given
+the true covariances: 98.6% from a SINGLE sample, 100% from five. The task never required memory —
+context was instantaneously available in every stimulus, so nothing had to be held across the dwell
+window, which removes the justification for `tau_slow`, `context_dwell` and much of H-D's framing. And
+the matched control built to measure context use shuffles stimulus order, which removes nothing when
+each stimulus independently carries its own context. So `context_gain ≈ 0` was never evidence about
+the substrate. Context use has never been validly measured on this project.
+PJM's replacement: present a cue, allow a delay, then a discrimination stimulus whose response must
+be modulated by the prior context. I resisted initially on the grounds that the original design
 deliberately made context inferred rather than signalled — but that hazard applies to a dedicated
-labelled channel, and PJM's cue is a stimulus like any other on shared channels. The four things the
-network must acquire (encode cue, hold it, encode probe, bind them) are exactly right, and step 2 is a
-memory requirement the old task simply did not have.
-
-The XOR target is the load-bearing choice: cue-only and probe-only rules score exactly 0.500, joint
-scores 1.000. **The floor is chance by construction** — unbeatable by capacity, static expansion, or a
-lucky projection. Every reference problem this project has fought traces to not having a trustworthy
-zero point. This design has one.
-
-**Where it stands.** Audit clean at the reverted operating point. New task built with both controls
-validated. Still to build: trial-structured evaluation and development, an audit C-group for the new
-task's invariants, and a cost re-measurement (the new task is ~2.7× per assay, not cheaper as I had
-guessed).
-
-_interpretation:_ Almost nothing was learned about the science and a great deal was learned about the
-apparatus. The honest summary is that most measurements taken before this week were not measuring what
-their names claimed. That is worth knowing before committing compute, and it is the reason the audit
-now gates expensive runs. The one substantive scientific residue: context use has never actually been
-measured, because the instrument for measuring it was broken.
-
-**Provenance gap noted:** the tooling built this week (`audit.py`, `calibrate_operating_point.py`, the
-probes, the runners) uses `runlog.tee()` and bypasses the `provenance` system entirely — so these runs
-have only a `.log`, with no `config.snapshot.json`, `manifest.json` or `env.txt`, and no automatic
-notebook stub. Older runs (`T0_*`, `E9_*`, `AN_*`) have the full record. This is a regression and should
-be fixed by routing the new scripts through `provenance.RunContext` rather than by hand-writing entries
-like this one.
-
+labelled channel, and PJM's cue is a stimulus like any other on shared channels. His four steps
+(encode cue, hold it, encode probe, bind them) are the right account, and step 2 is a memory
+requirement the old task simply lacked. The XOR target is load-bearing: measured over n=200, best
+probe-only rule 0.500, best cue-only rule 0.500, joint 1.000. The floor is chance by
+construction — unbeatable by capacity, static expansion or a lucky projection. Both controls validated:
+`omit_cue` blanks the cue from the input; `scramble` permutes targets against stimuli, dropping oracle
+accuracy to 0.510. (My first `scramble` permuted probe indices and recomputed the target from the
+permuted pairing — a different valid trial set, removing nothing. The old shuffle control's error,
+caught before use this time.) D120.
+Where it stands. Audit clean at the reverted operating point: 0 FAIL, 24 PASS, with reliability
+0.465 and α 1.92. New task built, controls validated, nothing run on it. Cost is ~2.7× per assay
+(40 trials × 4 segments × 50 ms = 8000 ms vs 3000 ms), not cheaper as I had guessed.
+Almost nothing was learned about double descent, and a great deal about the apparatus. What was
+established: selection moves a population when the signal is reliable; the apparatus is deterministic
+and reproducible to the digit; competition improves nonlinear decodability; dimensionality is set by
+input drive rather than recurrent gain. What was un-established: every prior claim about context use,
+encoding failure and heritability rested on instruments that did not measure what their names said.
+Next: trial-structured `evaluate()` and development; audit C-group for the new task's invariants
+(the waist and r₁/n_env checks are specific to the old task); cost re-measurement; then `wta_gain`
+including 0 as a swept coordinate, since competition may suppress delay-period persistence and that is
+selection's question to answer, not ours to assume.
