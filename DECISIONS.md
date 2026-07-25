@@ -5531,5 +5531,3 @@ Two structural arms were in the same cost class; this gate eliminated one of the
 licenses a task-design conclusion. The distributional reads (across neurons, among networks) did the
 work here — the aggregate reliabilities alone would have said "no-go" without saying WHY, and it is the
 why that names the next move.
-
-

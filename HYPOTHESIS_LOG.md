@@ -333,3 +333,53 @@ DECISIONS-level design turn; this entry records only that one branch is closed b
   averaged to zero signal while noise fell ~√50). The all-neuron-aggregate arm is ruled out; the S1
   refutation is not a readout artifact and is now a statement about the task rather than the measurement.
   (DECISIONS D125.)
+
+**S1a (the readout-artifact alternative) — ADVANCED AND REJECTED, 2026-07-25.** The S1 refutation left one
+substantive escape hatch, and it is worth recording that it was tested rather than argued away.
+
+> **S1a (advanced as a challenge to the refutation).** The trial_xor null may be an artifact of MEASUREMENT,
+> not a fact about the substrate: every number behind S1's refutation came from ONE arbitrary output cell
+> (`R[:,0]`, D095). If the network computes the binding somewhere the fitness never reads, then "unselectable"
+> describes the readout, and an all-neuron-aggregate fitness restores a selectable gradient.
+
+**Why the obvious test would NOT have settled it (PJM).** Re-analysing the evolved population is
+structurally incapable of answering it: that population was selected UNDER single-neuron pressure, so
+distributed capability had no path to express there. Absence of distributed representation under
+single-neuron selection says almost nothing about whether it would emerge under distributed selection —
+you cannot observe the fruit of a pressure never applied. What survives the objection is the RANDOM
+population, which has no selection history and is therefore an assumption-free gen-0 measurement.
+
+**Evidence that REJECTED S1a (DECISIONS D125; runs/allneuron/, n=30, draws=8, n_val=80).** Scoring all 50
+neurons independently, each with its own D095-weak readout: pooled over 1,500 (genome, neuron) pairs, every
+per-neuron score lies within 2 noise-sd of the median (val_acc median 0.530, max 0.589, threshold 0.606;
+chance 0.500). The per-genome count of neurons above that threshold is zero for essentially every genome in
+every condition — no between-genome variation in how many neurons carry the task, because none do. And the
+aggregate behaved diagnostically: averaging 50 neurons cut noise by ~6× (≈√50, as independent averaging
+predicts) while `signal_sd` fell to 0.0000 — the signature of averaging pure noise. A distributed
+representation would have survived that averaging and reliability would have risen.
+
+**S1a status: REJECTED on the gen-0 question.** There is no toehold at ANY neuron in an unselected
+population. This does not prove all-neuron SELECTION would remain flat over 40 generations — PJM's
+objection stands and no measurement can retire it — but the all-neuron arm would begin from exactly that
+population, so it starts from the same zero gradient single-neuron selection did. The all-neuron-aggregate
+arm is ruled out as the next move.
+
+**Consequence for S1.** The refutation hardens: the null is not an artifact of where the fitness looked.
+The substrate does not perform the arbitrary binding anywhere. This converts the S1 result from a
+statement about a measurement into a statement about the TASK — `trial_xor`'s target is arbitrary by
+construction, hence orthogonal to every dynamics-native property a generic E/I reservoir produces, and
+unsupervised development is target-blind. It therefore lands squarely on the TESTABILITY NOTE's task-fit
+criterion 1 (dynamics-native reward, not an arbitrary lookup table) and narrows the live fork recorded
+under "BEARING ON H-A..H-D": of the options listed there, the readout was not the problem, so the fork is
+now between the task's chance-floor STRUCTURE (D120) and the operating point (D119) — with the DMTS-family
+menu in FRAMING as the pre-registered candidate set for the former. Which lever is taken remains a
+DECISIONS-level design turn; this entry records only that one branch is closed by evidence.
+
+### Revision history addition
+- **2026-07-25** — SELECTABILITY S1a (the readout-artifact alternative to the S1 refutation) advanced and
+  REJECTED the same day: all-neuron scoring at n=30 found no gen-0 signal at ANY of 50 neurons in an
+  unselected population (every per-neuron score within 2 noise-sd of the median; mean-over-neurons
+  averaged to zero signal while noise fell ~√50). The all-neuron-aggregate arm is ruled out; the S1
+  refutation is not a readout artifact and is now a statement about the task rather than the measurement.
+  (DECISIONS D125.)
+
