@@ -1,0 +1,86 @@
+(.venv) C:\dev\reservoir_ddescent>python scripts/trial_reliability_probe.py --n 30 --draws 8 --populations random
+TRIAL-TASK FITNESS RELIABILITY (proper)
+n=30 genomes, draws=8, n_val sweep=[20, 40, 80] (built 80), n_assays sweep=[1, 2, 4, 8], dev_ms=16000, delay=1
+
+====================================================================================
+POPULATION: RANDOM
+====================================================================================
+  developing + sampling 30 genomes x 8 draws ...
+    genome  0 done
+    genome  1 done
+    genome  2 done
+    genome  3 done
+    genome  4 done
+    genome  5 done
+    genome  6 done
+    genome  7 done
+    genome  8 done
+    genome  9 done
+    genome 10 done
+    genome 11 done
+    genome 12 done
+    genome 13 done
+    genome 14 done
+    genome 15 done
+    genome 16 done
+    genome 17 done
+    genome 18 done
+    genome 19 done
+    genome 20 done
+    genome 21 done
+    genome 22 done
+    genome 23 done
+    genome 24 done
+    genome 25 done
+    genome 26 done
+    genome 27 done
+    genome 28 done
+    genome 29 done
+
+  --- basis: trial_score ---
+   n_val | signal_sd | noise_sd(1 draw) | reliability by n_assays (ICC / regression)
+   ------+-----------+------------------+--------------------------------------------
+     20  |  0.0000   |     0.0648       | a1:0.00/0.37  a2:0.00/0.54  a4:0.00/0.70  a8:0.00/0.83
+     40  |  0.0000   |     0.0303       | a1:0.00/0.00  a2:0.00/0.00  a4:0.00/0.00  a8:0.00/0.00
+     80  |  0.0034   |     0.0176       | a1:0.03/0.36  a2:0.07/0.53  a4:0.13/0.69  a8:0.22/0.82
+   n_val scaling: noise_var*n_val ratio across sweep = 3.37  (NOT ~1/n_val -> n_val and n_assays are not interchangeable here)
+
+  --- basis: val_acc ---
+   n_val | signal_sd | noise_sd(1 draw) | reliability by n_assays (ICC / regression)
+   ------+-----------+------------------+--------------------------------------------
+     20  |  0.0000   |     0.0639       | a1:0.00/0.07  a2:0.00/0.14  a4:0.00/0.24  a8:0.00/0.39
+     40  |  0.0000   |     0.0277       | a1:0.00/0.41  a2:0.00/0.59  a4:0.00/0.74  a8:0.00/0.85
+     80  |  0.0070   |     0.0374       | a1:0.03/0.08  a2:0.06/0.15  a4:0.12/0.26  a8:0.22/0.41
+   n_val scaling: noise_var*n_val ratio across sweep = 0.73  (~constant -> more trials cut noise like more assays (cheaper: overhead paid once))
+
+  --- basis: margin@0.25 ---
+   n_val | signal_sd | noise_sd(1 draw) | reliability by n_assays (ICC / regression)
+   ------+-----------+------------------+--------------------------------------------
+     20  |  0.0064   |     0.0963       | a1:0.00/0.35  a2:0.01/0.52  a4:0.02/0.68  a8:0.03/0.81
+     40  |  0.0000   |     0.0462       | a1:0.00/0.15  a2:0.00/0.27  a4:0.00/0.42  a8:0.00/0.59
+     80  |  0.0074   |     0.0384       | a1:0.04/0.41  a2:0.07/0.59  a4:0.13/0.74  a8:0.23/0.85
+   n_val scaling: noise_var*n_val ratio across sweep = 1.58  (~constant -> more trials cut noise like more assays (cheaper: overhead paid once))
+
+  --- basis: margin@0.5 ---
+   n_val | signal_sd | noise_sd(1 draw) | reliability by n_assays (ICC / regression)
+   ------+-----------+------------------+--------------------------------------------
+     20  |  0.0029   |     0.0766       | a1:0.00/0.34  a2:0.00/0.51  a4:0.01/0.68  a8:0.01/0.81
+     40  |  0.0000   |     0.0383       | a1:0.00/0.00  a2:0.00/0.01  a4:0.00/0.02  a8:0.00/0.03
+     80  |  0.0049   |     0.0262       | a1:0.03/0.41  a2:0.07/0.58  a4:0.12/0.74  a8:0.22/0.85
+   n_val scaling: noise_var*n_val ratio across sweep = 2.13  (NOT ~1/n_val -> n_val and n_assays are not interchangeable here)
+
+  --- basis: margin@1 ---
+   n_val | signal_sd | noise_sd(1 draw) | reliability by n_assays (ICC / regression)
+   ------+-----------+------------------+--------------------------------------------
+     20  |  0.0000   |     0.0520       | a1:0.00/0.35  a2:0.00/0.51  a4:0.00/0.68  a8:0.00/0.81
+     40  |  0.0000   |     0.0250       | a1:0.00/0.00  a2:0.00/0.00  a4:0.00/0.00  a8:0.00/0.00
+     80  |  0.0029   |     0.0158       | a1:0.03/0.38  a2:0.07/0.56  a4:0.12/0.71  a8:0.22/0.83
+   n_val scaling: noise_var*n_val ratio across sweep = 2.72  (NOT ~1/n_val -> n_val and n_assays are not interchangeable here)
+
+READ:
+  * RANDOM low + EVOLVED high  -> no gen-0 gradient but selectable once moving: use a
+    curriculum/seed (D120 ramp), not more assays.
+  * BOTH low, signal_sd tiny   -> little true variance anywhere: change the landscape.
+  * reliability CLIMBS with n_assays and ICC~regression -> noise-limited; pick the n_assays
+    (or n_val, if its scaling is ~constant above) where reliability first clears ~0.3-0.4.
+  * ICC and regression DISAGREE -> too few genomes or non-Gaussian noise; raise --n.
