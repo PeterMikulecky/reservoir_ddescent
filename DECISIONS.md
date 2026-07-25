@@ -5376,6 +5376,7 @@ work.
 (scoring, reporting, and the pool all pluggable), so the next environment change touches the task and
 the runner, not the loop — the coupling that made this a loose end is removed.
 
+### D123 - This number skipped, proceed to D124.
 
 ### D124 — RELIABILITY-FIRST verdict: the trial_xor fitness is UNSELECTABLE at the current task + operating point. A well-powered overnight diagnostic falsified every tuning-level lever before a single science arm was spent.
 **2026-07-25 · Investigation + finding · scripts/trial_reliability_probe.py, scripts/trial_delay_sweep.py · runs/reliability/ (two n=30 logs) · NOTE: D123 is reserved for the behave_batch retire/update follow-up (per D122); this is D124.**
