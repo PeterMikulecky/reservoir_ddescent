@@ -26,7 +26,7 @@ newest `### D` entry, the D entry wins and this file is stale — say so rather 
 
 ---
 
-## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-25 (D125)*
+## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-25 (D126)*
 
 The trial task is built, correct, and **unselectable**. The `cue→delay→probe` XOR task (D120) works
 exactly as designed — chance floor by construction, controls that remove what they claim, clock-aligned
@@ -41,22 +41,31 @@ arbitrary by construction, hence orthogonal to every dynamics-native property an
 and unsupervised development is target-blind. **H-A…H-D are not refuted; they are BLOCKED on
 selectability**, because no error-vs-P curve can be measured while selection has no gradient to follow.
 
-**NEXT ACTION — proposed, NOT yet a DECISIONS entry.** Swap the arbitrary XOR target for **plain DMTS**
-(match / non-match) — the minimal isolating edit: same segments, same delay, same D095 readout, same
-`trial_evaluate`; only the target changes. Then re-run `scripts/trial_reliability_probe.py` at n=30 on
-the new target and read gen-0 reliability. That single experiment answers "was arbitrary binding the
-specific killer?" If yes, the P_dev sweep runs there and finally addresses the D104-open question —
-*does a peak exist at all under evolution+development* — and only then does dimensioning up to
-DMTS-Plus (variable delay, K≥4, distractor) become meaningful, as the way to disentangle "too simple"
-from "no peak in this paradigm." Starting at DMTS-Plus skips the rung that says which change mattered.
-**A task change is a P-curve-defining decision and must be memorialized with its rationale BEFORE the
-sweep runs** (FRAMING §Discipline). Rider, independent of task choice: add a mild firing-rate penalty to
-fitness — `mean_exc` drifting 0.80→0.64 was the only thing selection gripped, and nothing currently
-penalizes a degenerate rate regime.
+**THE PATH FORWARD IS DECIDED AND PRE-REGISTERED (D126).** `trial_xor` is replaced by **DMTS
+(match / non-match)** via a **shared cue/probe pattern set** — one line in `cue_delay_probe`, which
+turns the existing target into a natural relation the substrate can compute as trace overlap. The
+chance floor survives by construction, and the controls, trial structure, D095 readout and GA driver
+are untouched. D126 also pre-registers the complexity axis (plain → variable delay → K≥4 → distractor),
+the triggers for moving up it, the sweep design (`n_seeds` = 5, staged, with a per-seed consistency
+requirement on any peak), and the read of every outcome. Rung 1's numeric dimensioning is deliberately
+left open, to be set from calibration data — reliability and low-P solvability — never from a curve.
+
+**NEXT ACTION — execute D126's sequence, each step gating the next.** (1) Make the shared-pattern edit
+and verify the controls still sit at chance and the floor is intact. (2) `trial_reliability_probe` at
+rung 0, n=30 — is there a gen-0 gradient? Hours, not overnight. (3) The **low-P solvability screen** —
+a few arms at the bottom of the P range only, NOT a sweep; answers "too simple?" cheaply and measures
+the arm-to-arm SD that sets `n_seeds`. (4) Dimension rung 1 from (2)+(3), probe it, lock both. (5) Sweep
+one rung. Also owed alongside the edit: parameterize variable-delay sampling and an optional in-delay
+distractor so the rungs are config rows rather than code paths, and add the **mild firing-rate penalty**
+to fitness (`mean_exc` drifting 0.80→0.64 was the only thing selection gripped, and nothing currently
+penalizes a degenerate rate regime).
 
 ## §2. OPEN THREADS — *volatile*
 
-- **The task decision itself.** Proposed above; needs a DECISIONS entry before any sweep.
+- **The D126 edit is not yet made.** `trial_task.py` still builds `trial_xor`; the entry is a
+  pre-registration written before the code was touched. Nothing has been measured on DMTS.
+- **Task-family parameterization** — variable-delay sampling and an optional in-delay distractor, so
+  D126's rungs are config rows rather than separate code paths. Small, and owed before rung 1.
 - **`behave_batch` is stale relative to D103** (omits `I_wta` and the eSTDP synapses) and dormant — it is
   called only by `verify_batch_equivalence`, never by `run_evolution`. Do NOT wire it into the GA or
   revive it as a speedup until it is brought up to the D103 substrate and re-passes equivalence at the

@@ -5531,3 +5531,131 @@ Two structural arms were in the same cost class; this gate eliminated one of the
 licenses a task-design conclusion. The distributional reads (across neurons, among networks) did the
 work here — the aggregate reliabilities alone would have said "no-go" without saying WHY, and it is the
 why that names the next move.
+
+
+### D126 — TASK DECISION: `trial_xor` is replaced by DMTS (match / non-match) via a SHARED cue/probe pattern set. The edit D120 filed as a difficulty ramp is the edit that restores a gen-0 gradient. The complexity axis, the trigger for moving along it, and the sweep design are pre-registered here, BEFORE any curve exists.
+**2026-07-25 · Task design decision (P-curve-defining) · ddescent/trial_task.py, ddescent/study_config.py · pre-registration; no data yet · supersedes D120's target, retains D120's controls and floor**
+
+**WHY A TASK CHANGE IS FORCED.** D124 found `trial_xor` unselectable and falsified every lever that
+leaves P's meaning intact (basis, delay, assays, development on/off). D125 closed the last alternative:
+the null is not a readout artifact — no neuron among 50 carries the task in an unselected population.
+The remaining diagnosis is the target itself. `trial_xor`'s answer is arbitrary BY CONSTRUCTION, which
+is precisely what made its floor chance-proof and made D120 attractive; but arbitrary means orthogonal
+to every dynamics-native property a generic E/I reservoir produces, and unsupervised development is
+target-blind, so nothing can build it and selection cannot select for what does not vary. This lands on
+FRAMING's task-fit criterion 1 (dynamics-native reward, not an arbitrary lookup table), which was
+committed BEFORE the D125 data arrived. Choosing from that pre-registered menu is executing a plan that
+anticipated this outcome, not reacting to a null.
+
+**RL-IN-DEVELOPMENT CONSIDERED AND DEFERRED (not refuted).** Adding reinforcement to `develop()` has a
+real standalone justification — organismal phenotypes are shaped by within-lifetime reinforcement, so
+unsupervised-only development was always an impoverished model of the analogy this project draws. It is
+deferred for three reasons, none of which is that it would not work: (i) the diagnosis points at the
+target, and changing the plasticity rule does not fix orthogonality; (ii) under D104/H-E development IS
+this project's implementation of Frank's mechanism (1), implicit regularization — add reward and it
+becomes an explicit optimizer, so selection would grip "how learnable is this genome," a different
+study; (iii) "partial reward" has no principled setting, and that setting determines how much of the
+task development solves versus selection — a free parameter at the centre of the measurement. Revisit
+as a deliberate design choice on its own merits; never as a rescue from a null.
+
+**THE EDIT IS ONE LINE, AND D120 ALREADY WROTE IT DOWN.** `cue_delay_probe` builds
+`pats = _orthonormal_patterns(K, n_cues + n_probes)` and splits it, so cue pattern *i* and probe pattern
+*i* are DIFFERENT orthonormal directions and the existing target line `y = +1 where cue_idx ==
+probe_idx` is a lookup table between unrelated vectors. **Share the pattern set** (`probe_pats =
+cue_pats`) and the identical target line becomes match / non-match on the held trace — a relation the
+substrate can compute as overlap between a decaying cue trace and current input.
+
+D120's own comment filed this under the opposite heading: *"Distinct patterns for cue vs probe keeps the
+starting version easy; the hard version (shared pattern set, role signalled by timing alone) is a later
+difficulty ramp."* **That reading was inverted.** Distinct patterns looked easier because roles are
+unambiguous, while being the thing that made the task unselectable. Shared patterns look harder because
+role must be signalled by timing — but that added difficulty is dynamics-native (temporal role
+assignment and trace overlap are things a reservoir is already partway toward), which is the KIND of
+difficulty criterion 1 asks for. Difficulty and selectability are not the same axis; D120 conflated them.
+
+**WHAT IS RETAINED FROM D120 — the floor survives, which is the whole reason this is a small change.**
+With a shared pattern set and uniform cue sampling, P(match | probe = i) = 1/n_cues = 0.5, and cue-only
+is at chance by symmetry. **The chance floor is still by construction** — the property that justified
+the D120 redesign is not spent. `omit_cue` and `scramble` remain valid and unchanged, as do the trial
+structure, the D095 readout, `trial_evaluate`, and the GA driver. Nothing outside `trial_task.py` moves.
+
+**PARAMETERIZED FAMILY, NOT TWO TASKS.** `K`, `n_cues`, `n_probes`, `delay_segments` are already
+arguments. Adding variable-delay sampling and an optional in-delay distractor makes the whole
+DMTS/DMTS-Plus range a set of CONFIG ROWS on one builder. Consequence: the complexity axis is a setting
+the reliability probe and the sweep runner both take, and this entry chooses a FIXED POINT ON A
+PARAMETERIZED FAMILY rather than swapping tasks. Moving along the axis later costs a flag, not a rewrite.
+
+**THE COMPLEXITY AXIS, PRE-REGISTERED IN ORDER (rungs fixed now; Plus's numbers set later, see below).**
+1. **Rung 0 — plain DMTS.** `n_cues = 2`, shared patterns, `delay_segments = 1` (50 ms, the rung D124's
+   delay sweep already showed carries signal at 50 and 100 ms and collapses at 0). **This is the
+   study's first rung.**
+2. **Rung 1 — variable delay.** Delays sampled per trial rather than fixed, forcing a stable attractor
+   instead of a phase-locked decay. H-D-native.
+3. **Rung 2 — multi-cue, `K_cues ≥ 4`.** Forces separated sub-assemblies and inter-cue interference.
+   Doubles as the localization (H-E) testbed, where distributed representation is required rather than
+   incidental.
+4. **Rung 3 — in-delay distractor.** Gated maintenance. Largest machinery addition; furthest out.
+Movement is UP this list only, one rung at a time.
+
+**WHY RUNG 0 FIRST, AND WHY PLUS IS NOT DIMENSIONED IN THIS ENTRY.** Rung 0 is the ISOLATING
+experiment: exactly one variable changes against `trial_xor` (arbitrary relation → natural relation),
+so a gen-0 gradient there identifies arbitrary binding as the specific killer — a clean diagnostic
+result. Starting at a Plus configuration changes several things at once; success would not say which
+change bought it and failure would not say which failed. Plus's NUMERIC dimensioning is deliberately
+left open here because it will be set from CALIBRATION data, not guessed: **the licensing distinction
+is that reliability probes (is it selectable?) and the low-P solvability screen (is it solved at
+minimum P?) are difficulty calibration, whereas the SHAPE of error-vs-P is the outcome.** Dimensioning
+Plus from the former is design; dimensioning it from the latter would be reactive drift. Both rungs are
+therefore specified and locked BEFORE any P-curve is run.
+
+**THE TRIGGER (pre-registered).** Move from rung 0 to rung 1 if EITHER: (a) rung 0's reliability probe
+shows no gen-0 gradient (the `trial_xor` failure recurring — then arbitrary binding was NOT the sole
+cause and the diagnosis needs revisiting before spending anything); or (b) the low-P solvability screen
+shows rung 0 already at ceiling at the BOTTOM of the operational P range (too simple; P_crit sits below
+the axis, so no interpolation peak is observable there). Both triggers are read from calibration, not
+from a curve.
+
+**SEQUENCE (each step gates the next).**
+1. Make the edit; verify the controls still sit at chance and the floor is intact.
+2. `trial_reliability_probe` at rung 0, n=30 — is there a gen-0 gradient? (hours)
+3. **Low-P solvability screen** at rung 0 — a few arms at the BOTTOM of the P range only, NOT a sweep.
+   Answers "too simple?" for hours instead of a week, and measures the arm-to-arm SD that sets seeds.
+4. Dimension rung 1 from (2)+(3); reliability-probe it; lock both specifications.
+5. Sweep ONE rung — the one that is selectable and not solved at low P.
+
+**SWEEP DESIGN AND POWER (pre-registered; this is the cost driver, not the task choice).**
+- **`n_seeds` = 5 independent arms per P point.** Rationale, stated honestly: the arm-to-arm SD on this
+  task family is UNMEASURED, so 5 is a floor chosen for cost, not a power calculation. At n=5 the SE of
+  a per-P mean is SD/2.24, so a peak of roughly one arm-to-arm SD is detectable. **Step 3 measures that
+  SD; if it implies the SE exceeds half the smallest peak worth claiming, raise `n_seeds` BEFORE
+  starting the sweep, not after seeing it.**
+- **Staged**: a coarse pass of 6 log-spaced P points × 5 seeds (30 arms), then a refinement pass adding
+  P points around any candidate non-monotonicity at the same `n_seeds`. Refining RESOLUTION is
+  legitimate sequential design; the claim rests on the refined curve.
+- **Peak criterion, fixed now.** A peak counts only if BOTH: (i) it exceeds its neighbouring P points by
+  more than 2 SE of the per-P mean; AND (ii) it appears in the same P region in a MAJORITY OF INDIVIDUAL
+  SEED CURVES. Criterion (ii) costs nothing (the per-seed data already exists) and is the real guard
+  against fitting a shape to noise — the failure mode behind three withdrawn numbers in this log.
+- Report against **P_dev and P_total** both, per D104.
+- Rider, independent of task: add a **mild firing-rate penalty** to fitness. `mean_exc` drifting
+  0.80 → 0.64 was the only thing selection gripped across 40 generations, and nothing currently
+  penalizes a degenerate rate regime; without it, selection may spend its grip on rate exploitation.
+
+**PRE-REGISTERED READ OF THE OUTCOMES.**
+- **Selectable + peak** — H-A supported on a selectable task; proceed to H-B (does the peak track r₁?).
+- **Selectable + flat** — the two-failure-mode ambiguity, and NOT a refutation of H-A. Resolved by
+  moving one rung up: if a peak appears at higher task dimension, rung 0 was too simple; if the curve is
+  flat at both, the evidence that evolution+development does not produce interpolation peaks becomes
+  substantial, and THAT is a finding about the paradigm rather than about the task.
+- **Not selectable at rung 0** — arbitrary binding was not the sole cause; the diagnosis is wrong and
+  must be revised before more compute is spent. This is the outcome that would most change the project.
+
+**HONEST STATUS.** No data. This entry is a pre-registration, written before `trial_task.py` was
+touched, so its rationale provably predates the result. Whether the shared-pattern edit restores a
+gen-0 gradient is exactly what step 2 measures and is not assumed here.
+
+**LESSON.** "Harder" and "less selectable" are different axes, and D120 conflated them — the variant
+filed as a later difficulty ramp is the one with a gen-0 gradient, because its difficulty is
+dynamics-native rather than arbitrary. When choosing a task, ask what KIND of difficulty it adds, not
+how much.
+
