@@ -1,0 +1,70 @@
+# analysis log: trial_delay_sweep
+# timestamp: 2026-07-24T20:20:04.367346
+# command: scripts/trial_delay_sweep.py --n 20 --draws 6 --delays 0 1
+# delay sweep [0, 1] segments (x50ms); n=20 draws=6 n_val=40
+#====================================================================
+
+[logging to runs/delay_sweep\20260724-202004_trial_delay_sweep.log]
+DELAY SWEEP  (reliability = ICC, the conservative estimate; a real gen-0 gradient needs
+signal_sd above the noise floor AND reliability climbing with n_assays)
+n=20 draws=6 n_val=40 assays=[1, 2, 4] dev_ms=16000
+
+==========================================================================================
+POPULATION: RANDOM
+==========================================================================================
+ delay | basis        | signal_sd | noise_sd | reliability(ICC) a1  a2  a4
+ ------+--------------+-----------+----------+----------------------------------------
+    genome  0 done
+    genome  1 done
+    genome  2 done
+    genome  3 done
+    genome  4 done
+    genome  5 done
+    genome  6 done
+    genome  7 done
+    genome  8 done
+    genome  9 done
+    genome 10 done
+    genome 11 done
+    genome 12 done
+    genome 13 done
+    genome 14 done
+    genome 15 done
+    genome 16 done
+    genome 17 done
+    genome 18 done
+    genome 19 done
+   0ms | trial_score  |  0.0000   |  0.0253  | 0.00  0.00  0.00
+   0ms | val_acc      |  0.0000   |  0.0505  | 0.00  0.00  0.00
+    genome  0 done
+    genome  1 done
+    genome  2 done
+    genome  3 done
+    genome  4 done
+    genome  5 done
+    genome  6 done
+    genome  7 done
+    genome  8 done
+    genome  9 done
+    genome 10 done
+    genome 11 done
+    genome 12 done
+    genome 13 done
+    genome 14 done
+    genome 15 done
+    genome 16 done
+    genome 17 done
+    genome 18 done
+    genome 19 done
+  50ms | trial_score  |  0.0000   |  0.0306  | 0.00  0.00  0.00
+  50ms | val_acc      |  0.0175   |  0.0491  | 0.11  0.20  0.34
+
+READ:
+  * signal_sd rises and reliability clears ~0.3-0.4 at 0 ms but not 50 ms  -> the delay
+    (maintenance) is what flattens the gradient; run the study at delay=0 (a clean fixed
+    rung: pure binding, no memory) rather than a curriculum.
+  * accuracy shows a gradient where NMSE does not, at either delay  -> the fix is the
+    fitness BASIS (select on accuracy), independent of the delay -- touches nothing P
+    depends on.
+  * both bases flat at both delays  -> the block is binding itself, not maintenance;
+    delay is not the lever and the operating point / task structure is next.
