@@ -5230,7 +5230,7 @@ development over trials (and how many passes); audit C-group replacement (the lo
 r1/n_env invariants are specific to the old task; the new invariants are the degenerate-strategy checks);
 cost re-measurement.
 
-D121 — CRITICAL: clock-offset bug in `EvoNet.behave` voided every DEVELOPED assay
+### D121 — CRITICAL: clock-offset bug in `EvoNet.behave` voided every DEVELOPED assay
 Status: FIXED and verified against the real code in a Brian2 2.10.1 sandbox on the trial config.
 Files touched: `evonet.py` only — two functional lines in `EvoNet.behave`. `behave_batch` UNCHANGED
 (comments only). This append supersedes the pre-freeze D121 note on three points (marked ⚠ below).
