@@ -64,17 +64,40 @@ from ddescent.trial_eval import trial_evaluate
 
 
 # --- scoring: replicate trial_eval._score_split on the FIRST v trials of a stored readout ----------
+MARGIN_TEMPS = (0.25, 0.5, 1.0)   # squash sharpness for soft-accuracy; swept to find the useful regime
+
+
+def soft_margin(yhat, y, temp):
+    """Graded, accuracy-ALIGNED score for one output: mean tanh(y*yhat / temp).
+
+    The saturating tanh is load-bearing. The RAW mean signed margin mean(y*yhat) equals mean(yhat^2)
+    for an in-sample least-squares fit, i.e. it equals trial_score = 1 - NMSE (var(y)=1 for balanced
+    XOR) -- so an un-squashed margin is just NMSE and inherits its floor-compression. tanh saturates
+    confident-correct / confident-wrong trials (recovering the sign-thresholding that made accuracy
+    separate near-floor genomes) while staying linear -- hence graded -- near the boundary. temp->0
+    approaches hard accuracy; temp->inf approaches the linear margin (~NMSE)."""
+    return float(np.mean(np.tanh((y * yhat) / temp)))
+
+
 def score_subset(R, Y, v):
-    """(trial_score, accuracy) from readout R (n_val x d) and targets Y (n_val x 1) on first v trials.
-    Uses the SAME in-sample per-output affine readout as _score_split (D095), so numbers match the arm."""
+    """All candidate fitness bases on the first v trials, from ONE affine fit (D095 readout):
+      trial_score = 1 - NMSE   (continuous but ~ mean signed margin, so floor-compressed)
+      val_acc     = sign accuracy (separates near-floor genomes but is a step function -> ties)
+      margin@T    = soft-accuracy at squash temperature T (graded AND accuracy-aligned)"""
     Rv, Yv = R[:v], Y[:v]
-    err = float(_affine_nmse(Yv, Rv))
-    acc_cols = []
+    out = {"trial_score": 1.0 - float(_affine_nmse(Yv, Rv))}
+    accs = []; marg = {T: [] for T in MARGIN_TEMPS}
     for j in range(Yv.shape[1]):
         A = np.vstack([Rv[:, j], np.ones(len(Rv))]).T
         coef, *_ = np.linalg.lstsq(A, Yv[:, j], rcond=None)
-        acc_cols.append(np.sign(A @ coef + 1e-12) == np.sign(Yv[:, j]))
-    return 1.0 - err, float(np.mean(acc_cols))
+        yhat = A @ coef
+        accs.append(float(np.mean(np.sign(yhat + 1e-12) == np.sign(Yv[:, j]))))
+        for T in MARGIN_TEMPS:
+            marg[T].append(soft_margin(yhat, Yv[:, j], T))
+    out["val_acc"] = float(np.mean(accs))
+    for T in MARGIN_TEMPS:
+        out["margin@%g" % T] = float(np.mean(marg[T]))
+    return out
 
 
 # --- collect: develop each genome once, store `draws` independent val readouts ----------------------
@@ -101,8 +124,7 @@ def decompose(stored, Y, v, basis, assays):
     S = np.zeros((M, K))
     for gi in range(M):
         for k in range(K):
-            ts, acc = score_subset(stored[gi][k], Y, v)
-            S[gi, k] = ts if basis == "trial_score" else acc
+            S[gi, k] = score_subset(stored[gi][k], Y, v)[basis]
 
     noise_var = float(np.mean(S.var(axis=1, ddof=1)))                 # within-genome measurement var
     between   = float(S.mean(axis=1).var(ddof=1))                    # var of K-averaged genome means
@@ -183,7 +205,7 @@ def main():
         print("  developing + sampling %d genomes x %d draws ..." % (len(genomes), args.draws), flush=True)
         stored, Y = collect(genomes, task, net_cfg, cfg, args.draws, base_seed=5000)
 
-        for basis in ("trial_score", "val_acc"):
+        for basis in ("trial_score", "val_acc") + tuple("margin@%g" % T for T in MARGIN_TEMPS):
             print("\n  --- basis: %s ---" % basis)
             print("   n_val | signal_sd | noise_sd(1 draw) | reliability by n_assays (ICC / regression)")
             print("   ------+-----------+------------------+" + "-" * 44)
