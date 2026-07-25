@@ -1,0 +1,211 @@
+# analysis log: trial_allneuron_probe
+# timestamp: 2026-07-25T12:20:53.890955
+# command: scripts/trial_allneuron_probe.py --n 30 --draws 8 --nval 80 --populations random evolved --dev-conditions developed undeveloped --evolved-ckpt runs/reliability/evolved_pop.pkl
+# allneuron: n=30 draws=8 nval=80 pops=random,evolved dev=developed,undeveloped N=50
+#====================================================================
+
+[logging to runs/allneuron\20260725-122053_trial_allneuron_probe.log]
+ALL-NEURON go/no-go (settles NEITHER arm; decides which overnight to spend)
+allneuron: n=30 draws=8 nval=80 pops=random,evolved dev=developed,undeveloped N=50
+
+========================================================================================
+POPULATION: RANDOM   |   DEVELOPED
+========================================================================================
+    genome  0 done
+    genome  1 done
+    genome  2 done
+    genome  3 done
+    genome  4 done
+    genome  5 done
+    genome  6 done
+    genome  7 done
+    genome  8 done
+    genome  9 done
+    genome 10 done
+    genome 11 done
+    genome 12 done
+    genome 13 done
+    genome 14 done
+    genome 15 done
+    genome 16 done
+    genome 17 done
+    genome 18 done
+    genome 19 done
+    genome 20 done
+    genome 21 done
+    genome 22 done
+    genome 23 done
+    genome 24 done
+    genome 25 done
+    genome 26 done
+    genome 27 done
+    genome 28 done
+    genome 29 done
+
+  --- basis: trial_score ---
+    single(n0)  signal_sd=0.0015  noise_sd=0.0125  reliability=0.109
+    mean(all)   signal_sd=0.0000  noise_sd=0.0022  reliability=0.000
+    best(all)   signal_sd=0.0000  noise_sd=0.0299  reliability=0.000
+    across-neuron score distribution (median/90th/99th/max): 0.011 / 0.020 / 0.030 / 0.039
+    #neurons above chance+2sd (thr=0.042) per genome: median=0 max=0 spread(sd)=0.00  <- among-network variation in HOW MANY carry the task
+
+  --- basis: val_acc ---
+    single(n0)  signal_sd=0.0064  noise_sd=0.0354  reliability=0.206
+    mean(all)   signal_sd=0.0000  noise_sd=0.0059  reliability=0.000
+    best(all)   signal_sd=0.0000  noise_sd=0.0432  reliability=0.000
+    across-neuron score distribution (median/90th/99th/max): 0.530 / 0.550 / 0.569 / 0.589
+    #neurons above chance+2sd (thr=0.606) per genome: median=0 max=0 spread(sd)=0.00  <- among-network variation in HOW MANY carry the task
+
+========================================================================================
+POPULATION: RANDOM   |   UNDEVELOPED
+========================================================================================
+    genome  0 done
+    genome  1 done
+    genome  2 done
+    genome  3 done
+    genome  4 done
+    genome  5 done
+    genome  6 done
+    genome  7 done
+    genome  8 done
+    genome  9 done
+    genome 10 done
+    genome 11 done
+    genome 12 done
+    genome 13 done
+    genome 14 done
+    genome 15 done
+    genome 16 done
+    genome 17 done
+    genome 18 done
+    genome 19 done
+    genome 20 done
+    genome 21 done
+    genome 22 done
+    genome 23 done
+    genome 24 done
+    genome 25 done
+    genome 26 done
+    genome 27 done
+    genome 28 done
+    genome 29 done
+
+  --- basis: trial_score ---
+    single(n0)  signal_sd=0.0019  noise_sd=0.0120  reliability=0.170
+    mean(all)   signal_sd=0.0000  noise_sd=0.0021  reliability=0.000
+    best(all)   signal_sd=0.0000  noise_sd=0.0304  reliability=0.000
+    across-neuron score distribution (median/90th/99th/max): 0.011 / 0.020 / 0.030 / 0.040
+    #neurons above chance+2sd (thr=0.042) per genome: median=0 max=0 spread(sd)=0.00  <- among-network variation in HOW MANY carry the task
+
+  --- basis: val_acc ---
+    single(n0)  signal_sd=0.0100  noise_sd=0.0340  reliability=0.409
+    mean(all)   signal_sd=0.0008  noise_sd=0.0052  reliability=0.166
+    best(all)   signal_sd=0.0000  noise_sd=0.0441  reliability=0.000
+    across-neuron score distribution (median/90th/99th/max): 0.530 / 0.550 / 0.569 / 0.591
+    #neurons above chance+2sd (thr=0.605) per genome: median=0 max=0 spread(sd)=0.00  <- among-network variation in HOW MANY carry the task
+  loaded evolved population from checkpoint runs/reliability/evolved_pop.pkl (SKIPPING the GA -- 30 genomes)
+
+========================================================================================
+POPULATION: EVOLVED   |   DEVELOPED
+========================================================================================
+    genome  0 done
+    genome  1 done
+    genome  2 done
+    genome  3 done
+    genome  4 done
+    genome  5 done
+    genome  6 done
+    genome  7 done
+    genome  8 done
+    genome  9 done
+    genome 10 done
+    genome 11 done
+    genome 12 done
+    genome 13 done
+    genome 14 done
+    genome 15 done
+    genome 16 done
+    genome 17 done
+    genome 18 done
+    genome 19 done
+    genome 20 done
+    genome 21 done
+    genome 22 done
+    genome 23 done
+    genome 24 done
+    genome 25 done
+    genome 26 done
+    genome 27 done
+    genome 28 done
+    genome 29 done
+
+  --- basis: trial_score ---
+    single(n0)  signal_sd=0.0014  noise_sd=0.0112  reliability=0.108
+    mean(all)   signal_sd=0.0003  noise_sd=0.0024  reliability=0.105
+    best(all)   signal_sd=0.0000  noise_sd=0.0345  reliability=0.000
+    across-neuron score distribution (median/90th/99th/max): 0.011 / 0.020 / 0.028 / 0.044
+    #neurons above chance+2sd (thr=0.042) per genome: median=0 max=1 spread(sd)=0.18  <- among-network variation in HOW MANY carry the task
+
+  --- basis: val_acc ---
+    single(n0)  signal_sd=0.0000  noise_sd=0.0344  reliability=0.000
+    mean(all)   signal_sd=0.0006  noise_sd=0.0054  reliability=0.083
+    best(all)   signal_sd=0.0000  noise_sd=0.0469  reliability=0.000
+    across-neuron score distribution (median/90th/99th/max): 0.530 / 0.552 / 0.569 / 0.588
+    #neurons above chance+2sd (thr=0.608) per genome: median=0 max=0 spread(sd)=0.00  <- among-network variation in HOW MANY carry the task
+
+========================================================================================
+POPULATION: EVOLVED   |   UNDEVELOPED
+========================================================================================
+    genome  0 done
+    genome  1 done
+    genome  2 done
+    genome  3 done
+    genome  4 done
+    genome  5 done
+    genome  6 done
+    genome  7 done
+    genome  8 done
+    genome  9 done
+    genome 10 done
+    genome 11 done
+    genome 12 done
+    genome 13 done
+    genome 14 done
+    genome 15 done
+    genome 16 done
+    genome 17 done
+    genome 18 done
+    genome 19 done
+    genome 20 done
+    genome 21 done
+    genome 22 done
+    genome 23 done
+    genome 24 done
+    genome 25 done
+    genome 26 done
+    genome 27 done
+    genome 28 done
+    genome 29 done
+
+  --- basis: trial_score ---
+    single(n0)  signal_sd=0.0024  noise_sd=0.0131  reliability=0.206
+    mean(all)   signal_sd=0.0003  noise_sd=0.0023  reliability=0.120
+    best(all)   signal_sd=0.0000  noise_sd=0.0330  reliability=0.000
+    across-neuron score distribution (median/90th/99th/max): 0.011 / 0.019 / 0.028 / 0.044
+    #neurons above chance+2sd (thr=0.041) per genome: median=0 max=1 spread(sd)=0.18  <- among-network variation in HOW MANY carry the task
+
+  --- basis: val_acc ---
+    single(n0)  signal_sd=0.0000  noise_sd=0.0367  reliability=0.000
+    mean(all)   signal_sd=0.0004  noise_sd=0.0052  reliability=0.041
+    best(all)   signal_sd=0.0000  noise_sd=0.0438  reliability=0.000
+    across-neuron score distribution (median/90th/99th/max): 0.530 / 0.550 / 0.564 / 0.580
+    #neurons above chance+2sd (thr=0.605) per genome: median=0 max=0 spread(sd)=0.00  <- among-network variation in HOW MANY carry the task
+
+GO/NO-GO READ:
+  * mean(all) signal_sd >> single(n0), reliability clears ~0.3-0.4  -> all-neuron arm has
+    a gen-0 toehold single-neuron missed; worth an overnight.
+  * mean(all) ~ single(n0), both flat, #-above-chance uniform across genomes -> no toehold;
+    RL-in-development (which can manufacture a gradient the unsupervised floor cannot) is
+    the better structural lever.
+  * best(all) high but mean(all) flat -> lucky-neuron lottery (rises with in-degree at
+    fixed N); NOT a selectable signal on its own -- do not be fooled by best alone.
