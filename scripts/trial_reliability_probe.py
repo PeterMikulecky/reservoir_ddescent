@@ -51,7 +51,7 @@ Usage:
   --n>=30 per the standing statistical rule; drop it for a quick look. Cost scales as
   n x draws x max(nval) behaves x 2 populations -- a real (pre-arm, one-time) measurement.
 """
-import sys, argparse, pathlib, zlib
+import sys, argparse, pathlib, zlib, os, pickle
 _here = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(_here.parent))
 import numpy as np, warnings
@@ -59,7 +59,7 @@ warnings.filterwarnings("ignore")
 
 from ddescent import study_config as SC
 from ddescent.runlog import tee
-from ddescent.evonet import EvoNet, random_genome
+from ddescent.evonet import EvoNet, random_genome, Genome
 from ddescent.evolve import _affine_nmse, run_evolution
 from ddescent.trial_eval import trial_evaluate
 
@@ -153,19 +153,46 @@ def decompose(stored, Y, v, basis, assays):
                 rel=rel, fitness_mean=float(S.mean()))
 
 
-def make_population(kind, task, net_cfg, cfg, n, evolve_gens, seed0=2000):
+def _save_pop(pop, path):
+    os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
+    with open(path, "wb") as f:
+        pickle.dump([(g.signs, g.mag) for g in pop], f)   # arrays, not Genome objects (robust)
+
+
+def _load_pop(path):
+    with open(path, "rb") as f:
+        return [Genome(signs=s, mag=m) for s, m in pickle.load(f)]
+
+
+def make_population(kind, task, net_cfg, cfg, n, evolve_gens, workers=1, ckpt=None, seed0=2000):
     randoms = [random_genome(net_cfg, cfg.density, w0=cfg.w0, ei_split=cfg.ei_split, seed=seed0 + i)
                for i in range(n)]
     if kind == "random":
         return randoms
     # lightly-evolved: a few generations of real selection, then take the final population
+    if ckpt and os.path.exists(ckpt):
+        pop = _load_pop(ckpt)
+        print("  loaded evolved population from checkpoint %s (SKIPPING the GA -- %d genomes)"
+              % (ckpt, len(pop)), flush=True)
+        return pop
     ecfg = SC.make_trial_evolve_cfg(pop_size=n, n_generations=evolve_gens,
                                     dev_ms=cfg.dev_ms, n_assays=max(1, min(2, cfg.n_assays)))
-    print("  evolving population for %d generations (this is the expensive part) ..." % evolve_gens, flush=True)
-    _, pop = run_evolution(task, net_cfg, ecfg,
-                           eval_fn=lambda g: trial_evaluate(g, task, net_cfg, ecfg),
-                           report_fn=lambda g: trial_evaluate(g, task, net_cfg, ecfg, report=True),
-                           worker_scorer="trial", n_workers=1, verbose=False)
+    print("  evolving population for %d generations on %d worker(s) (the expensive phase) ..."
+          % (evolve_gens, workers), flush=True)
+    history, pop = run_evolution(task, net_cfg, ecfg,
+                                 eval_fn=lambda g: trial_evaluate(g, task, net_cfg, ecfg),
+                                 report_fn=lambda g: trial_evaluate(g, task, net_cfg, ecfg, report=True),
+                                 worker_scorer="trial", n_workers=workers, verbose=True)
+    # fitness trajectory -- the climb curve; reveals whether evolve_gens was enough or plateaued
+    print("  --- evolve trajectory (does selection climb? where does it plateau?) ---")
+    print("   gen | best_train best_test | fit_mean  mean_exc")
+    for i, h in enumerate(history):
+        print("   %3d |   %.3f     %.3f   |  %+.4f   %.2f"
+              % (i, h.get("best_train", float("nan")), h.get("best_test", float("nan")),
+                 h.get("fit_mean", float("nan")), h.get("mean_exc_frac", float("nan"))))
+    if ckpt:
+        _save_pop(pop, ckpt)
+        print("  saved evolved population -> %s (undeveloped run can reuse it, skipping the GA)" % ckpt, flush=True)
     return pop
 
 
@@ -176,6 +203,9 @@ def main():
     ap.add_argument("--nval", type=int, nargs="+", default=[20, 40, 80])
     ap.add_argument("--assays", type=int, nargs="+", default=[1, 2, 4, 8])
     ap.add_argument("--evolve-gens", type=int, default=5)
+    ap.add_argument("--workers", type=int, default=1, help="parallel workers for the evolve phase (via run_evolution pool)")
+    ap.add_argument("--evolved-ckpt", default=None,
+                    help="path to save/reuse the evolved population; second (undeveloped) run loads it and skips the GA")
     ap.add_argument("--dev-ms", type=float, default=None)
     ap.add_argument("--delay", type=int, default=None)
     ap.add_argument("--populations", nargs="+", default=["random", "evolved"],
@@ -210,7 +240,8 @@ def _report(args, task, net_cfg, cfg, assays, nval_max):
         print("\n" + "=" * 84)
         print("POPULATION: %s" % pop_kind.upper())
         print("=" * 84)
-        genomes = make_population(pop_kind, task, net_cfg, cfg, args.n, args.evolve_gens)
+        genomes = make_population(pop_kind, task, net_cfg, cfg, args.n, args.evolve_gens,
+                                  workers=args.workers, ckpt=args.evolved_ckpt)
         print("  developing + sampling %d genomes x %d draws ..." % (len(genomes), args.draws), flush=True)
         stored, Y = collect(genomes, task, net_cfg, cfg, args.draws, base_seed=5000)
 
