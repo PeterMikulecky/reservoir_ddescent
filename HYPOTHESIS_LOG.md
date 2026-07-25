@@ -180,3 +180,67 @@ literature. Its status remains PROVISIONAL, with a weaker evidential base than w
   significant at n=30 (SE=0.192, p≈0.13), and fitness reliability at n_assays=1 is ≈0.05, so the
   measurement was unreliable regardless. H-Cv2 now rests on D110 plus two literature arguments.
   Standing rule added: compute the SE before calling a correlation a finding.
+
+
+  ## SELECTABILITY (precondition for H-A..H-D on the trial task) — advanced then REFUTED
+
+**Context.** This is not one of the driving H-A..H-D; it is a PRECONDITION for testing any of them on
+the D120 trial task. Frank's whole analogy assumes selection can act; if the trial_xor fitness carries
+no selectable gradient, no error-vs-P curve can be measured and H-A..H-D are untestable on this task.
+The 2026-07-24/25 reliability investigation advanced a working prediction about that precondition and
+then refuted it. Recorded here per the pre-registration discipline so the advance→refute path is legible.
+
+**S1 (PROVISIONAL — advanced 2026-07-24 on partial, later-discredited evidence).**
+> The trial_xor fitness has no gen-0 gradient BY CONSTRUCTION (the XOR floor puts every random genome at
+> chance), but it is "SELECTABLE ONCE MOVING": once a few generations of selection give the population
+> genuine skill variance, the fitness estimate distinguishes genomes and selection accelerates
+> (slow-start-then-climb). Evidence at advancement: an n=20 evolved population showed val_acc reliability
+> ~0.53 vs ~0.22 for random.
+
+**Evidence that REFUTED it (2026-07-25 overnight; DECISIONS D124; runs/reliability/ two n=30 logs):**
+- **The advancing evidence was an artifact.** The n=20 ~0.53 did not survive n=30 with the full n_val
+  sweep. It was in-sample affine-readout OVERFITTING at small n_val: signal appears at n_val=20 and
+  VANISHES at n_val=40/80 (backwards for real signal — more trials should reveal more). At the honest
+  n_val=80, evolved val_acc reliability is ~0.00 (developed) / ~0.20 (undeveloped) — i.e. NOT above
+  random (~0.15). Same D115 lesson, re-learned: check that a number survives more power before calling it.
+- **The 40-generation trajectory is FLAT.** best_test bounces ~0.88–1.00 with no trend; fit_mean sits at
+  ~+0.012 from gen 0 to gen 39. Forty generations of selection produced no performance climb. This is
+  the direct test, watched in real time rather than inferred — the D115 "selection on noise" failure.
+- **Evolved ≈ random across all five bases and both dev conditions.** No amplification, because there was
+  no climb to amplify. The refutation does not depend on the readout basis (NMSE, accuracy, margin@T all
+  flat) nor on development (dev and dev-off both flat).
+
+**S1 status: REFUTED (well-powered).** "Selectable once moving" is false for the trial_xor task at the
+current operating point. Combined with the earlier delay sweep (0/50/100 ms all flat) and basis sweep
+(all five flat), every LEVER THAT LEAVES P's MEANING INTACT — fitness basis, delay, more assays,
+development on/off — has now been falsified as a route to a selectable gen-0-to-gen-40 gradient.
+
+**One NON-NULL, logged as a lead not a finding.** Across the 40 generations the ONLY monotonic mover was
+`mean_exc` (E/I composition), 0.80 → 0.64. Selection WAS gripping something heritable — cell-identity
+composition — it simply was not task performance. This reconnects to the H-Cv2 theme (the heritable
+structure selection can act on is not aggregate performance), now on the trial task rather than the
+covariance task, and is a candidate thread if the study reframes around what selection CAN grip. It is a
+single descriptive observation, not tested; SE not computed; do not treat as a finding.
+
+**HONEST LIMITATION of the refutation (do not overclaim).** The overnight GA evolve phase ran at
+`n_assays=2` (the reliability probe's cost-capped default), not the arm's `n_assays=4`. So the flat
+trajectory specifically is at reduced assays. The reliability sweep argues 4 would not rescue it
+(reliability stays low even at n_assays=8: evolved n_val=80 ~0.20 undeveloped), so the definitive
+`n_assays=4` arm (scripts/trial_selection_run.py, 40 gens) was NOT run because the reliability evidence
+predicts it would confirm the null at greater cost — which is the entire point of reliability-first. But
+that one direct test remains formally unrun; the conclusion rests on the reliability sweep + the flat
+n_assays=2 trajectory, which are strong but not the arm itself.
+
+**BEARING ON H-A..H-D.** None are refuted — they are BLOCKED on this precondition. The error-vs-P_dev
+curve (D104) cannot be measured while selection has no gradient to follow. The live options all change
+what P means or what is being selected: the XOR chance-floor task structure (D120), the operating point
+(gain/noise, D119 — the one lever never moved), or reframing selection onto the heritable structure that
+DID move (composition/regulation, the H-Cv2 thread). Which lever to touch is deferred; this entry only
+records that the tuning-level levers are exhausted.
+
+### Revision history addition
+- **2026-07-25** — SELECTABILITY prediction S1 (selectable-once-moving) advanced 2026-07-24 on n=20
+  evidence, REFUTED same investigation at n=30: advancing evidence was small-n_val overfitting; 40-gen
+  trajectory flat; evolved not above random on any basis or dev condition. `mean_exc` monotonic drift
+  logged as an untested lead. H-A..H-D unrefuted but BLOCKED on selectability. (DECISIONS D124.)
+

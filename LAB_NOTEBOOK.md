@@ -508,3 +508,63 @@ Next: trial-structured `evaluate()` and development; audit C-group for the new t
 (the waist and r₁/n_env checks are specific to the old task); cost re-measurement; then `wta_gain`
 including 0 as a swept coordinate, since competition may suppress delay-period persistence and that is
 selection's question to answer, not ours to assume.
+
+
+## 2026-07-25 — Reliability-first investigation of the trial task: is trial_xor selectable? (No, at current config.)
+
+*(Format inferred — I don't have LAB_NOTEBOOK.md in front of me; conform to the house style as needed.)*
+
+**Where this started.** After D122 wired the trial arm, the plan was to run a first 40-gen arm. Before
+spending it, applied the D115 reliability-first discipline: measure whether the trial_xor fitness carries
+a selectable signal at all. It does not, at the current task + operating point. Full record: DECISIONS
+D124; hypothesis update: HYPOTHESIS_LOG "SELECTABILITY" S1 (REFUTED).
+
+**The path (each step narrowed the question):**
+- Built a proper trial-task reliability probe (ICC + `V_obs(k)=V_true+V_noise/k` regression,
+  cross-checked; sweeps n_assays × n_val; random + evolved populations; bases NMSE / accuracy / soft
+  margin@T). Realized mid-build that a naive margin = NMSE for an in-sample LS fit, so the tanh squash is
+  load-bearing — otherwise the "new basis" is the old one in disguise.
+- n=30 developed-random: all bases flat at gen-0 except a whisker at n_val=80 (~0.22@a8). Walked back an
+  earlier n=20 "val_acc=0.34/0.53 looks selectable" read — it was small-n_val overfitting, gone by n=30.
+- Delay sweep 0/50/100 ms (trial_delay_sweep.py): flat at every delay; 0 ms actively worse; 100 ms ≈
+  50 ms (passive maintenance not failing at one tau_slow). Delay is not the lever.
+- Undeveloped-random n=30 (dev_ms=0): slightly MORE gen-0 variance than developed → development suppresses
+  it (the (a)/(b) test lands on (a)), but weak either way.
+- Overnight n=30 random + evolved (40 gens, 6 workers), developed AND undeveloped from the same evolved
+  population (evolve-once, assay-both via --evolved-ckpt).
+
+**What the overnight showed (the decisive run):**
+- **40-gen trajectory FLAT.** best_test ~0.88–1.00 no trend; fit_mean ~+0.012 gen 0→39. Selection did not
+  climb. Watched it happen instead of inferring it.
+- **Evolved ≈ random** on every basis, both dev conditions. "Selectable once moving" refuted; the earlier
+  0.53 confirmed as overfitting (didn't survive the full n_val sweep).
+- **Development a secondary headwind** — real (undev evolved 0.20 > dev evolved 0.00 at n_val=80/a8) but
+  not the blocker; the flat gradient is flat with dev off too.
+- **`mean_exc` 0.80→0.64** — the one thing that moved monotonically. Selection grips E/I composition, not
+  performance. Filed as a lead (H-Cv2 thread), not a finding.
+
+**Read.** trial_xor is unselectable here. Every lever that keeps P's meaning intact — basis, delay, more
+assays, development on/off — is now falsified. The XOR chance-floor-by-construction (what made D120
+attractive) is exactly what zeroes the gen-0 gradient: arbitrary binding is not climbable from a random
+start. This is the "development can't build arbitrary associations" argument from the same week, now with
+numbers.
+
+**Caveat I'm keeping honest about.** The evolve phase ran at n_assays=2 (probe cost cap), not the arm's
+4. The reliability sweep says 4 wouldn't rescue it (low even at a8), so the full trial_selection_run arm
+at n_assays=4 was NOT run — reliability-first says it would just confirm the null at more cost. But that
+one direct test is formally unrun; the verdict rests on the sweep + the n_assays=2 flat trajectory.
+
+**Process win worth stating plainly.** One ~6 h diagnostic overnight replaced a 40-gen science arm that
+would have failed. That is exactly what the reliability discipline (D115) is for. No developed-phenotype
+performance result was burned to learn the task is unselectable.
+
+**Infrastructure touched today (all committed):** trial_reliability_probe.py gained --workers,
+--evolved-ckpt population reuse, fitness-trajectory logging, tee persistence to runs/reliability/, and
+the margin@T bases; trial_delay_sweep.py added. runlog.py fixed to open logs utf-8 (Windows cp1252 was
+crashing runs on non-ASCII output).
+
+**Open (decide next, a design turn — NOT decided today):** three structural levers remain, all of which
+change what P means or what is selected — (i) the task's XOR chance floor (D120), (ii) the operating
+point (gain/noise, D119, never moved), (iii) reframe selection onto the heritable structure that moved
+(composition/regulation). Deferred deliberately; picking reactively off a null is the move the framework
+guards against.

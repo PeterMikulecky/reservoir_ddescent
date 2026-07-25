@@ -5375,3 +5375,75 @@ work.
 **LESSON.** A task swap should not require editing the GA driver. `run_evolution` is now task-agnostic
 (scoring, reporting, and the pool all pluggable), so the next environment change touches the task and
 the runner, not the loop — the coupling that made this a loose end is removed.
+
+
+### D124 — RELIABILITY-FIRST verdict: the trial_xor fitness is UNSELECTABLE at the current task + operating point. A well-powered overnight diagnostic falsified every tuning-level lever before a single science arm was spent.
+**2026-07-25 · Investigation + finding · scripts/trial_reliability_probe.py, scripts/trial_delay_sweep.py · runs/reliability/ (two n=30 logs) · NOTE: D123 is reserved for the behave_batch retire/update follow-up (per D122); this is D124.**
+
+**WHAT WAS BUILT (the instrument, so the finding is trustworthy).** A proper fitness-reliability probe
+for the trial task (the covariance-era `fitness_reliability_probe.py` is retired with its task). It
+develops each genome once, samples the fitness noise over `draws` independent draws, and decomposes
+single-draw fitness variance into SIGNAL (true between-genome) and NOISE (measurement) two ways,
+cross-checked: an ICC (`signal/(signal+noise/k)`) and the D111-style `V_obs(k)=V_true+V_noise/k`
+regression. It reports both across a two-lever sweep — `n_assays` (average draws) and `n_val` (trials
+per split) — for TWO populations (random, and a lightly-evolved population produced by a real GA) and
+FIVE fitness bases: `trial_score` (1−NMSE), `val_acc`, and a saturating soft-accuracy `margin@T =
+mean tanh(y·ŷ/T)` at T∈{0.25,0.5,1}. Persists via `tee` to `runs/reliability/`; parallel evolve phase
+(`--workers`); evolved population checkpointed (`--evolved-ckpt`) so developed and undeveloped assays
+reuse ONE GA.
+
+**WHY THE MARGIN BASES EXIST (a subtlety that would have wasted the exercise).** The naive "mean signed
+distance to the decision boundary" `mean(y·ŷ)` EQUALS `mean(ŷ²)` for an in-sample least-squares fit,
+which equals `trial_score = 1−NMSE` (balanced XOR, var(y)=1). So an un-squashed margin IS NMSE and
+inherits its floor-compression. The saturating tanh is what recovers accuracy-like separation (small T →
+~hard accuracy, large T → ~NMSE); the sweep finds the regime. Verified: the bases behave exactly so.
+
+**THE OVERNIGHT RUN.** n=30 genomes, draws=8, n_val∈{20,40,80}, n_assays∈{1,2,4,8}, all five bases,
+random + evolved (40 generations, 6 workers), assayed both developed (dev_ms=16000) and undeveloped
+(dev_ms=0) from the same evolved population. ~6 h wall-clock. Both logs committed.
+
+**THE FINDINGS.**
+1. **The 40-generation fitness trajectory is FLAT.** best_test bounces ~0.88–1.00 with no trend;
+   fit_mean ~+0.012 from gen 0 to gen 39. Selection produced NO performance climb — the D115
+   "selection on noise" failure, now observed directly rather than inferred.
+2. **Evolved is NOT more reliable than random.** At the honest n_val=80 (the small-n_val cells are
+   contaminated — see #3), val_acc reliability: random-developed 0.15@a8, evolved-developed 0.00,
+   random-undeveloped 0.15, evolved-undeveloped 0.20. Evolved ≈ random on every basis and both dev
+   conditions. **"Selectable once moving" is REFUTED** (HYPOTHESIS_LOG, prediction S1).
+3. **The earlier n=20 val_acc=0.53 was an OVERFITTING artifact.** Signal appears at n_val=20 and
+   vanishes at n_val=40/80 — backwards for real signal, the fingerprint of the in-sample affine readout
+   chasing noise when trials are few. It did not survive n=30 + the full n_val sweep. (Restates the D115
+   rule: check a number survives more power before calling it a finding.)
+4. **Development is a real but SECONDARY headwind (the (a)/(b) question).** Undeveloped carries slightly
+   more between-genome variance than developed (evolved-undev 0.20 vs evolved-dev 0.00 at n_val=80/a8),
+   so development DOES suppress variance — (a) holds. But even with development OFF, evolved does not beat
+   random and the GA does not climb, so development is NOT the blocker; the flat selection gradient is,
+   and it is flat in BOTH conditions.
+5. **The only monotonic mover was `mean_exc`** (E/I composition), 0.80→0.64 over the 40 gens. Selection
+   grips a heritable variable — cell-identity composition — that is NOT task performance. Logged as an
+   untested lead (see HYPOTHESIS_LOG; reconnects to H-Cv2's "heritable structure ≠ aggregate performance").
+
+**VERDICT.** At the current trial task (D120) and operating point (D119), the trial_xor fitness is
+unselectable. Falsified as routes to a gen-0→gen-40 gradient: fitness basis (all five flat), delay
+(0/50/100 ms all flat, per trial_delay_sweep), more assays (reliability stays low to n_assays=8),
+development on/off (both flat). The structural reason is that the XOR chance-floor-BY-CONSTRUCTION (the
+property that made D120 attractive) makes the gen-0 gradient exactly zero — arbitrary binding is not in
+any statistic a random-start gradient can climb.
+
+**HONEST LIMITATION.** The overnight GA evolve phase ran at `n_assays=2` (the probe's cost cap), not the
+arm's `n_assays=4`. The reliability sweep argues 4 would not rescue it (reliability low even at a8), so
+the definitive `n_assays=4` arm (`trial_selection_run.py`, 40 gens) was not run — the reliability
+evidence predicts it confirms the null at greater cost, which is the point of reliability-first. That one
+direct test remains formally unrun.
+
+**PROCESS NOTE.** This is reliability-first working as intended (D115 lineage): a single ~6 h diagnostic
+replaced a doomed 40-generation science arm and told us it would have failed. No developed-phenotype
+performance result was spent to learn the task is unselectable.
+
+**WHAT IS NOW OPEN (not decided here).** Every remaining lever changes what P means or what is selected:
+(i) the task's XOR chance-floor structure (D120 — the floor and the flat gradient are the same property);
+(ii) the operating point (gain/noise — the one lever never moved, pinned by D119 to reliability, and
+moving it re-opens that whole negotiation); (iii) reframing selection onto the heritable structure that
+DID move (composition/regulation — the H-Cv2 thread). Choosing among these is deferred to a design turn;
+D124 records only that the tuning-level levers are exhausted and the block is structural.
+
