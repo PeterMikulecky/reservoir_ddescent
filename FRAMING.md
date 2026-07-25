@@ -260,3 +260,86 @@ theory (and the ML literature it borrows from) leave fused.
 H0 says the abstract process is substrate-independent and the work is finding the mapping.
 H1 — that spiking genuinely fails to instantiate it — is the fallback, reachable only after H0
 is honestly attempted.
+
+
+# Task design for the double-descent test: the two-failure-mode frame and task-fit criteria
+
+**2026-07-25 · design rationale · assembled after SELECTABILITY S1 (trial_xor refuted as unselectable, HYPOTHESIS_LOG) and two independent outside-view task critiques. This is design VOCABULARY prepared in advance, NOT a task decision — the task fork is gated on the all-neuron go/no-go.**
+
+*(Format inferred — I don't have FRAMING.md in front of me; conform to house style.)*
+
+## The two-failure-mode frame
+
+An error-vs-P (equivalently fitness-vs-P) curve comes back FLAT for two OPPOSITE reasons, and the curve
+alone cannot tell them apart. Both have now been observed or named in this project:
+
+- **TOO HARD — no gen-0 gradient → unselectable.** If random genomes sit at chance BY CONSTRUCTION
+  (arbitrary binding: the trial_xor XOR target has no statistic a random-start gradient can climb),
+  selection never moves and error-vs-P is flat-at-chance for every P. This is the mode the 2026-07-25
+  reliability investigation refuted the current task into (SELECTABILITY S1; DECISIONS D124): a
+  well-powered 40-generation run did not climb, on any readout basis or delay, with or without
+  development.
+- **TOO SIMPLE — P_crit too low → no interpolation peak.** If the task is solved at trivially low P
+  (a 50-neuron reservoir can solve 2-cue fixed-delay maintenance at perhaps P ~ 50–100 synapses), the
+  curve is a smooth first descent that plateaus, with the interpolation peak — if any — sitting BELOW
+  the operational P range. Also flat, opposite cause. (Named by the second outside view; the standing
+  risk for any DMTS-family replacement.)
+
+**Good task design threads BETWEEN these:** hard enough to have a gen-0 gradient AND to push P_crit into
+the operational synapse range (~100–1500 active synapses), yet simple enough to stay selectable. The two
+failure modes are the guard rails; the target is the corridor between them.
+
+## The premise this project must NOT assume
+
+Both the ML double-descent literature and the outside advisors reason as though P_crit EXISTS somewhere
+on the axis and the only question is WHERE it lands (too-low-boring vs mid-range-interesting). For this
+project that is exactly the driving question's "does the network show the signature — a peak — AT ALL?"
+Whether the interpolation phenomenology transfers to EVOLUTIONARY search (selection is like SGD but is
+not SGD — Frank is careful about this) with a DEVELOPMENTAL contraction sitting between dialed-P and
+effective-P (D104's P_dev) is UNTESTED. D104 showed the global-density sweeps came back flat but
+attributed it to varying the wrong P (P_total, which smears the peak); whether varying the RIGHT P
+(P_dev) produces a peak at all, under evolution+development, is the prior, unconfirmed question.
+**Designing a task to POSITION a peak (e.g. "DMTS Plus tuned so P_crit lands mid-range") is premature
+until a peak has been OBSERVED on some selectable task.** Establish that the paradigm produces
+interpolation peaks before dimensioning a task around placing one.
+
+## Task-fit criteria for the machinery we have built (N=50 / develop / assay / GA)
+
+A task is a good challenge for THIS substrate if it:
+1. **Has a gen-0 gradient** — dynamics-native rewards (timing, maintenance, sequence order, rhythm) that a
+   generic E/I reservoir is already partway toward; NOT arbitrary lookup-table associations, which are the
+   trial_xor failure and which unsupervised development provably cannot build.
+2. **Is not trivially solved at low P** — enough effective task dimension that P_crit plausibly lands
+   inside the operational range, so capacity actually binds somewhere you can measure.
+3. **Stays inside the built machinery** — cue→segment→readout trial structure, single-lifetime
+   development, the D095 readout, `trial_evaluate`/`_fitness` scoring, the delay axis already swept. A
+   closed-loop controller (cart-pole, phototaxis) would mean building an environment simulator + motor
+   interface — a much larger commitment than a task swap.
+4. **Exercises the hypotheses' phenomena** — maintenance across a delay (H-D), and representational
+   structure that is FORCED to distribute or cluster (the localization thread / provisional H-E).
+
+## Candidate menu (ranked by machinery cost + directness of hypothesis test), IF a task change is forced
+
+- **DMTS (match / non-match)** — the minimal edit: swaps the arbitrary XOR binding for a NATURAL relation
+  (is the probe the same as the held cue?). Same segments, same delay, same readout; only the target
+  changes. Directly tests "was arbitrary binding the specific killer?" and restores a gen-0 gradient with
+  almost no new machinery.
+- **Variable-delay DMTS** — H-D-native: uniformly sampled delays force a stable line attractor rather than
+  a fixed-delay decay/phase-lock. You already sweep delay; this makes attractor stability across
+  timescales the thing selection must build.
+- **Multi-cue / interference DMTS (K ≥ 4, or a distractor in the delay)** — the localization (H-E)
+  testbed: K distinct cues requiring separated sub-assemblies FORCE the representation to distribute or
+  fail on interference, making "does P drive concentration → distribution" measurable rather than
+  incidental.
+- *(further out, larger machinery commitments: continuous-feature DMTS; closed-loop sensorimotor control.)*
+
+## Discipline
+
+Any task change is a **P-curve-DEFINING decision** — choose it deliberately, before seeing the P-curve,
+and memorialize it (DECISIONS) with its rationale. Do NOT drift into a task because an outside view called
+it "well-suited" or because a null made the current one frustrating; picking reactively off a null is the
+move this discipline exists to prevent. The immediate sequence is unchanged: the all-neuron go/no-go
+decides first — if the current task is selectable through a better (all-neuron) readout, the task question
+may be moot and the first move is the P_dev sweep on the current task to answer the D104-open "does a peak
+exist at all"; only if that is null does this menu become the live fork.
+

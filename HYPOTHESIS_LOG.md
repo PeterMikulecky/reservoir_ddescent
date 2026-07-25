@@ -244,3 +244,44 @@ records that the tuning-level levers are exhausted.
   trajectory flat; evolved not above random on any basis or dev condition. `mean_exc` monotonic drift
   logged as an untested lead. H-A..H-D unrefuted but BLOCKED on selectability. (DECISIONS D124.)
 
+
+## TESTABILITY NOTE (2026-07-25) — a flat error-vs-P curve is TWO-WAYS AMBIGUOUS; testing H-A requires a task that threads between the two failure modes
+
+*Bears on the driving question ("does the network show the signature — a peak — AT ALL?") and H-A ("a peak exists"). This is NOT a new hypothesis and NOT a revision of H-A's claim — it is a constraint on what task/measurement can TEST H-A, forced by the 2026-07-25 selectability null (SELECTABILITY S1, REFUTED) and two independent outside-view task critiques. Full design rationale and task-fit criteria live in FRAMING.md; recorded here because it changes how a flat result must be READ.*
+
+**The frame.** An error-vs-P (fitness-vs-P) curve returns FLAT for two OPPOSITE reasons, indistinguishable
+from the curve alone:
+- **TOO HARD → unselectable.** Random genomes at chance BY CONSTRUCTION (arbitrary binding, trial_xor):
+  selection never moves; flat-at-chance for all P. The mode SELECTABILITY S1 refuted the current task into.
+- **TOO SIMPLE → no interpolation peak.** Solved at trivially low P (2-cue fixed-delay maintenance at
+  P ~ 50–100 on a 50-neuron reservoir): smooth first descent, peak (if any) below the operational P range.
+
+**Consequence for H-A.** A flat curve DOES NOT refute H-A ("a peak exists") — it is ambiguous between
+"no peak" and "peak exists but off-range (too simple)" and "task unselectable (too hard)." Testing H-A
+therefore requires a task chosen to thread BETWEEN the two failure modes: a gen-0 gradient (rules out
+too-hard) AND P_crit pushed into the operational synapse range ~[100,1500] (rules out too-simple). This is
+a task-design precondition on the H-A test, not a change to the H-A prediction.
+
+**The premise H-A/H-B must not smuggle in.** The ML literature and the outside advisors reason as if P_crit
+EXISTS on the axis and only its LOCATION is in question. For this project that IS the driving question's
+"at all?": whether the interpolation phenomenology transfers to EVOLUTIONARY search (not SGD — Frank is
+explicit) with a DEVELOPMENTAL contraction between dialed-P and effective-P (D104's P_dev), which is
+UNCONFIRMED. D104 showed the global-density sweeps flat but attributed it to varying the wrong P; whether
+varying P_dev yields a peak AT ALL, under evolution+development, is prior and unobserved. Positioning a
+peak (e.g. dimensioning a "DMTS Plus" so P_crit lands mid-range) is premature until a peak is observed on
+some selectable task.
+
+**Status.** Design constraint on the H-A test; H-A (v1) remains PRE-REGISTERED and unrevised as a claim.
+Records that (i) a flat result is not a refutation of H-A, and (ii) the "does P_dev peak at all under
+evolution+development" question (the driving question's "at all?", D104-open) is logically prior to any
+task-dimensioning aimed at placing a peak.
+
+### Revision history addition
+- **2026-07-25** — TESTABILITY NOTE added (bears on driving question + H-A, revises neither): flat
+  error-vs-P is two-ways ambiguous — TOO HARD (no gen-0 gradient, unselectable; SELECTABILITY S1) vs
+  TOO SIMPLE (P_crit below the operational range, no interpolation peak). Testing H-A requires a task that
+  threads between them. The premise that P_crit EXISTS on-axis (assumed by the ML analogy and both outside
+  views) is the driving question's own "at all?" and is UNCONFIRMED for evolution+development (D104-open);
+  it must not be assumed while dimensioning a task to position a peak. Full criteria + candidate task menu
+  in FRAMING.md. Prompted by the SELECTABILITY S1 refutation and two outside-view task critiques.
+
