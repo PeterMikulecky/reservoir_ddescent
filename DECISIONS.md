@@ -5448,3 +5448,88 @@ moving it re-opens that whole negotiation); (iii) reframing selection onto the h
 DID move (composition/regulation — the H-Cv2 thread). Choosing among these is deferred to a design turn;
 D124 records only that the tuning-level levers are exhausted and the block is structural.
 
+
+### D125 — THE NULL IS NOT A READOUT ARTIFACT: no neuron anywhere carries the task. The all-neuron go/no-go closes the last alternative to D124 and rules out the all-neuron-aggregate arm.
+**2026-07-25 · Investigation + finding · scripts/trial_allneuron_probe.py · runs/allneuron/20260725-122053_trial_allneuron_probe.log · settles the fork opened at the end of D124**
+
+**THE QUESTION.** D124 declared `trial_xor` unselectable, but every number in it was measured through
+ONE arbitrary output cell (`R[:,0]`, the D095 designated readout). That left a live alternative: the
+network might compute the binding somewhere the fitness never looked, in which case "unselectable" was
+an artifact of the readout, not a fact about the substrate — and an all-neuron-aggregate fitness would
+be the fix. PJM raised it, and correctly rejected the first framing of the test: the evolved population
+was selected UNDER single-neuron pressure, so distributed capability had no path to express there, and
+its flatness would prove little. What survives that objection is the RANDOM population, which has no
+selection history at all and is therefore a clean gen-0 measurement. The probe is a DECISION GATE — it
+decides which structural arm to spend, and settles no arm by itself.
+
+**THE INSTRUMENT.** Each of 50 neurons scored independently with its own D095-weak affine readout (50
+weak reads, deliberately NOT one strong pooled decoder, which would reopen the RC degeneracy D095
+exists to close). Reports `single(n0)` / `mean(all)` / `best(all)` ICC reliability, plus the two
+distributions PJM asked for: ACROSS neurons (percentiles of per-neuron score) and AMONG networks
+(per-genome count of neurons above chance + 2·noise). n=30, draws=8, n_val=80, random and evolved,
+developed and undeveloped; the evolved population reused from the D124 checkpoint (no re-evolve).
+
+**THE RESULT — NO-GO, and by a stronger route than the aggregates.**
+1. **The across-neuron distribution is the decisive number.** Pooled over all 1,500 (genome, neuron)
+   pairs, `val_acc` runs median 0.530 / 90th 0.550 / 99th 0.569 / **max 0.589** against chance at
+   0.500; `trial_score` runs median 0.011 / max 0.039–0.044 against 0. The threshold (median + 2·
+   per-neuron noise sd) sits at 0.606 while the maximum observed is 0.589 — **every one of the 1,500
+   per-neuron scores lies within 2 noise-sd of the median.** The entire across-neuron spread is
+   consistent with pure measurement noise about a common chance value. The signal is not concentrated
+   at neuron 0 and not distributed across the other 49; it is nowhere.
+2. **Among networks, there is nothing to grip.** `#neurons above threshold` is median 0 / max 0 in six
+   of eight cells, and max 1 with sd 0.18 in the two evolved `trial_score` cells (≈1 genome in 30 with
+   a single neuron crossing — a coin flip at that threshold). No between-genome variation in HOW MANY
+   neurons carry the task, because the count is zero for essentially every genome. An all-neuron
+   fitness would present gen-0 selection with a population uniform at zero.
+3. **`mean(all)` is WORSE than `single(n0)`, and that is the cleanest evidence in the run.** Averaging
+   50 per-neuron scores cut `noise_sd` from ~0.035 to ~0.005 — a factor of ~6, close to the
+   √50 ≈ 7.1 expected from averaging independent quantities (slightly under, consistent with mild
+   shared network-level noise, which is correct for 50 neurons in one network on one noise draw). Noise
+   averaged down exactly as predicted. Had ANY common genome-level task signal existed across those
+   neurons, averaging would have preserved it while shedding noise and reliability would have RISEN.
+   Instead `signal_sd` went to 0.0000. The per-neuron scores are independent noise with no shared
+   genome-level component.
+4. **`best(all)` is pure lottery**, exactly as the probe's pre-registered read warned: `signal_sd`
+   0.0000 and reliability 0.000 in all eight cells despite respectable-looking maxima — a different
+   lucky neuron each draw, no between-genome consistency.
+5. **Development remains a mild headwind**, unchanged from D124's (a): undeveloped exceeds developed on
+   `signal_sd` in both random bases (`val_acc` 0.0100 vs 0.0064; `trial_score` 0.0019 vs 0.0015). Same
+   direction, same small magnitude. Nothing new, nothing contradicted.
+
+**⚠ ONE NUMBER DELIBERATELY NOT PROMOTED.** Random/undeveloped `val_acc` `single(n0)` reads reliability
+0.409, `signal_sd` 0.0100 — the highest in the table. It is not a finding. It is inconsistent (the same
+cell developed is 0.206; both evolved cells are 0.000, and real signal at neuron 0 should persist across
+conditions), the ICC has wide error bars at G=30/K=8, and 0.0100 is one percentage point of
+between-genome spread on a scale where chance is 0.5. This is the same shape as the n=20 val_acc=0.53
+that D124 had to withdraw. The D115 rule applies: compute the power before calling a number a finding.
+
+**WHAT THIS LICENSES, AND WHAT IT DOES NOT.** It does NOT prove that all-neuron SELECTION would stay
+flat over 40 generations — PJM's objection stands, and no reanalysis can answer that. It proves there is
+**no gen-0 toehold at any neuron**, which was the gate's actual question, and it proves it on the random
+population where no selection history can contaminate it. An arm that must climb from zero gradient at
+every available readout does not justify an overnight. **All-neuron-aggregate selection is ruled out as
+the next arm.**
+
+**EFFECT ON D124.** It hardens. The readout-artifact hypothesis was the strongest surviving challenge to
+"unselectable," it was tested against the network's own data, and it failed. D124 moves from *unselectable
+as measured* to *unselectable, and not because of how it was measured*.
+
+**WHAT IT SHARPENS ABOUT THE FORK.** The failure is not that the computation sits somewhere the fitness
+never looked — the substrate never performs the binding at all. `trial_xor`'s target is arbitrary BY
+CONSTRUCTION (that is precisely what made its floor chance-proof and made D120 attractive), and arbitrary
+means orthogonal to every dynamics-native property a generic E/I reservoir produces. Unsupervised
+development is target-blind, so nothing in `develop()` can build it; selection cannot select for what does
+not vary. That is a TASK-DESIGN diagnosis, and it points at FRAMING's pre-registered task-fit criterion 1
+(dynamics-native reward, not an arbitrary lookup table) rather than at the plasticity rule.
+
+**PROCESS NOTE.** The probe cost minutes and was written with its read pre-registered in the docstring
+before any data existed — including the `best(all)` lottery caution, which fired exactly as anticipated.
+Two structural arms were in the same cost class; this gate eliminated one of them without spending either.
+
+**LESSON.** "Flat at the readout" and "flat in the network" are different claims, and only the second
+licenses a task-design conclusion. The distributional reads (across neurons, among networks) did the
+work here — the aggregate reliabilities alone would have said "no-go" without saying WHY, and it is the
+why that names the next move.
+
+
