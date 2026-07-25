@@ -58,6 +58,7 @@ import numpy as np, warnings
 warnings.filterwarnings("ignore")
 
 from ddescent import study_config as SC
+from ddescent.runlog import tee
 from ddescent.evonet import EvoNet, random_genome
 from ddescent.evolve import _affine_nmse, run_evolution
 from ddescent.trial_eval import trial_evaluate
@@ -189,7 +190,15 @@ def main():
     if args.dev_ms is not None:
         cfg.dev_ms = args.dev_ms
     assays = [a for a in args.assays if a <= args.draws]
+    hdr = ("reliability: n=%d draws=%d nval=%s assays=%s dev_ms=%s delay=%d pops=%s"
+           % (args.n, args.draws, args.nval, assays,
+              int(cfg.dev_ms) if cfg.dev_ms else 0, task.meta["delay_segments"],
+              ",".join(args.populations)))
+    with tee("trial_reliability_probe", log_dir="runs/reliability", header=hdr):
+        _report(args, task, net_cfg, cfg, assays, nval_max)
 
+
+def _report(args, task, net_cfg, cfg, assays, nval_max):
     print("TRIAL-TASK FITNESS RELIABILITY (proper)")
     print("n=%d genomes, draws=%d, n_val sweep=%s (built %d), n_assays sweep=%s, dev_ms=%s, delay=%d"
           % (args.n, args.draws, args.nval, nval_max, assays,
