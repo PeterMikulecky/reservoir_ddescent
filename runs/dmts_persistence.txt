@@ -1,0 +1,23 @@
+== CHECK 1  D121 regression (zero-plasticity develop == no development) ==
+   max|delta| state at noise=0 : 0.000e+00  -> PASS
+   per-stage cue decode (undeveloped, zeroDev), real noise:
+      cue     undev=1.00  dev=1.00
+      delay   undev=1.00  dev=1.00
+      probe   undev=0.62  dev=0.54
+      read    undev=0.64  dev=0.64
+
+== CHECK 2  delay persistence: UNDEVELOPED vs DEVELOPED ==
+   selection acts on DEVELOPED nets -- the developed row is the one that matters
+   delay        |  undeveloped        |  developed          |  cue@delay change
+   -------------+---------------------+---------------------+------------------
+   1 ( 50 ms)   |  cue=1.00 delay=1.00 |  cue=0.92 delay=1.00 |  +0.00
+   2 (100 ms)   |  cue=1.00 delay=1.00 |  cue=1.00 delay=0.92 |  -0.08
+   4 (200 ms)   |  cue=1.00 delay=0.54 |  cue=1.00 delay=0.46 |  -0.08
+   8 (400 ms)   |  cue=1.00 delay=0.85 |  cue=1.00 delay=0.71 |  -0.14
+   READ: largest drop = -0.14 -- a large negative drop means DEVELOPMENT, not the target,
+         is the blocker, and the D126 task swap is necessary but not sufficient.
+
+== CHECK 3  degenerate-strategy controls (must sit at chance 0.50) ==
+   normal    val_acc=0.525
+   omit_cue  val_acc=0.538
+   scramble  val_acc=0.500
