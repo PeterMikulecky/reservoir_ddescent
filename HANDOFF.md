@@ -15,14 +15,28 @@ the last two or three `### D` entries in `DECISIONS.md`. That is sufficient to r
 
 ---
 
-## §0. MAINTENANCE — how to keep this cheap to update
+## §0. MAINTENANCE — when to update, and why the trigger is loss-based
 
-Only **§1 and §2 are volatile.** They are short by design: update them at every memorialization (i.e.
-whenever a `### D` entry is written), which makes updating a two-minute edit rather than a rewrite.
-§3–§6 change rarely — when a standing rule is earned, a lever is closed, or an artifact is identified.
+Only **§1 and §2 are volatile**, and they are short by design so a refresh is a two-minute edit.
+§3–§6 change rarely — when a standing rule is earned, a branch closes, or an artifact is identified.
 
-**The rule: a DECISIONS entry and a §1/§2 refresh land in the same commit.** If §1 disagrees with the
-newest `### D` entry, the D entry wins and this file is stale — say so rather than trusting it.
+**The trigger is not a cadence. Update after a significant move or development whose loss to a frozen
+chat would meaningfully hamper resumption.** (PJM, 2026-07-25.) The reasoning: once something is in
+`DECISIONS.md` and committed, a freeze does not lose it. What a freeze destroys is the state that exists
+ONLY in the conversation — a conclusion reached but not yet memorialized, and the next move, which is
+obvious in context and invisible to a fresh reader. So the question is always **"is this chat carrying
+something the repo isn't, and would re-deriving it cost real work?"**
+
+**Fires when:** the NEXT ACTION changes (a step completes, a blocker appears); a result lands that
+changes how the state should be read; a branch closes or a lever is ruled out; a decision redirects the
+work; or something was discovered in passing that would be expensive to rediscover.
+
+**Does not fire for:** a memorialization whose content §1 already reflects; routine code edits; any
+entry after which the next action is unchanged.
+
+If §1 disagrees with the newest `### D` entry, the D entry wins and this file is stale — say so rather
+than trusting it. And when in doubt, refresh: the cost is two minutes, the cost of being wrong is a
+re-derivation.
 
 ---
 
