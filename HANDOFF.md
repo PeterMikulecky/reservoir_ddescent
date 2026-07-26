@@ -40,7 +40,7 @@ re-derivation.
 
 ---
 
-## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-25 (D127 + persistence-contrast reorder)*
+## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-25 (D127 amended; localization BUILT)*
 
 The trial task is built, correct, and **unselectable**. The `cue→delay→probe` XOR task (D120) works
 exactly as designed — chance floor by construction, controls that remove what they claim, clock-aligned
@@ -89,10 +89,15 @@ penalizes a degenerate rate regime).
 
 - **Network-level controls on DMTS not yet run** — `omit_cue`, `scramble`, leakage, on a developed net.
   Gates the reliability probe; nothing about the network has been measured on DMTS.
-- **The D127 localization measurement is DECIDED but NOT BUILT.** All-neuron scoring, PR + its
-  scrambled-target null, on the `report_fn` hook and post-arm in the runner. Must ship before sweep one —
-  retrofitting means re-running arms. Touches `trial_eval.py` and `trial_selection_run.py`; end-to-end
-  verification needs Brian2, so the real check is a short run on PJM's machine.
+- **D127 localization is BUILT but UNRUN end-to-end.** `trial_eval.localization_report` on the
+  `report_fn` hook, `trial_selection_run.post_arm_localization` over the final population. Metric logic
+  verified against synthetic states of known concentration; the network path has never executed (no
+  Brian2 in the authoring sandbox). Eyeball the `loc_*` keys on the first real arm before any sweep
+  depends on them. NOTE: D127's pre-registered PR formula was WRONG (referenced theoretical chance, not
+  the measured null) and was corrected before any data — see the D127 amendment.
+- **`trial_allneuron_probe.py` carries a mislabel**: its `single(n0)` column reads state column 0, an
+  INPUT neuron, not the fitness cell (outputs are the LAST d units). D125's conclusion is unaffected —
+  it rests on the all-neuron distribution — but fix or retire the script before running it again.
 - **Parallel mean-selected arm** (D127): committed design, NOT part of sweep one. Trigger is fixed —
   run it iff sweep one produces a peak meeting D126's criterion.
 - **⚠ UNTESTED LEAD, recorded because it exists nowhere else: DEVELOPMENT MAY DESTROY THE HELD CUE.** A
