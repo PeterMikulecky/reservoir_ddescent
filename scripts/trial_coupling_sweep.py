@@ -69,7 +69,13 @@ from ddescent.measures import participation_ratio
 from ddescent.trial_eval import localization_report
 
 from delay_persistence_probe import decode, decode_null, _expand, stage_rows
-from trial_operating_point_sweep import pr_with_null, loc_best_null, MARGIN_SD
+from trial_operating_point_sweep import pr_with_null, loc_best_null
+
+# Defined here rather than imported, so this script does not depend on which revision of
+# trial_operating_point_sweep is checked out. A metric counts as clearing only if it exceeds its null by
+# more than this many across-genome sds (D129: a bare `>` flagged loc_best at 0.555 against a null of
+# 0.554 -- a comparison of two noisy estimates is not a test).
+MARGIN_SD = 2.0
 
 DEFAULT_SCALES = [0.25, 0.5, 1.0, 2.0, 4.0, 8.0]
 QUAD_K = 10          # MATCHED across every condition, including the 10-neuron input slice

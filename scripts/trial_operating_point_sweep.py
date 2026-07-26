@@ -28,6 +28,23 @@ signature is neurons that DO NOT VARY with the stimulus. `frac_lowvar` counts un
 sd is under 1% of the population median -- saturated and silent units both land there, and both mean
 the same thing: that unit carries no stimulus information.
 
+ESTABLISHED BY THE FIRST PASS (gains 0.5-50, density 0.3, 2026-07-26):
+  - The conjunction is CREATED BY GAIN. quad does not clear its null at gain <= 2 (0.48-0.49) and rises
+    monotonically to 0.995 at gain 50. D128's "the conjunction is only second-order" was a fact about
+    GAIN 10, not about the substrate.
+  - PR IS STRONGLY MOVABLE and moves INVERSELY: PR/null 0.88 at gain 2 falls to 0.20 at gain 50.
+    Expressivity rises as effective dimensionality COLLAPSES -- the opposite direction to the expansion
+    that encoding saturation would predict, and a reason to doubt that PR-of-trial-variation answers the
+    question D127 pre-registered it for. PR=5.94 at gain 10 reproduces D075's ~7: that number was
+    measuring the REGIME, not the network.
+  - SATURATION IS NOT THE MECHANISM, at least not as dead units: frac_lowvar ~0.000 at every gain
+    including 50, while mean rate climbs 0.30 -> 0.60. Nothing goes flat.
+  - loc_best NEVER leaves its noise floor (0.551-0.559 vs nulls 0.552-0.563 and a measured pure-noise
+    floor of 0.563). No single neuron carries the relation at any gain tested.
+  - linear clears only at gain 50, marginally (0.559 vs 0.538), with quad already at ceiling. BOTH
+    CURVES ARE STILL RISING AT THE EDGE OF THE RANGE, which is why the default grid now starts at 10
+    and extends to 800.
+
 PRE-REGISTERED READ (fixed before running):
   PR rises above its null as gain falls        -> effective dimensionality is regime-set. The operating
                                                   point is the lever P was not, and a P sweep should be
@@ -57,7 +74,19 @@ from ddescent.trial_eval import localization_report
 
 from delay_persistence_probe import decode, decode_null, _expand, stage_rows
 
-DEFAULT_GAINS = [0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 50.0]
+DEFAULT_GAINS = [10.0, 20.0, 50.0, 100.0, 200.0, 400.0, 800.0]
+
+# A metric counts as clearing only if it exceeds its null by MORE than this many across-genome sds.
+# Rationale: the first version of this script used a bare `metric > null` and duly flagged loc_best as
+# clearing at 0.555 against a null of 0.554 -- a margin of 0.001 on a quantity whose across-genome sd
+# is an order of magnitude larger, with the null itself estimated from 6 draws. A comparison of two
+# noisy estimates is not a test.
+MARGIN_SD = 2.0
+
+
+def _mark(row, key, null_key) -> str:
+    sd = max(row.get(key + "_sd", 0.0), 1e-6)
+    return "*" if (row[key] - row[null_key]) > MARGIN_SD * sd else " "
 
 
 def pr_with_null(X, n_rep: int = 20, seed: int = 0):
@@ -164,15 +193,15 @@ def main():
         print("  ------+------------------+----------+---------+-----------------+---------------")
         for r in rows:
             print("  %-5g | %.3f (%.3f)%s | %.3f    |  %4.1f   | %.3f (%.3f)%s | %.3f (%.3f)%s"
-                  % (r["gain"], r["loc_best"], r["loc_best_null"],
-                     "*" if r["loc_best"] > r["loc_best_null"] else " ",
+                  % (r["gain"], r["loc_best"], r["loc_best_null"], _mark(r, "loc_best", "loc_best_null"),
                      r["loc_mean"], r["loc_n_above"],
-                     r["lin"], r["lin_null"], "*" if r["lin"] > r["lin_null"] else " ",
-                     r["quad"], r["quad_null"], "*" if r["quad"] > r["quad_null"] else " "))
-        print("  (* = clears its own null. loc_best is the one that decides whether a GA has a gradient.)")
+                     r["lin"], r["lin_null"], _mark(r, "lin", "lin_null"),
+                     r["quad"], r["quad_null"], _mark(r, "quad", "quad_null")))
+        print("  (* = exceeds its null by more than MARGIN_SD across-genome sds. A bare '>' is NOT a")
+        print("   test: an earlier version flagged loc_best at 0.555 vs a null of 0.554.)")
 
         pr_ratio = [r["pr"] / (r["pr_null"] + 1e-12) for r in rows]
-        lb_ok = [r for r in rows if r["loc_best"] > r["loc_best_null"]]
+        lb_ok = [r for r in rows if _mark(r, "loc_best", "loc_best_null") == "*"]
         print("\nREAD:")
         print("  PR/null ranges %.2f to %.2f across the gain range." % (min(pr_ratio), max(pr_ratio)))
         if max(pr_ratio) - min(pr_ratio) > 0.15:
