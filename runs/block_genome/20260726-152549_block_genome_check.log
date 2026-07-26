@@ -1,0 +1,48 @@
+# analysis log: block_genome_check
+# timestamp: 2026-07-26T15:25:49.480853
+# command: scripts/block_genome_check.py
+# D131 steps 1/2/4 -- invariants, known positive, ablation repeated
+#====================================================================
+
+[logging to runs/block_genome\20260726-152549_block_genome_check.log]
+N=100 density=0.30 xi_seed=7 genomes=4 trials=400 tau_slow=100 ms
+
+== STEP 1  INVARIANTS ==
+   k=30 inputs per neuron -> P_syn must be N*k = 3000 at every K
+    K  | P_gene | P_syn | fixed | in-deg | dead | dale | cluster ratio: GEO-mean [min-max] over 30
+     2 |    104 |  3000 | True  | 30-30  |  0   |  0   | 1.16 [0.38-3.30] 
+     4 |    116 |  3000 | True  | 30-30  |  0   |  0   | 0.87 [0.42-1.56] 
+     8 |    164 |  3000 | True  | 30-30  |  0   |  0   | 0.98 [0.37-1.63] 
+    12 |    244 |  3000 | True  | 30-30  |  0   |  0   | 1.07 [0.60-1.74] 
+    20 |    500 |  3000 | True  | 30-30  |  0   |  0   | 0.98 [0.74-1.33] 
+    30 |   1000 |  3000 | True  | 30-30  |  0   |  0   | 1.02 [0.72-1.59] 
+   GEOMETRIC-mean ratio must sit near 1 (E2: the PRIOR must not be systematically clustered).
+   The SPREAD is expected and wanted -- it is the heritable variation selection acts on.
+   Low K has the widest spread, because B has only K^2 entries and top-k amplifies any bias.
+
+== STEPS 2 and 4  CARRY: does connectivity hold the cue past tau_slow? ==
+   delay=1 (50 ms)  <- within passive decay, control only:
+     clustered/intact delay=1 done
+     clustered/ablated delay=1 done
+     random/intact delay=1 done
+     random/ablated delay=1 done
+   delay=4 (200 ms)  <- PAST tau_slow, this is the test:
+     clustered/intact delay=4 done
+     clustered/ablated delay=4 done
+     random/intact delay=4 done
+     random/ablated delay=4 done
+
+  cue decodability at the DELAY stage, mean (sd) vs null
+  delay      | genome    | intact          | ablated         | intact - ablated
+  -----------+-----------+-----------------+-----------------+-----------------
+  1 ( 50ms) | clustered | 0.931 (0.015) * | 0.999 (0.001) * |     -0.069
+  1 ( 50ms) | random    | 0.950 (0.032) * | 1.000 (0.000) * |     -0.050
+  4 (200ms) | clustered | 0.507 (0.025)   | 0.529 (0.025)   |     -0.022
+  4 (200ms) | random    | 0.519 (0.028)   | 0.534 (0.019) * |     -0.015
+  (* = clears its own shuffled-label null)
+
+READ:
+  At delay=4 (200 ms, past tau_slow):
+    clustered intact 0.507 | clustered ablated 0.529 | random intact 0.519 | null 0.550
+  CLUSTERED IS NOT BETTER THAN RANDOM. The block genome does not produce carry --
+  implementation bug, or clusters are insufficient at this N. Fix before anything else.
