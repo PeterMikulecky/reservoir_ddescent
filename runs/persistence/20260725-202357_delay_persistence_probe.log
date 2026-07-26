@@ -1,0 +1,98 @@
+# analysis log: delay_persistence_probe
+# timestamp: 2026-07-25T20:23:57.576459
+# command: scripts/delay_persistence_probe.py
+# D121 regression + delay persistence (undeveloped vs DEVELOPED) + controls
+#====================================================================
+
+[logging to runs/persistence\20260725-202357_delay_persistence_probe.log]
+== CHECK 1  D121 regression (zero-plasticity develop == no development) ==
+   max|delta| state at noise=0 : 0.000e+00  -> PASS
+   per-stage cue decode (undeveloped, zeroDev), real noise:
+      cue     undev=0.95  dev=0.95
+      delay   undev=1.00  dev=1.00
+      probe   undev=0.50  dev=0.47
+      read    undev=0.52  dev=0.55
+
+== CHECK 2  delay persistence: UNDEVELOPED vs DEVELOPED ==
+   selection acts on DEVELOPED nets -- the developed row is the one that matters
+   delay        |  undeveloped        |  developed          |  cue@delay change
+   -------------+---------------------+---------------------+------------------
+   1 ( 50 ms)   |  cue=0.95 delay=1.00 |  cue=0.88 delay=1.00 |  +0.00
+   2 (100 ms)   |  cue=0.92 delay=0.95 |  cue=0.95 delay=0.83 |  -0.12
+   4 (200 ms)   |  cue=1.00 delay=0.35 |  cue=0.98 delay=0.40 |  +0.05
+   8 (400 ms)   |  cue=0.98 delay=0.70 |  cue=0.97 delay=0.67 |  -0.03
+   READ: largest drop = -0.12 -- a large negative drop means DEVELOPMENT, not the target,
+         is the blocker, and the D126 task swap is necessary but not sufficient.
+
+== CHECK 2b  RELATION (match/non-match) decodability -- the DMTS invariant ==
+    undeveloped genome 0 done
+    undeveloped genome 1 done
+    undeveloped genome 2 done
+    developed genome 0 done
+    developed genome 1 done
+    developed genome 2 done
+   n_trials=400, n_genomes=3, n_features=50  (n >> p, so the null is tight and a negative means
+    ABSENT rather than merely undetectable). Compare to the NULL, never to 0.5.
+   condition    | stage  | decode (sd) | null_p95 | clears?
+   -------------+--------+-------------+----------+--------
+   undeveloped  | cue    | 0.478 (0.014)|  0.551   | no
+   undeveloped  | delay  | 0.470 (0.037)|  0.544   | no
+   undeveloped  | probe  | 0.479 (0.058)|  0.539   | no
+   undeveloped  | read   | 0.493 (0.040)|  0.535   | no
+   developed    | cue    | 0.469 (0.030)|  0.553   | no
+   developed    | delay  | 0.487 (0.032)|  0.534   | no
+   developed    | probe  | 0.462 (0.021)|  0.538   | no
+   developed    | read   | 0.480 (0.024)|  0.543   | no
+   READ: clears at READ -> information present, selection's job is ROUTING (D127).
+         at null at READ -> information absent; selection has nothing to route.
+
+== CHECK 2c  TRACE SURVIVAL: does the held cue survive the PROBE DRIVE? ==
+    trace/undeveloped genome 0 done
+    trace/undeveloped genome 1 done
+    trace/undeveloped genome 2 done
+    trace/developed genome 0 done
+    trace/developed genome 1 done
+    trace/developed genome 2 done
+   cue identity on NON-MATCH trials only (n=200), where the probe cannot reveal the cue.
+   A drop from delay -> probe means the probe drive SWAMPS the trace, which would explain
+   a CHECK 2b null mechanically. Diagnostic only -- the levers are outside D126's rung axis.
+   condition    | stage  | decode | null_p95 | clears?
+   -------------+--------+--------+----------+--------
+   undeveloped  | cue    | 0.988  |  0.558   | YES
+   undeveloped  | delay  | 0.998  |  0.557   | YES
+   undeveloped  | probe  | 0.978  |  0.556   | YES
+   undeveloped  | read   | 0.998  |  0.572   | YES
+   developed    | cue    | 0.983  |  0.563   | YES
+   developed    | delay  | 0.997  |  0.575   | YES
+   developed    | probe  | 0.973  |  0.559   | YES
+   developed    | read   | 0.997  |  0.581   | YES
+
+== CHECK 2d  IS THE CONJUNCTION THERE AT ALL? (readouts of increasing power, READ stage) ==
+    nonlin/undeveloped genome 0 done
+    nonlin/undeveloped genome 1 done
+    nonlin/undeveloped genome 2 done
+    nonlin/developed genome 0 done
+    nonlin/developed genome 1 done
+    nonlin/developed genome 2 done
+   cue is held at ~1.00 (2c) and the relation is at chance under a LINEAR readout (2b).
+   equality of two categoricals is XOR-type: separable linear codes cannot yield it linearly.
+   condition    | readout   | decode (sd) | null_p95 | clears?
+   -------------+-----------+-------------+----------+--------
+   undeveloped  | linear    | 0.493 (0.040)|  0.535   | no
+   undeveloped  | square    | 0.524 (0.020)|  0.548   | no
+   undeveloped  | quad      | 0.524 (0.018)|  0.535   | no
+   undeveloped  | randtanh  | 0.502 (0.042)|  0.539   | no
+   undeveloped  | activity  | 0.527 (0.039)|  0.545   | no
+   developed    | linear    | 0.480 (0.024)|  0.543   | no
+   developed    | square    | 0.488 (0.030)|  0.544   | no
+   developed    | quad      | 0.523 (0.038)|  0.545   | no
+   developed    | randtanh  | 0.506 (0.015)|  0.532   | no
+   developed    | activity  | 0.525 (0.051)|  0.543   | no
+   READ: nonlinear clears, linear does not -> conjunction EXISTS but is not linearly
+         available; the blocker is the operating-point regime (D119), not the target.
+         nothing clears -> trace and probe never interact; deeper dynamics statement.
+
+== CHECK 3  degenerate-strategy controls (must sit at chance 0.50) ==
+   normal    val_acc=0.525
+   omit_cue  val_acc=0.538
+   scramble  val_acc=0.500
