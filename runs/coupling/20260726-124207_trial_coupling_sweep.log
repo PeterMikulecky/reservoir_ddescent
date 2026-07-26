@@ -1,0 +1,81 @@
+# analysis log: trial_coupling_sweep
+# timestamp: 2026-07-26T12:42:07.272469
+# command: scripts/trial_coupling_sweep.py
+# recurrent coupling strength x {intact, ablated} -- does recurrence contribute?
+#====================================================================
+
+[logging to runs/coupling\20260726-124207_trial_coupling_sweep.log]
+density=0.300 (P=735)  input_gain=10.0 (FIXED)  genomes=6  trials=400
+w0 multipliers on w0_for_density(0.300)=0.6000; 1.0 IS the project's current setting.
+All quad uses k=10 for EVERY condition, so comparisons are matched.
+delays=[1, 4, 8] segments ([50, 200, 400] ms); tau_slow=100 ms, so delay>=3 exceeds passive decay.
+Genomes are PAIRED across arms (same seed), so differences are per-genome.
+
+   delay=1 w0x1     intact   done   [139s elapsed, ~2362s left]
+   delay=1 w0x1     ablated  done   [254s elapsed, ~2035s left]
+   delay=1 w0x2     intact   done   [409s elapsed, ~2047s left]
+   delay=1 w0x2     ablated  done   [520s elapsed, ~1820s left]
+   delay=1 w0x4     intact   done   [682s elapsed, ~1773s left]
+   delay=1 w0x4     ablated  done   [795s elapsed, ~1590s left]
+   delay=4 w0x1     intact   done   [1065s elapsed, ~1674s left]
+   delay=4 w0x1     ablated  done   [1264s elapsed, ~1580s left]
+   delay=4 w0x2     intact   done   [1537s elapsed, ~1537s left]
+   delay=4 w0x2     ablated  done   [1741s elapsed, ~1393s left]
+   delay=4 w0x4     intact   done   [2014s elapsed, ~1282s left]
+   delay=4 w0x4     ablated  done   [2205s elapsed, ~1103s left]
+   delay=8 w0x1     intact   done   [2674s elapsed, ~1029s left]
+   delay=8 w0x1     ablated  done   [2976s elapsed, ~850s left]
+   delay=8 w0x2     intact   done   [3384s elapsed, ~677s left]
+   delay=8 w0x2     ablated  done   [3686s elapsed, ~461s left]
+   delay=8 w0x4     intact   done   [4106s elapsed, ~242s left]
+   delay=8 w0x4     ablated  done   [4406s elapsed, ~0s left]
+
+  INTACT vs ABLATED  (ablated = recurrent connectivity zeroed, tau_slow retained)
+  delay  w0x   arm      | cue@delay |  quad  | quad_in | loc_best (floor) | PR/null | lowvar
+  -------+-----+--------+-----------+--------+---------+------------------+---------+-------
+  1( 50ms) 1    intact  |   1.000   | 0.776  |  0.818  | 0.557 (0.557)  |   0.41  | 0.000
+  1( 50ms) 1    ablated |   1.000   | 0.786  |  0.840  | 0.562 (0.560)  |   0.38  | 0.000
+  1( 50ms) 2    intact  |   0.999   | 0.774  |  0.816  | 0.554 (0.558)  |   0.46  | 0.007
+  1( 50ms) 2    ablated |   1.000   | 0.779  |  0.825  | 0.555 (0.558)  |   0.39  | 0.000
+  1( 50ms) 4    intact  |   0.998   | 0.719  |  0.756  | 0.552 (0.557)  |   0.51  | 0.030
+  1( 50ms) 4    ablated |   1.000   | 0.788  |  0.820  | 0.558 (0.559)  |   0.40  | 0.000
+  4(200ms) 1    intact  |   0.497   | 0.497  |  0.507  | 0.558 (0.558)  |   0.42  | 0.000
+  4(200ms) 1    ablated |   0.503   | 0.500  |  0.491  | 0.563 (0.563)  |   0.39  | 0.000
+  4(200ms) 2    intact  |   0.523   | 0.504  |  0.470  | 0.554 (0.557)  |   0.46  | 0.000
+  4(200ms) 2    ablated |   0.483   | 0.498  |  0.517  | 0.554 (0.560)  |   0.38  | 0.000
+  4(200ms) 4    intact  |   0.519   | 0.520  |  0.483  | 0.556 (0.559)  |   0.49  | 0.010
+  4(200ms) 4    ablated |   0.493   | 0.512  |  0.496  | 0.562 (0.561)  |   0.40  | 0.000
+  8(400ms) 1    intact  |   0.493   | 0.501  |  0.481  | 0.551 (0.554)  |   0.43  | 0.000
+  8(400ms) 1    ablated |   0.499   | 0.485  |  0.498  | 0.556 (0.557)  |   0.40  | 0.000
+  8(400ms) 2    intact  |   0.503   | 0.502  |  0.490  | 0.562 (0.555)  |   0.51  | 0.000
+  8(400ms) 2    ablated |   0.487   | 0.494  |  0.495  | 0.558 (0.558)  |   0.39  | 0.000
+  8(400ms) 4    intact  |   0.498   | 0.506  |  0.501  | 0.551 (0.555)  |   0.61  | 0.023
+  8(400ms) 4    ablated |   0.489   | 0.503  |  0.479  | 0.557 (0.558)  |   0.40  | 0.000
+
+  RECURRENCE CONTRIBUTION -- PAIRED per-genome difference, mean (sd) t
+  A contribution counts only if |t| > 4.0, set from the MEASURED null: at n=6 the null
+  |t| reaches 3.86 at p99 and ~2.77 as the expected max over this grid's 27 cells. The
+  first pass used a hardcoded 0.05 difference with no variance reference, and called
+  +0.047 on n=3 a contribution; a threshold of 2.0 would also sit below the noise.
+  delay  w0x  |     d cue@delay      |        d quad        |      d loc_best
+  -------+----+----------------------+----------------------+---------------------
+  1( 50ms) 1   | +0.000 (0.000) t=+0.00  | -0.010 (0.048) t=-0.54  | -0.005 (0.017) t=-0.72 
+  1( 50ms) 2   | -0.001 (0.002) t=-1.46  | -0.005 (0.050) t=-0.24  | -0.001 (0.015) t=-0.21 
+  1( 50ms) 4   | -0.002 (0.004) t=-1.28  | -0.069 (0.047) t=-3.59  | -0.006 (0.010) t=-1.50 
+  4(200ms) 1   | -0.006 (0.023) t=-0.61  | -0.003 (0.042) t=-0.20  | -0.005 (0.009) t=-1.31 
+  4(200ms) 2   | +0.040 (0.023) t=+4.15* | +0.007 (0.030) t=+0.54  | -0.000 (0.013) t=-0.00 
+  4(200ms) 4   | +0.026 (0.037) t=+1.74  | +0.008 (0.037) t=+0.52  | -0.006 (0.024) t=-0.59 
+  8(400ms) 1   | -0.006 (0.029) t=-0.53  | +0.017 (0.044) t=+0.92  | -0.005 (0.008) t=-1.52 
+  8(400ms) 2   | +0.016 (0.037) t=+1.04  | +0.009 (0.040) t=+0.54  | +0.003 (0.010) t=+0.79 
+  8(400ms) 4   | +0.010 (0.035) t=+0.67  | +0.003 (0.055) t=+0.15  | -0.006 (0.007) t=-2.13 
+  (* = |t| exceeds the threshold, i.e. recurrence measurably contributes)
+
+READ:
+  delay=1 ( 50 ms): ABLATED holds the cue at 1.000-1.000  <- passive decay suffices; recurrence CANNOT be required here
+  delay=4 (200 ms): ABLATED holds the cue at 0.483-0.503  <- passive decay FAILS; recurrence could be required
+  delay=8 (400 ms): ABLATED holds the cue at 0.487-0.499  <- passive decay FAILS; recurrence could be required
+  Positive contribution at: delay=4 w0x2 (cue_delay +0.040)
+  Recurrence is load-bearing there; re-run the density sweep in that regime before
+  concluding anything about P.
+
+  Fixed density and input_gain; random undeveloped genomes; no selection, no development.
