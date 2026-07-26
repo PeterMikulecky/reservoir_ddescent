@@ -1,0 +1,51 @@
+# analysis log: trial_operating_point_sweep
+# timestamp: 2026-07-26T10:57:55.604400
+# command: scripts/trial_operating_point_sweep.py
+# operating point (input_gain) at FIXED density -- random undeveloped genomes
+#====================================================================
+
+[logging to runs/operating_point\20260726-105755_trial_operating_point_sweep.log]
+density=0.300 (P=735, FIXED)  genomes=4  trials=400  gains=[0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 50.0]
+Only the regime varies. P is constant, so nothing here is a P effect.
+
+   gain=0.5   done   [103s elapsed, ~616s left]
+   gain=1     done   [246s elapsed, ~615s left]
+   gain=2     done   [390s elapsed, ~520s left]
+   gain=5     done   [535s elapsed, ~401s left]
+   gain=10    done   [683s elapsed, ~273s left]
+   gain=20    done   [807s elapsed, ~134s left]
+   gain=50    done   [920s elapsed, ~0s left]
+
+  SUBSTRATE STATE
+  gain  | mean rate | frac_lowvar |  PR (null)  PR/null
+  ------+-----------+-------------+--------------------
+  0.5   |    0.2985 |       0.000 | 25.81 (30.37)  0.85
+  1     |    0.2833 |       0.000 | 26.28 (30.21)  0.87
+  2     |    0.2906 |       0.000 | 25.94 (29.62)  0.88
+  5     |    0.2954 |       0.000 | 19.54 (26.09)  0.75
+  10    |    0.3678 |       0.005 |  5.94 (15.36)  0.39
+  20    |    0.4297 |       0.000 |  2.22 ( 9.07)  0.24
+  50    |    0.6047 |       0.005 |  1.31 ( 6.63)  0.20
+  (frac_lowvar = units not varying with stimulus: saturated or silent, both uninformative)
+
+  RELATION ACCESSIBILITY
+  gain  | loc_best (null)  | loc_mean | n_above |  linear (null)  |  quad (null)
+  ------+------------------+----------+---------+-----------------+---------------
+  0.5   | 0.556 (0.559)  | 0.514    |   1.5   | 0.473 (0.547)  | 0.482 (0.549) 
+  1     | 0.557 (0.563)  | 0.515    |   2.0   | 0.499 (0.544)  | 0.495 (0.552) 
+  2     | 0.556 (0.558)  | 0.514    |   1.8   | 0.490 (0.549)  | 0.489 (0.545) 
+  5     | 0.559 (0.562)  | 0.513    |   1.8   | 0.466 (0.539)  | 0.614 (0.550)*
+  10    | 0.555 (0.554)* | 0.516    |   3.2   | 0.511 (0.540)  | 0.740 (0.548)*
+  20    | 0.557 (0.554)* | 0.512    |   1.8   | 0.506 (0.548)  | 0.904 (0.548)*
+  50    | 0.551 (0.552)  | 0.513    |   1.8   | 0.559 (0.538)* | 0.995 (0.553)*
+  (* = clears its own null. loc_best is the one that decides whether a GA has a gradient.)
+
+READ:
+  PR/null ranges 0.20 to 0.88 across the gain range.
+  PR IS MOVABLE by the regime. Effective dimensionality is a property of the operating
+  point, not of P -- and the density sweep should be re-run at the favourable regime
+  before any conclusion about P is drawn.
+  loc_best LEAVES its noise floor at gain=10.0, 20.0: a capacity-bounded readout can see the
+  relation there, and that regime is where a GA becomes possible.
+
+  Fixed density, random undeveloped genomes, no selection and no development.
