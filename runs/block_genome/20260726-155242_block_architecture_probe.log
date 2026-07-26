@@ -1,0 +1,37 @@
+# analysis log: block_architecture_probe
+# timestamp: 2026-07-26T15:52:42.390220
+# command: scripts/block_architecture_probe.py
+# is there ANY block architecture where recurrence matters?
+#====================================================================
+
+[logging to runs/block_genome\20260726-155242_block_architecture_probe.log]
+N=100  K_exc=4 + 1 inhibitory block  density=0.30  delay=1 (50 ms)  nmda_frac=0.50
+Sweeping WITHIN-cluster excitatory strength. Sign is a BLOCK property here, so the
+inhibitory pool is SHARED (the D092 ceiling architecture) rather than split across
+clusters as in the first check -- where local inhibition cancelled each cluster.
+
+   within=0.5   done  (rate 0.059, silent 16%)
+   within=1     done  (rate 0.059, silent 15%)
+   within=2     done  (rate 0.061, silent 11%)
+   within=4     done  (rate 2.845, silent 21%)
+   within=8     done  (rate 3.712, silent 58%)
+   within=16    done  (rate 3.809, silent 60%)
+
+  within | rate  | silent | CUE: intact/abl (d)      | RELATION quad: intact/abl (d)
+  -------+-------+--------+--------------------------+------------------------------
+  0.5    | 0.059 |    16% | 0.965 / 1.000  (-0.035) | 0.759 / 0.757  (+0.002)
+  1      | 0.059 |    15% | 0.963 / 1.000  (-0.037) | 0.757 / 0.757  (-0.000)
+  2      | 0.061 |    11% | 0.965 / 1.000  (-0.035) | 0.772 / 0.757  (+0.016)
+  4      | 2.845 |    21% | 0.854 / 1.000  (-0.146) | 0.528 / 0.757  (-0.228)
+  8      | 3.712 |    58% | 0.928 / 1.000  (-0.072) | 0.567 / 0.757  (-0.189)
+  16     | 3.809 |    60% | 0.931 / 1.000  (-0.069) | 0.583 / 0.757  (-0.173)
+  (* = intact exceeds ablated on the RELATION by >0.05 AND clears its own null)
+
+READ:
+  best RELATION gain from recurrence: +0.016 at within=2 (clears null)
+  best CUE-CARRY gain from recurrence: -0.035 at within=0.5
+  unstable / saturating at within >= 4 (rate blow-up or silent units)
+  NO ARCHITECTURE AND NO LOOP GAIN MAKES RECURRENCE MATTER. E1 is REFUTED: the
+  encoding was never the constraint, because the target is not in the space at all.
+  STOP (D131 step 4). Return to the neuron model and the substrate's capacity for
+  persistent activity -- with one fewer explanation available.
