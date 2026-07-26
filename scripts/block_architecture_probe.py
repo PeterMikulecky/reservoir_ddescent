@@ -54,7 +54,13 @@ from ddescent.block_genome import BlockGenes, make_xi, to_genome
 
 from delay_persistence_probe import decode, decode_null, _expand, stage_rows
 
-DEFAULT_STRENGTHS = [0.5, 1.0, 2.0, 4.0, 8.0, 16.0]
+DEFAULT_STRENGTHS = [2.0, 2.5, 3.0, 3.5, 4.0]
+# The first pass swept 0.5-16 and found recurrence INERT at <=2 (d quad +0.002 to +0.016) and
+# DESTRUCTIVE at >=4 (rate jumps 47x to 2.845, 21-60% of units go silent, relation collapses 0.757 ->
+# 0.528 while the cue survives at 0.854 -- winner-take-all locking the state so the probe can no longer
+# perturb it). The attractors are too STABLE, not too weak. If a useful regime exists it must be strong
+# enough to sustain and weak enough to remain perturbable, which is exactly the 2-4 gap the first grid
+# jumped over. This default resolves that gap.
 
 
 def ei_block_genes(nc, K_exc: int, within: float, between: float = 0.5,
@@ -115,47 +121,58 @@ def main():
     ap.add_argument("--trials", type=int, default=400)
     ap.add_argument("--density", type=float, default=0.3)
     ap.add_argument("--delay", type=int, default=1)
-    ap.add_argument("--xi-seed", type=int, default=7)
+    ap.add_argument("--xi-seeds", type=int, nargs="+", default=[7],
+                    help="D131 requires >=3 independent xi draws for any headline result, "
+                         "and a STOP CONDITION is the most headline result there is.")
     a = ap.parse_args()
 
     warnings.filterwarnings("ignore")
     with tee("block_architecture_probe", log_dir="runs/block_genome",
              header="is there ANY block architecture where recurrence matters?"):
         nc = SC.make_net_cfg(N=a.n)
-        xi = make_xi(nc.N, seed=a.xi_seed)
         task = SC.make_trial_task(n_trials=a.trials, n_val=a.trials, n_test=a.trials,
                                   delay_segments=a.delay)
         rel = (task.cue_test == task.probe_test).astype(int)
         cue = task.cue_test
         print("N=%d  K_exc=%d + 1 inhibitory block  density=%.2f  delay=%d (%d ms)  nmda_frac=%.2f"
               % (nc.N, a.k_exc, a.density, a.delay, a.delay * 50, nc.nmda_frac))
+        print("xi draws: %s  (D131: a headline result must hold across all of them, or it does not stand)"
+              % a.xi_seeds)
         print("Sweeping WITHIN-cluster excitatory strength. Sign is a BLOCK property here, so the")
         print("inhibitory pool is SHARED (the D092 ceiling architecture) rather than split across")
         print("clusters as in the first check -- where local inhibition cancelled each cluster.\n")
 
         rows = []
-        for w in a.strengths:
-            genes = ei_block_genes(nc, a.k_exc, within=w, seed=1)
-            i = measure(nc, a.density, xi, genes, task, rel, cue, a.genomes, ablate=False)
-            b = measure(nc, a.density, xi, genes, task, rel, cue, a.genomes, ablate=True)
-            rows.append((w, i, b))
-            print("   within=%-5g done  (rate %.3f, silent %.0f%%)" % (w, i["rate"], 100 * i["silent"]),
-                  flush=True)
+        for xs in a.xi_seeds:
+            xi = make_xi(nc.N, seed=xs)
+            for w in a.strengths:
+                genes = ei_block_genes(nc, a.k_exc, within=w, seed=1)
+                i = measure(nc, a.density, xi, genes, task, rel, cue, a.genomes, ablate=False)
+                b = measure(nc, a.density, xi, genes, task, rel, cue, a.genomes, ablate=True)
+                rows.append((xs, w, i, b))
+                print("   xi=%d within=%-5g done  (rate %.3f, silent %.0f%%)"
+                      % (xs, w, i["rate"], 100 * i["silent"]), flush=True)
 
-        print("\n  within | rate  | silent | CUE: intact/abl (d)      | RELATION quad: intact/abl (d)")
-        print("  -------+-------+--------+--------------------------+------------------------------")
-        for w, i, b in rows:
-            print("  %-6g | %.3f | %5.0f%% | %.3f / %.3f  (%+.3f) | %.3f / %.3f  (%+.3f)%s"
-                  % (w, i["rate"], 100 * i["silent"], i["cue"], b["cue"], i["cue"] - b["cue"],
+        print("\n  xi  within | rate  | silent | CUE: intact/abl (d)      | RELATION quad: intact/abl (d)")
+        print("  ----+-------+-------+--------+--------------------------+------------------------------")
+        for xs, w, i, b in rows:
+            print("  %3d %-6g | %.3f | %5.0f%% | %.3f / %.3f  (%+.3f) | %.3f / %.3f  (%+.3f)%s"
+                  % (xs, w, i["rate"], 100 * i["silent"], i["cue"], b["cue"], i["cue"] - b["cue"],
                      i["quad"], b["quad"], i["quad"] - b["quad"],
                      "  *" if (i["quad"] - b["quad"]) > 0.05 and i["quad"] > i["quad_null"] else ""))
         print("  (* = intact exceeds ablated on the RELATION by >0.05 AND clears its own null)")
 
-        dq = [(w, i["quad"] - b["quad"], i["quad"] > i["quad_null"]) for w, i, b in rows]
-        dc = [(w, i["cue"] - b["cue"]) for w, i, b in rows]
+        print("\n  REPLICATION ACROSS xi -- does any (strength, xi) cell show a relation gain?")
+        for w in a.strengths:
+            g = [i["quad"] - b["quad"] for xs, w2, i, b in rows if w2 == w]
+            print("     within=%-6g d quad across xi: %s   mean %+.3f"
+                  % (w, " ".join("%+.3f" % x for x in g), float(np.mean(g))))
+
+        dq = [(w, i["quad"] - b["quad"], i["quad"] > i["quad_null"]) for _, w, i, b in rows]
+        dc = [(w, i["cue"] - b["cue"]) for _, w, i, b in rows]
         best_q = max(dq, key=lambda t: t[1])
         best_c = max(dc, key=lambda t: t[1])
-        runaway = [w for w, i, b in rows if i["rate"] > 3 * rows[0][1]["rate"] or i["silent"] > 0.2]
+        runaway = [w for _, w, i, b in rows if i["rate"] > 3 * rows[0][2]["rate"] or i["silent"] > 0.2]
         print("\nREAD:")
         print("  best RELATION gain from recurrence: %+.3f at within=%g%s"
               % (best_q[1], best_q[0], " (clears null)" if best_q[2] else " (does NOT clear its null)"))
@@ -169,7 +186,9 @@ def main():
             print("  Recurrence supplies MEMORY but not computation. Useful for the delay axis (D126")
             print("  rung 1), not for the task as it stands.")
         else:
-            print("  NO ARCHITECTURE AND NO LOOP GAIN MAKES RECURRENCE MATTER. E1 is REFUTED: the")
+            print("  NO ARCHITECTURE AND NO LOOP GAIN MAKES RECURRENCE MATTER, across %d xi draws."
+                  % len(a.xi_seeds))
+            print("  E1 is REFUTED: the")
             print("  encoding was never the constraint, because the target is not in the space at all.")
             print("  STOP (D131 step 4). Return to the neuron model and the substrate's capacity for")
             print("  persistent activity -- with one fewer explanation available.")
