@@ -303,17 +303,41 @@ def trace_survival(seed: int = 1, n_trials: int = 400, n_genomes: int = 3) -> di
 # CHECK 2d - IS THE CONJUNCTION THERE AT ALL? linear vs nonlinear readouts of the relation
 # ==================================================================================================
 def _expand(X, kind: str, seed: int = 0):
-    """Feature maps of increasing power, applied to the SAME states."""
+    """Feature maps of increasing power, applied to the SAME states.
+
+    WHY THE FIRST VERSION OF THIS WAS BROKEN (2026-07-25). The relation, in the pattern basis, is
+    essentially sum_i (proj_i)^2 -- a MATCH puts double amplitude in one pattern direction, a NON-MATCH
+    unit amplitude in two. But proj_i = w_i . x, so proj_i^2 = sum_jk w_ij w_ik x_j x_k: expressing it
+    requires CROSS TERMS x_j x_k in the neuron basis. The original maps could not supply them --
+    "square" gave only x_j^2, "activity" used ||x||^2 over all 50 neurons (drowning two signal
+    directions among 48 noise ones), and "randtanh" scaled W by 1/sqrt(N) against z-scored inputs, so
+    pre-activations had unit variance and tanh never left its linear regime. All three failed the
+    POSITIVE CONTROL (separable codes carrying a recoverable XOR-type relation) and that failure was
+    misread as confirmation. Any map added here must clear the positive control before it is trusted.
+    """
     X = np.asarray(X, float)
+    Xz = (X - X.mean(0)) / (X.std(0) + 1e-8)
     if kind == "linear":
         return X
-    if kind == "square":                      # separable nonlinearity: no cross terms
+    if kind == "square":                      # separable nonlinearity: NO cross terms (kept for contrast)
         return np.hstack([X, X * X])
-    if kind == "randtanh":                    # random nonlinear expansion (ELM-style): HAS cross terms
+    if kind == "quad":                        # PCA -> ALL pairwise products: full 2nd-order, incl. cross
+        # PCA on CENTERED, NOT z-scored data. Z-scoring equalises every dimension's variance and so
+        # destroys the ordering PCA relies on: with signal concentrated in a few dimensions the leading
+        # PCs then miss it entirely (caught by positive control 1, which failed under z-scoring while
+        # the distributed-signal control passed).
+        k = 14
+        Xc = X - X.mean(0)
+        U, S, Vt = np.linalg.svd(Xc, full_matrices=False)
+        Z = Xc @ Vt[:k].T
+        Z = Z / (Z.std(0) + 1e-8)             # scale AFTER the projection, so products are conditioned
+        iu = np.triu_indices(k)
+        return np.hstack([Z, (Z[:, :, None] * Z[:, None, :])[:, iu[0], iu[1]]])
+    if kind == "randtanh":                    # random nonlinear expansion, GAIN SET TO SATURATE
         rng = np.random.default_rng(seed)
-        W = rng.normal(size=(X.shape[1], 200)) / np.sqrt(X.shape[1])
-        return np.tanh((X - X.mean(0)) / (X.std(0) + 1e-8) @ W)
-    if kind == "activity":                    # 1-D: does TOTAL drive differ on match vs non-match?
+        W = rng.normal(size=(X.shape[1], 300)) / np.sqrt(X.shape[1])
+        return np.tanh(4.0 * (Xz @ W))        # gain 4: pre-activations leave the linear regime
+    if kind == "activity":                    # 1-D scalars: does TOTAL drive differ match vs non-match?
         return np.stack([X.mean(1), np.linalg.norm(X, axis=1)], 1)
     raise ValueError(kind)
 
@@ -346,7 +370,7 @@ def relation_nonlinear(seed: int = 1, n_trials: int = 400, n_genomes: int = 3,
     cfg = SC.make_trial_evolve_cfg()
     task = SC.make_trial_task(n_trials=n_trials, n_val=n_trials, n_test=n_trials)
     rel = (task.cue_test == task.probe_test).astype(int)
-    kinds = ("linear", "square", "randtanh", "activity")
+    kinds = ("linear", "square", "quad", "randtanh", "activity")
     out = {}
     for cond in ("undeveloped", "developed"):
         acc = {k: [] for k in kinds}; nul = {k: [] for k in kinds}
@@ -475,7 +499,7 @@ if __name__ == "__main__":
     print("   condition    | readout   | decode (sd) | null_p95 | clears?")
     print("   -------------+-----------+-------------+----------+--------")
     for cond in ("undeveloped", "developed"):
-        for k in ("linear", "square", "randtanh", "activity"):
+        for k in ("linear", "square", "quad", "randtanh", "activity"):
             v = rn[cond][k]
             print("   %-12s | %-9s | %.3f (%.3f)|  %.3f   | %s"
                   % (cond, k, v["decode"], v["sd"], v["null_p95"], "YES" if v["clears"] else "no"))
