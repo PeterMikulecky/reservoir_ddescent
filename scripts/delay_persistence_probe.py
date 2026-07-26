@@ -300,6 +300,78 @@ def trace_survival(seed: int = 1, n_trials: int = 400, n_genomes: int = 3) -> di
 
 
 # ==================================================================================================
+# CHECK 2d - IS THE CONJUNCTION THERE AT ALL? linear vs nonlinear readouts of the relation
+# ==================================================================================================
+def _expand(X, kind: str, seed: int = 0):
+    """Feature maps of increasing power, applied to the SAME states."""
+    X = np.asarray(X, float)
+    if kind == "linear":
+        return X
+    if kind == "square":                      # separable nonlinearity: no cross terms
+        return np.hstack([X, X * X])
+    if kind == "randtanh":                    # random nonlinear expansion (ELM-style): HAS cross terms
+        rng = np.random.default_rng(seed)
+        W = rng.normal(size=(X.shape[1], 200)) / np.sqrt(X.shape[1])
+        return np.tanh((X - X.mean(0)) / (X.std(0) + 1e-8) @ W)
+    if kind == "activity":                    # 1-D: does TOTAL drive differ on match vs non-match?
+        return np.stack([X.mean(1), np.linalg.norm(X, axis=1)], 1)
+    raise ValueError(kind)
+
+
+def relation_nonlinear(seed: int = 1, n_trials: int = 400, n_genomes: int = 3,
+                       stage: str = "read") -> dict:
+    """Decode MATCH/NON-MATCH from the read-stage state under readouts of increasing power.
+
+    THE QUESTION THIS SETTLES. CHECK 2c shows the cue is held essentially perfectly at read and CHECK 2b
+    shows the RELATION is at chance there. Both codes are present; their conjunction is not linearly
+    available. Equality of two categorical variables is an XOR-type function, so a representation that
+    encodes cue and probe in separable linear subspaces CANNOT yield "cue == probe" to a linear readout,
+    no matter how clean each code is. That is a statement about the substrate's regime, not the target,
+    and it would have applied to the retired trial_xor identically.
+
+    READ:
+      linear at null, NONLINEAR clears  -> the conjunction EXISTS in the state but is not linearly
+        available. The blocker is the readout/operating-point regime (D119), and the D095 weak affine
+        fitness can never see it. Selection is not the problem; linear separability is.
+      NOTHING clears, including randtanh -> the trace and the probe drive never interact at all; the
+        network holds two independent codes and computes nothing between them. A deeper dynamics
+        statement, and the operating point is where it would have to be addressed.
+      activity clears -> match trials simply drive MORE total activity; the relation is available as a
+        scalar and even a weak readout could find it, which would contradict 2b and warrant a re-check.
+
+    Diagnostic only. The levers implied (gain, threshold proximity, recurrent strength) are operating-
+    point parameters requiring their own DECISIONS entry -- not a reactive turn off a null.
+    """
+    nc = SC.make_net_cfg()
+    cfg = SC.make_trial_evolve_cfg()
+    task = SC.make_trial_task(n_trials=n_trials, n_val=n_trials, n_test=n_trials)
+    rel = (task.cue_test == task.probe_test).astype(int)
+    kinds = ("linear", "square", "randtanh", "activity")
+    out = {}
+    for cond in ("undeveloped", "developed"):
+        acc = {k: [] for k in kinds}; nul = {k: [] for k in kinds}
+        for i in range(n_genomes):
+            g = random_genome(nc, cfg.density, w0=cfg.w0, ei_split=cfg.ei_split, seed=seed + i)
+            net = EvoNet(g, nc)
+            if cond == "developed":
+                net.develop(task.E_train, eta=cfg.dev_eta, dev_ms=cfg.dev_ms,
+                            warmup_ms=SC.WARMUP_MS, n_checkpoints=4, seed=seed + i)
+            B = net.behave(task.E_test, noise_seed=2 + i)
+            X0 = B["state"][stage_rows(task, "test", stage)]
+            for k in kinds:
+                Z = _expand(X0, k, seed=seed + i)
+                acc[k].append(decode(Z, rel))
+                nul[k].append(decode_null(Z, rel, n_rep=30)[1])
+            print("    nonlin/%s genome %d done" % (cond, i), flush=True)
+        out[cond] = {k: dict(decode=round(float(np.mean(acc[k])), 3),
+                             sd=round(float(np.std(acc[k], ddof=1)), 3) if n_genomes > 1 else 0.0,
+                             null_p95=round(float(np.mean(nul[k])), 3),
+                             clears=bool(np.mean(acc[k]) > np.mean(nul[k]))) for k in kinds}
+    out["_meta"] = dict(stage=stage, n_trials=n_trials, n_genomes=n_genomes)
+    return out
+
+
+# ==================================================================================================
 # CHECK 3 - DEGENERATE-STRATEGY CONTROLS: omit_cue and scramble must sit at chance
 # ==================================================================================================
 def degenerate_checks(seed: int = 7) -> dict:
@@ -331,6 +403,7 @@ def run_all() -> dict:
                 persistence=persistence_contrast(),
                 relation=relation_persistence(),
                 trace=trace_survival(),
+                nonlinear=relation_nonlinear(),
                 controls=degenerate_checks())
 
 
@@ -394,6 +467,21 @@ if __name__ == "__main__":
             v = ts[cond][st]
             print("   %-12s | %-6s | %.3f  |  %.3f   | %s"
                   % (cond, st, v["decode"], v["null_p95"], "YES" if v["clears"] else "no"))
+
+    print("\n== CHECK 2d  IS THE CONJUNCTION THERE AT ALL? (readouts of increasing power, READ stage) ==")
+    rn = relation_nonlinear(); rm = rn.pop("_meta")
+    print("   cue is held at ~1.00 (2c) and the relation is at chance under a LINEAR readout (2b).")
+    print("   equality of two categoricals is XOR-type: separable linear codes cannot yield it linearly.")
+    print("   condition    | readout   | decode (sd) | null_p95 | clears?")
+    print("   -------------+-----------+-------------+----------+--------")
+    for cond in ("undeveloped", "developed"):
+        for k in ("linear", "square", "randtanh", "activity"):
+            v = rn[cond][k]
+            print("   %-12s | %-9s | %.3f (%.3f)|  %.3f   | %s"
+                  % (cond, k, v["decode"], v["sd"], v["null_p95"], "YES" if v["clears"] else "no"))
+    print("   READ: nonlinear clears, linear does not -> conjunction EXISTS but is not linearly")
+    print("         available; the blocker is the operating-point regime (D119), not the target.")
+    print("         nothing clears -> trace and probe never interact; deeper dynamics statement.")
 
     print("\n== CHECK 3  degenerate-strategy controls (must sit at chance 0.50) ==")
     for k, v in degenerate_checks().items():
