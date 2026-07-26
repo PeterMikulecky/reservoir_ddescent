@@ -6129,5 +6129,85 @@ D115's rule moved one level up: before spending selection on a task, verify that
 discriminating quantity is visible to the fitness at all.
 
 
+### D130 — RECURRENCE CONTRIBUTES NOTHING. Ablating all recurrent connectivity changes nothing where the task is solvable, and where passive decay fails the intact network fails identically. The substrate's entire memory is single-neuron `tau_slow` leak. P counts synapses that do not participate.
+**2026-07-26 · Finding · scripts/trial_coupling_sweep.py · runs/coupling/20260726-124207 · 3 delays x 3 couplings x {intact, ablated}, 6 PAIRED genomes, random and undeveloped**
+
+**THE DESIGN.** Two arms on the SAME genomes (paired by seed): `intact`, and `ablated` with
+`genome.mag` zeroed — no recurrent connectivity, every neuron keeping its intrinsic `tau_slow`
+dynamics. That isolates the contribution of CONNECTIVITY specifically rather than of temporal dynamics
+generally. Crossed with recurrent coupling (w0 x 1, 2, 4 on the standing `w0_for_density` value, so 1.0
+IS the project's current setting) and with delay (1, 4, 8 segments = 50, 200, 400 ms against
+`tau_slow` = 100 ms). The delay axis is what makes the question answerable: at 50 ms passive decay
+suffices, so recurrence CANNOT be required there, and only delays past `tau_slow` can reveal a
+requirement. All `quad` uses k=10 across every condition, so intact / ablated / input-only comparisons
+are matched.
+
+**THE RESULT — two regimes, and recurrence is absent from both.**
+
+| delay | arm | cue@delay | quad | quad_in | loc_best (floor) |
+|---|---|---|---|---|---|
+| 50 ms | intact (w0x1) | 1.000 | 0.776 | 0.818 | 0.557 (0.557) |
+| 50 ms | **ablated** | **1.000** | **0.786** | **0.840** | 0.562 (0.560) |
+| 200 ms | intact | 0.497 | 0.497 | 0.507 | 0.558 (0.558) |
+| 200 ms | ablated | 0.503 | 0.500 | 0.491 | 0.563 (0.563) |
+| 400 ms | intact | 0.493 | 0.501 | 0.481 | 0.551 (0.554) |
+| 400 ms | ablated | 0.499 | 0.485 | 0.498 | 0.556 (0.557) |
+
+1. **Where the task is solvable (50 ms), ablation changes nothing.** The disconnected network holds the
+   cue at 1.000 and reads `quad` at 0.786-0.840 — equal to or ABOVE intact. The only `quad` difference
+   reaching significance anywhere is NEGATIVE (-0.069, t=-3.59, at 50 ms w0x4): recurrence actively
+   degrading the representation.
+2. **Where passive decay fails (200, 400 ms), the intact network fails identically.** `cue@delay`,
+   `quad` and `quad_in` all sit at ~0.50 in BOTH arms at every coupling. Full recurrent connectivity at
+   1x, 2x and 4x the standing value holds nothing past `tau_slow`.
+3. **There is therefore no delay at which the recurrent network does something the isolated neurons do
+   not.** That is the definition of contributing nothing. The substrate's entire working memory is
+   single-neuron leak with a 100 ms constant.
+4. **`loc_best` sits at its measured noise floor in all 18 conditions**, as in every sweep since D129.
+
+**⚠ THE ONE STARRED CELL IS AN ARTIFACT, AND IT EXPOSES A GAP IN THE TEST ITSELF.** The script flagged
+delay=4 / w0x2 / `d cue@delay` = +0.040, t=+4.15. That is a difference between **0.523 and 0.483 — both
+at chance**. Cue decodability at 200 ms is ~0.50 in every condition. A consistent difference between two
+chance-level values is a small bias in noise, not a contribution. The paired t tests whether a
+difference is reliably non-zero and NEVER CHECKS whether either arm is above its own null. **New
+standing rule: a difference test is meaningful only when at least one arm clears its own null first.**
+
+**PROCESS FAILURE WORTH RECORDING — the read rule has now been wrong in three consecutive scripts.**
+(i) D129 sweep 2: a bare `metric > null`, which flagged 0.555 against 0.554; (ii) the first coupling
+pass: a hardcoded 0.05 difference threshold with no variance reference, which called +0.047 on n=3 a
+contribution; (iii) this pass: a paired t with a threshold set from the measured null but no
+chance-level precondition. Each fix addressed the previous failure without asking what else the rule
+needed. The pattern is the same one that produced four versions of the D128 instrument: **fixing the
+error that just fired rather than re-deriving what the test must establish.**
+
+**WHAT THIS SETTLES.**
+- **D129's flat density sweep is now a NECESSITY, not a null.** P counts recurrent synapses; those
+  synapses do nothing at any coupling from 0.25x to 8x; therefore P cannot matter. The parameter axis
+  this study is built on is disconnected from the computation being measured.
+- **The DMTS task is only solvable where no memory is required.** At 50 ms the cue survives by leak
+  alone; past `tau_slow` nothing survives. The task has been running in the one regime where the
+  network's absence of memory does not show.
+- **D129's `quad_input` >= full-state `quad` observation is confirmed** on a matched comparison
+  (k=10 throughout): 0.840 ablated vs 0.776 intact at 50 ms w0x1. The relation lives in the ten driven
+  input neurons and the recurrent network adds nothing to it.
+
+**HONEST LIMITATIONS.**
+- **RANDOM UNDEVELOPED genomes.** Selection or development could in principle build persistent activity
+  that random connectivity lacks — PJM's standing objection (D125), and it applies here with full force.
+  This measures what recurrence does BY DEFAULT, not what it could be made to do.
+- `tau_slow` = 100 ms is itself a parameter. A longer constant would extend the passive window, but that
+  would extend LEAK, not create network memory, and would not change the ablation result.
+- n=6 paired genomes, one density (0.3), one `input_gain` (10.0), one N (50), probe stage only.
+- Couplings tested span 0.25x-8x across two runs. No claim is made outside that range; at w0x8 (first
+  pass) recurrence became DISRUPTIVE (`frac_lowvar` 0.160, `quad` 0.664), so the range from inert to
+  destructive contains no useful regime.
+
+**LESSON.** An ablation control answers in one run what parameter sweeps cannot answer at all. Three
+sweeps and roughly two hours of compute on random genomes established that the study's independent
+variable is disconnected from its dependent variable — a conclusion that a GA arm would have reached, if
+ever, after weeks. **When a study's mechanism is in doubt, ablate the mechanism before sweeping its
+parameter.**
+
+
 
 

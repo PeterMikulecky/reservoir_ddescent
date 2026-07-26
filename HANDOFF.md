@@ -40,29 +40,33 @@ re-derivation.
 
 ---
 
-## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-26 (D129 -- two sweeps, no selection)*
+## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-26 (D130 -- recurrence contributes nothing)*
 
-**The substrate works; nothing the fitness can read ever varies.** The cue is held at ~1.00 through
-every stage (D128). The relation is present in the state at second order, and D129 showed it is CREATED
-BY GAIN -- `quad` is at its null for input_gain <= 2 and reaches 0.995 at gain 50, so D128's
-"second-order only" described gain 10, not the substrate. But across a **45x range of P and a 100x range
-of gain, no capacity-bounded readout has ever seen the relation**: `loc_best` sits at 0.549-0.561 against
-a measured pure-noise floor of 0.563. And `PR_state` is set by the REGIME, not by P -- flat at 5.5-8.0
-across all densities, but moving 0.88 -> 0.20 (PR/null) across gain. **On the parameter axis this study
-is built around, the representational quantity encoding saturation would act through does not move.**
-D128's timing finding stands unconditionally: the relation is present at probe and decayed by read,
-which is where `response_rows()` samples.
+**The recurrent network has never contributed anything, and that explains everything else.** D130
+ablated all recurrent connectivity (`genome.mag` zeroed, `tau_slow` retained) against intact networks on
+paired genomes, across couplings 1x-4x and delays 50/200/400 ms. Where the task is solvable (50 ms) the
+ABLATED network holds the cue at **1.000** and reads `quad` at 0.786-0.840 -- equal to or ABOVE intact;
+the only significant `quad` difference anywhere is NEGATIVE, recurrence degrading it. Where passive decay
+fails (200, 400 ms) the intact network fails identically, everything at ~0.50 in both arms at every
+coupling. **There is no delay at which recurrence does something the isolated neurons do not.** The
+substrate's entire working memory is single-neuron `tau_slow` leak.
 
-**NEXT ACTION -- undecided, deliberately.** Two candidates, neither started:
-1. **Has recurrence ever contributed anything?** `quad_input` (10 input neurons) >= full-state `quad` at
-   every density. The comparison is unmatched (10 vs 14 PCA components) and must be fixed before it is
-   taken seriously -- but if a feedforward read of the input neurons matches the full network across
-   regimes, the recurrent dynamics have been inert throughout and that reframes everything.
-2. **Recurrent COUPLING STRENGTH has never been varied independently.** `w0` has always been derived
-   from density via `w0_for_density`, a rule built to control the drive confound. Whether that coupling
-   places the network in any useful dynamical regime has never been asked. This is a DIFFERENT parameter
-   from `input_gain` (external drive, swept in D129) and is the one the reservoir literature says governs
-   memory and expansion.
+**Consequence: D129's flat density sweep was a necessity, not a null.** P counts recurrent synapses;
+those synapses do nothing; so P cannot matter. The study's independent variable is disconnected from the
+computation it is meant to modulate. `loc_best` has sat at its measured noise floor in every condition of
+every sweep -- a 45x P range, a 100x gain range, and now 3 couplings x 3 delays x ablation.
+
+**NEXT ACTION -- undecided. The finding is a fork, not a to-do.** D130's limitation is the live question:
+it measured RANDOM UNDEVELOPED genomes, so it establishes what recurrence does BY DEFAULT, not what
+selection or development could build (PJM's standing D125 objection, applying with full force). Three
+directions, none started:
+1. **Test whether recurrence is BUILDABLE.** A GA arm scored on a delay past `tau_slow`, where the
+   ablated network provably fails -- selection would have to construct persistent activity or fail
+   visibly. Expensive, and D130 says gen-0 fitness would start at chance.
+2. **Fix the substrate first.** No memory beyond leak may mean the neuron model or connectivity
+   statistics cannot support persistent activity at all. That is a modelling question, not a sweep.
+3. **Reconsider the task.** DMTS requires working memory this substrate lacks. A task whose demands the
+   substrate can meet would change what is being asked.
 
 **DO NOT** resume D126's sweep sequence. A P-sweep whose fitness cannot read the task's discriminating
 quantity would repeat D124 at far greater cost. **DO NOT** push `input_gain` past ~50: PR is already 1.31
@@ -168,6 +172,9 @@ Recorded so no future turn re-opens them by accident. Each is closed by evidence
   Undeveloped/birth-scored numbers are unaffected.
 - **Any test-error number from a run between D094 and D113** — void (fitness was computed from test
   error, so selection optimized the reported generalization).
+- **Any "recurrence contributes" claim from a difference test alone** — a difference between two
+  chance-level values is noise, not a contribution (D130 flagged +0.040 between 0.523 and 0.483, both at
+  chance). STANDING RULE: a difference test is meaningful only when at least one arm clears its own null.
 - **`cos`/`corr`/`eucl` self-referential scalars** — NOT fitness candidates (D129). 0.961 at P=49, flat
   across a 45x P range: they read stimulus geometry at the input neurons, not network function. They
   pass `omit_cue` and `scramble`, so the D120 controls do not catch them.
@@ -180,6 +187,13 @@ Recorded so no future turn re-opens them by accident. Each is closed by evidence
 
 - **Validate that code MEASURES WHAT IT CLAIMS, not just that it executes.** The audit found seven silent
   defects by reading, not running. Run `preflight.py` / `audit.py` before anything expensive.
+- **Ablate the mechanism before sweeping its parameter.** D130 answered in one run what three parameter
+  sweeps could not: the recurrent network contributes nothing, so P — which counts recurrent synapses —
+  could never have mattered. A sweep can only tell you a parameter does not move the outcome; an
+  ablation tells you whether the thing it parameterises is participating at all.
+- **A difference test needs a chance-level precondition.** Only compare arms when at least one clears
+  its own null. Earned three times over: a bare `>` (0.555 vs 0.554), a hardcoded 0.05 threshold
+  (+0.047 at n=3), and a correctly-thresholded paired t applied to two chance-level values.
 - **Reliability before science.** Selection cannot work on a fitness whose between-genome signal is below
   its measurement noise (D115). One ~6 h diagnostic replaced a 40-generation arm that would have failed.
 - **Compute the SE before calling a number a finding**, and check it survives more power (D115).
