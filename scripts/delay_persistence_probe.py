@@ -326,7 +326,10 @@ def _expand(X, kind: str, seed: int = 0):
         # destroys the ordering PCA relies on: with signal concentrated in a few dimensions the leading
         # PCs then miss it entirely (caught by positive control 1, which failed under z-scoring while
         # the distributed-signal control passed).
-        k = 14
+        # k must not exceed the available dimensionality: quad is also applied to sub-slices (e.g. the
+        # n_in=10 input neurons), where Vt has fewer rows than a hardcoded k and triu_indices(k) then
+        # indexes past the projection. Clamp to what the data actually supports.
+        k = min(14, X.shape[1], max(2, X.shape[0] - 1))
         Xc = X - X.mean(0)
         U, S, Vt = np.linalg.svd(Xc, full_matrices=False)
         Z = Xc @ Vt[:k].T
