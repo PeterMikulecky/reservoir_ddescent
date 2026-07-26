@@ -1,0 +1,22 @@
+# analysis log: block_genome_check
+# timestamp: 2026-07-26T15:21:57.568606
+# command: scripts/block_genome_check.py
+# D131 steps 1/2/4 -- invariants, known positive, ablation repeated
+#====================================================================
+
+[logging to runs/block_genome\20260726-152157_block_genome_check.log]
+N=100 density=0.30 xi_seed=7 genomes=4 trials=400 tau_slow=100 ms
+
+== STEP 1  INVARIANTS ==
+   k=30 inputs per neuron -> P_syn must be N*k = 3000 at every K
+    K  | P_gene | P_syn | fixed | in-deg | dead | dale | cluster ratio (random)
+     2 |    104 |  3000 | True  | 30-30  |  0   |  0   | 2.93   <- FAIL
+     4 |    116 |  3000 | True  | 30-30  |  0   |  0   | 1.08 
+     8 |    164 |  3000 | True  | 30-30  |  0   |  0   | 0.75 
+    12 |    244 |  3000 | True  | 30-30  |  0   |  0   | 0.82 
+    20 |    500 |  3000 | True  | 30-30  |  0   |  0   | 1.13 
+    30 |   1000 |  3000 | True  | 30-30  |  0   |  0   | 1.11 
+   cluster ratio for RANDOM genomes must stay near 1 (E2: a clustered prior is a seeded
+   genome under another name). The hand-set clustered genome should read >> 1.
+
+   INVARIANTS FAILED -- stop here; nothing downstream is meaningful.
