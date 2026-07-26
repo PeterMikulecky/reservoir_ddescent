@@ -123,13 +123,17 @@ def d121_regression(seed: int = 1, noise_sigma: float = 0.0) -> dict:
 # ==================================================================================================
 # CHECK 2 - DELAY PERSISTENCE: how far the (undeveloped) substrate coasts, swept over delay length
 # ==================================================================================================
-def delay_persistence(delays=(1, 2, 4, 8), seed: int = 1) -> dict:
-    """Cue decodability at the LAST delay segment vs delay length, on an UNDEVELOPED net.
+def delay_persistence(delays=(1, 2, 4, 8), seed: int = 1, developed: bool = False) -> dict:
+    """Cue decodability at the LAST delay segment vs delay length.
 
     tau_slow = 100 ms and present_ms = 50 ms, so one delay segment (50 ms) is within reach of passive
     decay and two (100 ms) is at the edge. Expect ~1.0 at short delays falling toward chance as the
-    delay exceeds tau_slow. That fall-off point is the H-D boundary; pushing it outward is what
-    development/selection must accomplish, measured by re-running this on a developed net.
+    delay exceeds tau_slow. That fall-off point is the H-D boundary.
+
+    developed=False is the SUBSTRATE's passive coast. developed=True runs real plasticity first and is
+    the condition that actually matters: SELECTION ACTS ON DEVELOPED NETWORKS, so if development
+    degrades the held cue, no target change can rescue the task -- the probe would be measuring a
+    capability the assayed phenotype does not have. Reported side by side; read the DEVELOPED row.
     """
     nc = SC.make_net_cfg()
     cfg = SC.make_trial_evolve_cfg()
@@ -137,12 +141,34 @@ def delay_persistence(delays=(1, 2, 4, 8), seed: int = 1) -> dict:
     for d in delays:
         task = SC.make_trial_task(delay_segments=d)
         g = random_genome(nc, cfg.density, w0=cfg.w0, ei_split=cfg.ei_split, seed=seed)
-        B = EvoNet(g, nc).behave(task.E_test, noise_seed=2)
+        net = EvoNet(g, nc)
+        if developed:
+            net.develop(task.E_train, eta=cfg.dev_eta, dev_ms=cfg.dev_ms,
+                        warmup_ms=SC.WARMUP_MS, n_checkpoints=4, seed=seed)
+        B = net.behave(task.E_test, noise_seed=2)
         cue = task.cue_test
         out[d] = dict(cue_at_cue=round(decode(B["state"][stage_rows(task, "test", "cue")], cue), 2),
                       cue_at_delay=round(decode(B["state"][stage_rows(task, "test", "delay")], cue), 2),
                       delay_ms=d * nc.present_ms)
     return out
+
+
+def persistence_contrast(delays=(1, 2, 4, 8), seed: int = 1) -> dict:
+    """UNDEVELOPED vs DEVELOPED delay persistence -- the D128 question.
+
+    Motivation: an uncommitted 2026-07-24 sandbox run reported cue decode ~1.00 undeveloped falling to
+    ~0.45 after development on the RETIRED task, with competition ruled out as the cause. That was never
+    verified against committed code and never memorialised, yet it is the observation that most directly
+    predicts whether ANY task change can work -- D124 and D125 both independently found development a
+    headwind. This makes the contrast a first-class, repeatable check.
+
+    READ: dev ~ undev            -> development preserves the trace; the target was the blocker.
+          dev << undev (-> 0.5)  -> development destroys what selection needs; the blocker is
+                                    DEVELOPMENT, not the task, and the task swap is necessary but not
+                                    sufficient.
+    """
+    return dict(undeveloped=delay_persistence(delays, seed, developed=False),
+                developed=delay_persistence(delays, seed, developed=True))
 
 
 # ==================================================================================================
@@ -174,7 +200,7 @@ def degenerate_checks(seed: int = 7) -> dict:
 def run_all() -> dict:
     warnings.filterwarnings("ignore")
     return dict(d121=d121_regression(),
-                persistence=delay_persistence(),
+                persistence=persistence_contrast(),
                 controls=degenerate_checks())
 
 
@@ -188,10 +214,20 @@ if __name__ == "__main__":
     for st, (u, d) in r1["stage_decode_undev_vs_dev"].items():
         print("      %-6s  undev=%.2f  dev=%.2f" % (st, u, d))
 
-    print("\n== CHECK 2  delay persistence (undeveloped; where the held cue breaks = H-D) ==")
-    for d, v in delay_persistence().items():
-        print("   delay=%d (%3d ms):  cue@cue=%.2f  cue@delay=%.2f"
-              % (d, v["delay_ms"], v["cue_at_cue"], v["cue_at_delay"]))
+    print("\n== CHECK 2  delay persistence: UNDEVELOPED vs DEVELOPED ==")
+    print("   selection acts on DEVELOPED nets -- the developed row is the one that matters")
+    pc = persistence_contrast()
+    print("   delay        |  undeveloped        |  developed          |  cue@delay change")
+    print("   -------------+---------------------+---------------------+------------------")
+    for d in sorted(pc["undeveloped"]):
+        u, v = pc["undeveloped"][d], pc["developed"][d]
+        print("   %d (%3d ms)   |  cue=%.2f delay=%.2f |  cue=%.2f delay=%.2f |  %+.2f"
+              % (d, u["delay_ms"], u["cue_at_cue"], u["cue_at_delay"],
+                 v["cue_at_cue"], v["cue_at_delay"], v["cue_at_delay"] - u["cue_at_delay"]))
+    worst = min(pc["developed"][d]["cue_at_delay"] - pc["undeveloped"][d]["cue_at_delay"]
+                for d in pc["undeveloped"])
+    print("   READ: largest drop = %+.2f -- a large negative drop means DEVELOPMENT, not the target," % worst)
+    print("         is the blocker, and the D126 task swap is necessary but not sufficient.")
 
     print("\n== CHECK 3  degenerate-strategy controls (must sit at chance 0.50) ==")
     for k, v in degenerate_checks().items():

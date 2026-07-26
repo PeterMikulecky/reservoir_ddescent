@@ -40,7 +40,7 @@ re-derivation.
 
 ---
 
-## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-25 (D127)*
+## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-25 (D127 + persistence-contrast reorder)*
 
 The trial task is built, correct, and **unselectable**. The `cue→delay→probe` XOR task (D120) works
 exactly as designed — chance floor by construction, controls that remove what they claim, clock-aligned
@@ -70,11 +70,17 @@ DONE** (D126 amendment): `shared_patterns=True` ships, rung 0's floor is verifie
 a correction was made — the (cue,probe) type grid loses the floor for `n_cues>2`, so the family is now
 relation-balanced. **Still owed on step 1: the network-level controls** — `omit_cue` and `scramble` on a
 developed net plus the leakage check. The oracle cannot test `omit_cue` at all (blanking the cue stimulus
-leaves the cue INDEX intact), so it is network-level by nature. (2) `trial_reliability_probe` at
-rung 0, n=30 — is there a gen-0 gradient? Hours, not overnight. (3) The **low-P solvability screen** —
+leaves the cue INDEX intact), so it is network-level by nature. (2) **`delay_persistence_probe` FIRST, not the
+reliability probe** — its new `persistence_contrast` reports cue decode UNDEVELOPED vs DEVELOPED. This
+reorder matters: selection acts on developed nets, so if development degrades the held cue there is
+nothing for a match comparison to read at probe time, and a flat reliability result would be misread as
+"the task change didn't help." Minutes, and it forks the diagnosis — cue survives development means the
+target was the blocker and D126 holds; cue destroyed means the blocker is DEVELOPMENT, the task swap was
+necessary but not sufficient, and RL-in-development or a gentler development scheme returns as the lever.
+(3) `trial_reliability_probe` at rung 0, n=30 — is there a gen-0 gradient? Hours, not overnight. (4) The **low-P solvability screen** —
 a few arms at the bottom of the P range only, NOT a sweep; answers "too simple?" cheaply and measures
-the arm-to-arm SD that sets `n_seeds`. (4) Dimension rung 1 from (2)+(3), probe it, lock both. (5) Sweep
-one rung. Also owed alongside the edit: parameterize variable-delay sampling and an optional in-delay
+the arm-to-arm SD that sets `n_seeds`. (5) Dimension rung 1 from the calibration data, probe it, lock
+both. (6) Sweep one rung. Also owed alongside the edit: parameterize variable-delay sampling and an optional in-delay
 distractor so the rungs are config rows rather than code paths, and add the **mild firing-rate penalty**
 to fitness (`mean_exc` drifting 0.80→0.64 was the only thing selection gripped, and nothing currently
 penalizes a degenerate rate regime).
@@ -89,6 +95,14 @@ penalizes a degenerate rate regime).
   verification needs Brian2, so the real check is a short run on PJM's machine.
 - **Parallel mean-selected arm** (D127): committed design, NOT part of sweep one. Trigger is fixed —
   run it iff sweep one produces a peak meeting D126's criterion.
+- **⚠ UNTESTED LEAD, recorded because it exists nowhere else: DEVELOPMENT MAY DESTROY THE HELD CUE.** A
+  2026-07-24 sandbox run (frozen chat, never committed, never memorialised) reported cue decode ~1.00
+  undeveloped falling to ~0.45 after development on the RETIRED task, with competition ruled out as the
+  cause. Provenance is weak — reconstruction sandbox, stubbed `tasks.py`, old task, never verified
+  against committed code — so treat it as a lead, not a finding. But it is consistent with D124
+  (development a headwind) and D125 (undeveloped carried more signal than developed in both random
+  bases), and it is the observation that most directly predicts whether ANY task change can work.
+  `delay_persistence_probe.persistence_contrast()` now measures it; it has NOT been run.
 - **Task-family parameterization** — variable-delay sampling and an optional in-delay distractor, so
   D126's rungs are config rows rather than separate code paths. Small, and owed before rung 1.
 - **`behave_batch` is stale relative to D103** (omits `I_wta` and the eSTDP synapses) and dormant — it is
