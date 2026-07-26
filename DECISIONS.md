@@ -5659,3 +5659,55 @@ filed as a later difficulty ramp is the one with a gen-0 gradient, because its d
 dynamics-native rather than arbitrary. When choosing a task, ask what KIND of difficulty it adds, not
 how much.
 
+### D126 — AMENDMENT (2026-07-25, same day): step 1 executed. Rung 0's floor VERIFIED. Rung 2 as pre-registered would have LOST the floor; construction corrected before any compute was spent.
+**Appended to D126 · ddescent/trial_task.py · pure-numpy verification, no simulation · still no network data**
+
+**THE EDIT.** `cue_delay_probe` gains `shared_patterns: bool = True`. When True the cue and probe are
+drawn from ONE orthonormal set (`n_probes` is forced to `n_cues`) and the existing target line becomes
+match / non-match. `shared_patterns=False` reproduces the retired `trial_xor` construction bit for bit,
+so D124/D125 remain reproducible. Nothing outside `trial_task.py` changed.
+
+**RUNG 0 VERIFIED (n_cues=2, 20 seeds, held-out scoring).** Degenerate-strategy floor: cue-only
+0.4996 ± 0.0023, probe-only 0.5000 ± 0.0000, constant rule 0.500, joint 1.000, target balance 0.500.
+**D126's central claim holds: the chance floor survives the shared-pattern edit**, so D120's trustworthy
+zero point is not spent. Stimulus-level check: on MATCH trials the probe segment's inner product with
+the cue vector is exactly +1.0000, on NON-MATCH exactly 0.0000 — the relation the network must compute
+is literally trace overlap, which is the dynamics-native property criterion 1 asks for, confirmed at the
+level of the stimulus rather than argued.
+
+**⚠ CORRECTION TO THE PRE-REGISTERED AXIS — rung 2 (K ≥ 4) would have had NO FLOOR.** The original
+`build()` balances the (cue, probe) TYPE GRID. Under a shared pattern set that makes MATCH a `1/n_cues`
+minority as soon as `n_cues > 2`: measured at `n_cues=4`, target balance was 0.250 and a constant
+"non-match" rule scored **0.750**, with cue-only and probe-only also at 0.750. That is D116 recurring —
+a floor that measures something other than what it claims — and it would have been baked into rung 2 of
+an axis this entry pre-registered.
+
+**THE FIX (applies to the whole family; rung 0 unaffected).** Balance the RELATION, not the grid: half
+match / half non-match, cue exactly balanced, non-match probe drawn uniformly from the other
+`n_cues − 1` patterns. At `n_cues=2` this is identical to the type grid, so rung 0's construction and
+D126's verification are unchanged. Verified held-out over 20 seeds: cue-only / probe-only sit at
+0.4996 / 0.5000 (K=2), 0.4998 / 0.5001 (K=4), 0.5033 / 0.4994 (K=8), constant rule exactly 0.500 at
+every K. **The floor is now chance-by-construction across the whole pre-registered axis, not only at
+rung 0.**
+
+**A NEAR-MISS WORTH RECORDING, because it nearly became a fourth withdrawn number — in the other
+direction.** A single-seed held-out check read cue-only 0.537 at K=4, and the per-cue match-rate
+deviations correlated +0.919 between val and test, which reads exactly like a construction bias. It was
+not one: across 20 seeds the same quantity is 0.4998 ± 0.0031. The correlation was four points examined
+*because they surprised me*, and one draw. **Had it been recorded from that single seed, this log would
+carry a defect that does not exist** — the mirror image of the n=20 `val_acc` 0.53 that D124 had to
+withdraw. Same D115 rule, same fix (repeat across seeds before calling anything), now demonstrated to
+cut both ways: it protects against inventing defects as well as inventing findings.
+
+**WHAT IS STILL UNVERIFIED.** Everything network-level. This was pure task construction in numpy — no
+Brian2, no development, no assay. The `omit_cue` control cannot be validated at the oracle level at all
+(blanking the cue stimulus leaves the cue INDEX intact, so an index-based oracle still scores 1.000);
+it is a network-level control by nature and must be run on a developed net, along with `scramble` and
+the leakage check, before the reliability probe means anything. D126's step 1 is complete only in its
+task-construction half.
+
+**LESSON.** A property that holds "by construction" holds only at the configuration where it was
+checked. D120's floor was verified at 2 cues and then carried forward as a general property of the
+design; it is not one. Re-verify construction-level guarantees at every rung of a pre-registered axis,
+and do it in the cheap layer — this took numpy seconds and would have cost rung 2 entirely.
+

@@ -120,6 +120,7 @@ def cue_delay_probe(K: int = 10,
                     n_val: int | None = None,
                     n_test: int | None = None,
                     delay_segments: int = 1,
+                    shared_patterns: bool = True,
                     omit_cue: bool = False,
                     scramble: bool = False,
                     seed: int = 0) -> TrialTask:
@@ -138,17 +139,45 @@ def cue_delay_probe(K: int = 10,
     # Cue and probe patterns live in the SAME input space and are all mutually orthogonal. Distinct
     # patterns for cue vs probe keeps the starting version easy; the hard version (shared pattern set,
     # role signalled by timing alone) is a later difficulty ramp.
-    pats = _orthonormal_patterns(K, n_cues + n_probes, rng)
-    cue_pats, probe_pats = pats[:n_cues], pats[n_cues:]
+    # PATTERN SET (D126). shared_patterns=True is DMTS: cue and probe are drawn from the SAME
+    # orthonormal set, so "cue_idx == probe_idx" below means the probe IS the held cue and the target is
+    # MATCH / NON-MATCH -- a natural relation the substrate can compute as overlap between a decaying cue
+    # trace and current input. shared_patterns=False is the RETIRED trial_xor target (D120): cue pattern i
+    # and probe pattern i are DIFFERENT directions, so agreement is a lookup table between unrelated
+    # vectors -- arbitrary by construction, orthogonal to every dynamics-native property, and shown
+    # unselectable at every neuron (D124/D125). Retained only to reproduce pre-D126 runs.
+    if shared_patterns:
+        n_probes = n_cues                      # the probe is drawn from the cue set; roles differ by TIMING
+        cue_pats = _orthonormal_patterns(K, n_cues, rng)
+        probe_pats = cue_pats
+    else:
+        pats = _orthonormal_patterns(K, n_cues + n_probes, rng)
+        cue_pats, probe_pats = pats[:n_cues], pats[n_cues:]
 
     lay = seg_layout(delay_segments)
 
     def build(n, rng_local):
-        # balanced over the n_cues x n_probes trial types, then shuffled
-        types = np.tile(np.arange(n_cues * n_probes), int(np.ceil(n / (n_cues * n_probes))))[:n]
-        rng_local.shuffle(types)
-        cue_idx, probe_idx = types // n_probes, types % n_probes
-        # XOR target on identity: +1 when indices agree, -1 when they differ
+        if shared_patterns:
+            # RELATION-BALANCED (D126 correction). Balancing the (cue, probe) type GRID makes MATCH a
+            # 1/n_cues minority the moment n_cues > 2, so a constant "non-match" rule scores
+            # 1 - 1/n_cues and the chance-by-construction floor is LOST (measured: n_cues=4 -> cue-only,
+            # probe-only and constant rules all reach 0.750). Balance the RELATION instead: half match,
+            # half non-match; cue exactly balanced; non-match probe drawn uniformly from the OTHER
+            # n_cues-1 patterns. At n_cues=2 this is identical to the type grid; at n_cues>2 it is what
+            # keeps every degenerate rule at 0.500.
+            is_match = np.zeros(n, dtype=bool); is_match[: n // 2] = True
+            rng_local.shuffle(is_match)
+            cue_idx = np.tile(np.arange(n_cues), int(np.ceil(n / n_cues)))[:n]
+            rng_local.shuffle(cue_idx)
+            offset = rng_local.integers(1, n_cues, size=n) if n_cues > 1 else np.zeros(n, dtype=int)
+            probe_idx = np.where(is_match, cue_idx, (cue_idx + offset) % n_cues)
+        else:
+            # balanced over the n_cues x n_probes trial types, then shuffled (RETIRED trial_xor path)
+            types = np.tile(np.arange(n_cues * n_probes), int(np.ceil(n / (n_cues * n_probes))))[:n]
+            rng_local.shuffle(types)
+            cue_idx, probe_idx = types // n_probes, types % n_probes
+        # target: +1 when indices agree, -1 when they differ. Under shared_patterns this is MATCH /
+        # NON-MATCH on the held trace; under the legacy path it is the arbitrary XOR binding.
         y = np.where(cue_idx == probe_idx, 1.0, -1.0)[:, None]
         if scramble:
             # BINDING CONTROL. Permute the TARGETS against the stimuli, leaving stimulus statistics
