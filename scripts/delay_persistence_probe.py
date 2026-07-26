@@ -396,6 +396,48 @@ def relation_nonlinear(seed: int = 1, n_trials: int = 400, n_genomes: int = 3,
 
 
 # ==================================================================================================
+# CHECK 2e - WHERE and WHEN: quad across stages, and with NARROW windows to catch a transient
+# ==================================================================================================
+def relation_where_when(seed: int = 1, n_trials: int = 400, n_genomes: int = 3) -> dict:
+    """Second-order decode of the relation across STAGES and across READOUT WINDOWS.
+
+    TWO GAPS THIS CLOSES. (1) CHECK 2d ran quad at the READ stage only; CHECK 2b covered every stage
+    but only LINEARLY. If the conjunction is a transient coincidence it would live during the PROBE,
+    when the incoming pattern meets the decaying trace, and that cell was never tested at second order.
+    (2) Every window so far is readout_window_ms=60 against present_ms=50 -- wider than the segment it
+    names. So each "stage" state is a 60 ms average that also carries the last 10 ms of the PRECEDING
+    stage, and a brief coincidence would be diluted roughly 6:1. Narrow leading/trailing windows
+    (10 ms) sample the start and end of each segment instead.
+
+    Run UNDEVELOPED only: development has been indistinguishable from undeveloped in 2b, 2c and 2d, and
+    undeveloped costs no develop() call, so this is a cheap screen. If any cell clears, re-check it
+    developed before believing it.
+    """
+    cfg = SC.make_trial_evolve_cfg()
+    task = SC.make_trial_task(n_trials=n_trials, n_val=n_trials, n_test=n_trials)
+    rel = (task.cue_test == task.probe_test).astype(int)
+    windows = (("wide 60ms", dict()),
+               ("early 10ms", dict(readout_window_ms=10.0, readout_pos="leading")),
+               ("late 10ms", dict(readout_window_ms=10.0, readout_pos="trailing")))
+    out = {}
+    for wname, wkw in windows:
+        nc = SC.make_net_cfg(**wkw)
+        for stage in ("probe", "read"):
+            acc, nul = [], []
+            for i in range(n_genomes):
+                g = random_genome(nc, cfg.density, w0=cfg.w0, ei_split=cfg.ei_split, seed=seed + i)
+                B = EvoNet(g, nc).behave(task.E_test, noise_seed=2 + i)
+                Z = _expand(B["state"][stage_rows(task, "test", stage)], "quad", seed=seed + i)
+                acc.append(decode(Z, rel)); nul.append(decode_null(Z, rel, n_rep=30)[1])
+            out[(wname, stage)] = dict(decode=round(float(np.mean(acc)), 3),
+                                       sd=round(float(np.std(acc, ddof=1)), 3) if n_genomes > 1 else 0.0,
+                                       null_p95=round(float(np.mean(nul)), 3),
+                                       clears=bool(np.mean(acc) > np.mean(nul)))
+            print("    %s / %s done" % (wname, stage), flush=True)
+    return out
+
+
+# ==================================================================================================
 # CHECK 3 - DEGENERATE-STRATEGY CONTROLS: omit_cue and scramble must sit at chance
 # ==================================================================================================
 def degenerate_checks(seed: int = 7) -> dict:
@@ -428,6 +470,7 @@ def run_all() -> dict:
                 relation=relation_persistence(),
                 trace=trace_survival(),
                 nonlinear=relation_nonlinear(),
+                where_when=relation_where_when(),
                 controls=degenerate_checks())
 
 
@@ -506,6 +549,16 @@ if __name__ == "__main__":
     print("   READ: nonlinear clears, linear does not -> conjunction EXISTS but is not linearly")
     print("         available; the blocker is the operating-point regime (D119), not the target.")
     print("         nothing clears -> trace and probe never interact; deeper dynamics statement.")
+
+    print("\n== CHECK 2e  WHERE and WHEN is the conjunction? (quad, undeveloped) ==")
+    print("   2d tested quad at READ only; 2b tested every stage but only LINEARLY. And every window")
+    print("   so far is 60ms wide against a 50ms segment, which would dilute a transient ~6:1.")
+    print("   window     | stage  | quad decode (sd) | null_p95 | clears?")
+    print("   -----------+--------+------------------+----------+--------")
+    for (w, st), v in relation_where_when().items():
+        print("   %-10s | %-6s |   %.3f (%.3f)   |  %.3f   | %s"
+              % (w, st, v["decode"], v["sd"], v["null_p95"], "YES" if v["clears"] else "no"))
+    print("   READ: nothing clears here either -> the conjunction is absent, not mistimed.")
 
     print("\n== CHECK 3  degenerate-strategy controls (must sit at chance 0.50) ==")
     for k, v in degenerate_checks().items():
