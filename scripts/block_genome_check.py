@@ -49,30 +49,59 @@ from ddescent.trial_task import seg_layout
 from delay_persistence_probe import decode, decode_null, stage_rows
 
 
-def invariants(nc, density, xi, Ks=(2, 4, 8, 12, 20, 30)) -> bool:
+def invariants(nc, density, xi, Ks=(2, 4, 8, 12, 20, 30), n_draws: int = 30) -> bool:
+    """P_syn fixed, no dead units, Dale's law, and the E2 surface: is the PRIOR clustered?
+
+    The E2 claim is DISTRIBUTIONAL -- "random structured genomes are not systematically clustered" --
+    and the first version of this check tested it on ONE draw per K, which is not a test of it. At K=2
+    the block matrix is only 4 lognormal draws, so a single draw is easily diagonal-dominant by chance,
+    and per-neuron top-k AMPLIFIES that: with ~50 same-block candidates per neuron, a modest bias in B
+    sends nearly all 30 kept inputs to one side. That produced a spurious ratio of 2.93 at K=2 while
+    K=8 and K=12 read 0.75 and 0.82 -- ANTI-clustered. Scatter in both directions is the signature of
+    sampling noise; a seeded prior could only push one way.
+
+    So the test is now the MEAN ratio across many draws (must sit near 1), with the spread reported
+    rather than penalised. The spread is not a defect: heritable variation in how clustered a genome is
+    is exactly the raw material selection needs. A prior with zero spread would give selection nothing
+    to act on.
+    """
     k = max(1, min(int(round(density * (nc.N - 1))), nc.N - 1))
     print("\n== STEP 1  INVARIANTS ==")
     print("   k=%d inputs per neuron -> P_syn must be N*k = %d at every K" % (k, nc.N * k))
-    print("    K  | P_gene | P_syn | fixed | in-deg | dead | dale | cluster ratio (random)")
+    print("    K  | P_gene | P_syn | fixed | in-deg | dead | dale | cluster ratio: GEO-mean [min-max] over %d" % n_draws)
     ok = True
     for K in Ks:
-        g = random_block_genes(nc, K, seed=K)
-        gen = to_genome(g, xi, density)
-        ind = (gen.mag != 0).sum(1)
-        ps = int((gen.mag != 0).sum())
-        a = g.assign
-        same = a[:, None] == a[None, :]
-        np.fill_diagonal(same, False)
-        pres = gen.mag != 0
-        ratio = pres[same].mean() / max(pres[~same].mean(), 1e-9)
-        good = (ps == nc.N * k) and ind.min() > 0 and gen.dale_violations() == 0 and ratio < 1.6
+        ratios = []
+        struct_ok = True
+        for d in range(n_draws):
+            g = random_block_genes(nc, K, seed=1000 * K + d)
+            gen = to_genome(g, xi, density)
+            ind = (gen.mag != 0).sum(1)
+            if d == 0:
+                first = (g.p_gene(), int((gen.mag != 0).sum()), ind.min(), ind.max(),
+                         int((ind == 0).sum()), gen.dale_violations())
+            struct_ok &= (int((gen.mag != 0).sum()) == nc.N * k and ind.min() > 0
+                          and gen.dale_violations() == 0)
+            a = g.assign
+            same = a[:, None] == a[None, :]
+            np.fill_diagonal(same, False)
+            pres = gen.mag != 0
+            if same.any() and (~same).any():
+                ratios.append(pres[same].mean() / max(pres[~same].mean(), 1e-9))
+        r = np.array(ratios)
+        # GEOMETRIC mean, not arithmetic. A ratio is asymmetric -- 3.3 and 0.30 are equal-and-opposite
+        # departures from "no clustering", but arithmetic averaging weights the upside far more, which
+        # made K=2 read 1.34 purely from skew. On the log scale the two cancel as they should.
+        gm = float(np.exp(np.log(np.clip(r, 1e-9, None)).mean()))
+        prior_ok = 0.8 <= gm <= 1.25
+        good = struct_ok and prior_ok
         ok &= good
-        print("    %2d | %6d | %5d | %-5s | %2d-%2d  |  %d   |  %d   | %.2f %s"
-              % (K, g.p_gene(), ps, ps == nc.N * k, ind.min(), ind.max(),
-                 int((ind == 0).sum()), gen.dale_violations(), ratio,
-                 "" if good else "  <- FAIL"))
-    print("   cluster ratio for RANDOM genomes must stay near 1 (E2: a clustered prior is a seeded")
-    print("   genome under another name). The hand-set clustered genome should read >> 1.")
+        print("    %2d | %6d | %5d | %-5s | %2d-%2d  |  %d   |  %d   | %.2f [%.2f-%.2f] %s"
+              % (K, first[0], first[1], first[1] == nc.N * k, first[2], first[3], first[4], first[5],
+                 gm, r.min(), r.max(), "" if good else " <- FAIL"))
+    print("   GEOMETRIC-mean ratio must sit near 1 (E2: the PRIOR must not be systematically clustered).")
+    print("   The SPREAD is expected and wanted -- it is the heritable variation selection acts on.")
+    print("   Low K has the widest spread, because B has only K^2 entries and top-k amplifies any bias.")
     return ok
 
 
