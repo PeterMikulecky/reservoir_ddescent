@@ -200,7 +200,9 @@ def cue_delay_probe(K: int = 10,
     Eva, Yva, cva, pva = build(n_val, rng)
     Ete, Yte, cte, pte = build(n_test, rng)
 
-    meta = dict(K=K, n_cues=n_cues, n_probes=n_probes, delay_segments=delay_segments,
+    meta = dict(K=K, n_cues=n_cues, n_probes=n_probes, shared_patterns=shared_patterns,
+                relation=("dmts_match" if shared_patterns else "xor_binding"),
+                delay_segments=delay_segments,
                 n_seg=lay["n_seg"], omit_cue=omit_cue, scramble=scramble, seed=seed,
                 cue_patterns=cue_pats, probe_patterns=probe_pats,
                 n_trials=dict(train=n_trials, val=n_val, test=n_test))

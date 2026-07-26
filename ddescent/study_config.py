@@ -150,7 +150,13 @@ def w0_for_density(density: float) -> float:
 TRIAL = dict(
     K=10,                 # shared input channels; cue and probe live in the same space
     n_cues=2,             # start minimal (PJM); ramp later
-    n_probes=2,
+    shared_patterns=True, # D126: cue and probe drawn from the SAME orthonormal set -> the target is
+                          # DMTS MATCH / NON-MATCH, a natural relation computable as trace overlap.
+                          # False reproduces the RETIRED trial_xor arbitrary binding (D120), kept only
+                          # to reproduce pre-D126 runs. RECORDED HERE so every config snapshot states
+                          # which task it was; the two are otherwise indistinguishable in provenance.
+    n_probes=2,           # IGNORED when shared_patterns=True (forced to n_cues); retained for the
+                          # legacy path only.
     n_trials=40,          # per split
     n_val=40,
     n_test=40,
@@ -182,13 +188,21 @@ def make_trial_task(**overrides):
 
 
 def make_trial_evolve_cfg(**overrides) -> EvolveConfig:
+    # NAMING (D126): fitness_mode="trial_xor" is now a MISNOMER -- since D126 the target is DMTS
+    # match/non-match, not the retired XOR binding. The string is deliberately NOT renamed: it keys the
+    # `trial_xor` branch of evolve._fitness (which reads comp["trial_score"] and is target-agnostic), and
+    # renaming it would invalidate every self-hashing run checkpoint for no functional gain. Read it as
+    # "the trial-task fitness mode". The task's actual identity is recorded in TRIAL["shared_patterns"]
+    # and in each task's meta["relation"], which is where provenance should be checked.
     base = dict(dev_ms=trial_dev_ms(), dev_eta=1e-3, n_assays=N_ASSAYS,
                 fitness_mode="trial_xor", seed=12345)
     return EvolveConfig(**{**base, **overrides})
 
 
 def trial_summary() -> str:
-    return (f"TRIAL {TRIAL['n_cues']} cues x {TRIAL['n_probes']} probes, "
+    _rel = "DMTS match/non-match" if TRIAL.get("shared_patterns", False) else "XOR binding (RETIRED, D120)"
+    _np  = TRIAL['n_cues'] if TRIAL.get("shared_patterns", False) else TRIAL['n_probes']
+    return (f"TRIAL [{_rel}] {TRIAL['n_cues']} cues x {_np} probes, "
             f"delay={TRIAL['delay_segments']}x{NET['present_ms']}ms, "
             f"{TRIAL['n_trials']}/{TRIAL['n_val']}/{TRIAL['n_test']} trials\n"
             f"DEV   {TRIAL_DEV_PASSES} passes = {trial_dev_ms():.0f} ms "
