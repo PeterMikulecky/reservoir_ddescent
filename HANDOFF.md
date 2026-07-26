@@ -40,39 +40,40 @@ re-derivation.
 
 ---
 
-## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-25 (D128 -- the conjunction exists)*
+## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-26 (D129 -- two sweeps, no selection)*
 
-**The conjunction exists, and the fitness has been looking in the wrong place for it.** D128 is the
-turn: second-order decode of match/non-match reads **0.783 at the PROBE segment** (null 0.539, sd 0.014
-over 3 genomes) and **0.524 at the READ segment**, where `response_rows()` samples. The signal is
-sustained across the probe window, not transient, and it is available only to a QUADRATIC readout --
-linear decode at probe is 0.479, chance. So the flat results of D124 and D125 are now mechanically
-explained by two separable faults: a **TIMING** error (the fitness samples ~50 ms after the information
-has decayed) and an **ORDER** mismatch (the relation is quadratic in the rates; D095's readout is a
-two-parameter affine). Neither is "the substrate cannot bind." Upstream of both, the substrate is
-healthy: the cue is held at ~1.00 through every stage, undeveloped and developed alike (D128 / CHECK 2c),
-so memory and encoding are not the problem and development is not the blocker.
+**The substrate works; nothing the fitness can read ever varies.** The cue is held at ~1.00 through
+every stage (D128). The relation is present in the state at second order, and D129 showed it is CREATED
+BY GAIN -- `quad` is at its null for input_gain <= 2 and reaches 0.995 at gain 50, so D128's
+"second-order only" described gain 10, not the substrate. But across a **45x range of P and a 100x range
+of gain, no capacity-bounded readout has ever seen the relation**: `loc_best` sits at 0.549-0.561 against
+a measured pure-noise floor of 0.563. And `PR_state` is set by the REGIME, not by P -- flat at 5.5-8.0
+across all densities, but moving 0.88 -> 0.20 (PR/null) across gain. **On the parameter axis this study
+is built around, the representational quantity encoding saturation would act through does not move.**
+D128's timing finding stands unconditionally: the relation is present at probe and decayed by read,
+which is where `response_rows()` samples.
 
-**WHY THE RELATION IS SECOND-ORDER (structural, not incidental).** Cue and probe enter through the SAME
-ten input neurons -- the architecture has one environment pathway -- so role is carried by timing alone.
-Match puts `(a+b, 0)` in the pattern basis, non-match `(a, b)`: not linearly separable, and the only
-discriminating features are the norm and the cross term, both quadratic. `state` is additionally a 60 ms
-mean of a 5 ms-sampled rate trace, so spike timing and synchrony are averaged away and rate structure is
-the sole remaining channel.
+**NEXT ACTION -- undecided, deliberately.** Two candidates, neither started:
+1. **Has recurrence ever contributed anything?** `quad_input` (10 input neurons) >= full-state `quad` at
+   every density. The comparison is unmatched (10 vs 14 PCA components) and must be fixed before it is
+   taken seriously -- but if a feedforward read of the input neurons matches the full network across
+   regimes, the recurrent dynamics have been inert throughout and that reframes everything.
+2. **Recurrent COUPLING STRENGTH has never been varied independently.** `w0` has always been derived
+   from density via `w0_for_density`, a rule built to control the drive confound. Whether that coupling
+   places the network in any useful dynamical regime has never been asked. This is a DIFFERENT parameter
+   from `input_gain` (external drive, swept in D129) and is the one the reservoir literature says governs
+   memory and expansion.
 
-**NEXT ACTION.** The operating point (D119), untouched since it was recorded as a live lever. Under the
-reservoir premise the network should convert a conjunction into a rate difference a linear reader can
-see; D128 shows the conjunction forms and that conversion does not happen. `input_gain = 10.0` is
-annotated in the config as "the useful regime; NOT the PR-optimal one," and D075 measured `PR_mean ~ 7`
-of 50 -- a network operating close to linearly. If the input neurons saturate, doubled drive yields the
-same rate as single drive and the amplitude channel is shut at entry. **The decisive cheap test: sweep
-`input_gain` and measure whether the relation becomes LINEARLY decodable at the probe stage.**
-Undeveloped, no `develop()` calls, minutes. Also owed and NOT yet done: the developed condition at the
-probe stage (CHECK 2e ran undeveloped only), and a decision on `readout_window_ms=60` against
-`present_ms=50`.
+**DO NOT** resume D126's sweep sequence. A P-sweep whose fitness cannot read the task's discriminating
+quantity would repeat D124 at far greater cost. **DO NOT** push `input_gain` past ~50: PR is already 1.31
+there (one effective dimension) and the network is plausibly degenerating toward feedforward behaviour,
+which is trivial to induce and useless to study (PJM).
 
-**DO NOT** resume D126's sweep sequence until the order problem is resolved. A P-sweep whose fitness
-cannot read the task's discriminating quantity would repeat D124 at far greater cost.
+**SCREEN EVERY CANDIDATE FITNESS AGAINST P.** D129 killed the `cos(delay, test)` scalar because it scored
+0.961 at P=49 -- a 49-synapse network -- and stayed flat across a 45x range. It was reading stimulus
+geometry, not network function. The D120 controls do NOT catch this: `omit_cue` and `scramble` both sit at
+chance for it. Capacity-bounded is necessary but NOT sufficient; the readout's FORM must also be
+task-agnostic, and `cos(delay, test)` *is* the DMTS comparison.
 
 ## §2. OPEN THREADS — *volatile*
 
@@ -167,6 +168,13 @@ Recorded so no future turn re-opens them by accident. Each is closed by evidence
   Undeveloped/birth-scored numbers are unaffected.
 - **Any test-error number from a run between D094 and D113** — void (fitness was computed from test
   error, so selection optimized the reported generalization).
+- **`cos`/`corr`/`eucl` self-referential scalars** — NOT fitness candidates (D129). 0.961 at P=49, flat
+  across a 45x P range: they read stimulus geometry at the input neurons, not network function. They
+  pass `omit_cue` and `scramble`, so the D120 controls do not catch them.
+- **`PR_state ~ 7`** — a property of `input_gain = 10`, not of the network (D129). It runs 25.8 at gain
+  0.5 and 1.31 at gain 50. D075's `PR_mean ~ 7` was measuring the regime.
+- **Any "clears its null" claim from a bare `>` comparison** — not a test (D129). Requires exceeding the
+  null by more than ~2 across-genome sds; the unguarded rule flagged 0.555 against 0.554.
 
 ## §6. STANDING RULES — *stable; each was earned by a specific failure*
 

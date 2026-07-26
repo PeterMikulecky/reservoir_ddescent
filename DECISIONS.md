@@ -5983,5 +5983,151 @@ discussion until it was asked about directly — and it was the difference betwe
 bind" and "the fitness looks 50 ms too late at the wrong order."
 
 
+### D128 — AMENDMENT (2026-07-26): the finding is CONDITIONAL ON GAIN 10, not a property of the substrate.
+**Appended to D128 · see D129 sweep 2 · runs/operating_point/20260726-105755**
+
+D128 concluded that the conjunction is formed during the probe segment but is "available only to a
+SECOND-ORDER readout." **The second half of that is regime-specific.** D129's operating-point sweep, at
+fixed density and varying `input_gain` alone, finds `quad` at its null for gain <= 2 (0.482-0.495),
+rising monotonically to **0.995 at gain 50**. The conjunction is not merely expressed second-order at
+gain 10 — at low gain it is not formed at all, and at high gain it is formed almost perfectly.
+
+So D128 measured the substrate at ONE point on a steep curve. Its structural argument stands (equality
+of two categoricals is XOR-type; separable linear codes cannot yield it linearly; the readout window
+averages away spike timing), and its TIMING finding stands unchanged and unconditionally — the relation
+is present at probe and decayed by read, which is where `response_rows()` samples. What does not stand
+is the implication that "second-order only" characterises this substrate. It characterises `input_gain
+= 10.0`, a value carrying its own annotation in `study_config` as "the useful regime; NOT the
+PR-optimal one" (D030/D033).
+
+D128's proposed MECHANISM is also refuted: saturation closing the amplitude channel at entry would show
+as units ceasing to vary with the stimulus, and `frac_lowvar` is ~0.000 at every gain including 50 while
+mean rate climbs 0.2985 -> 0.6047. Nothing goes flat.
+
+**Extension to D128's LESSON.** It reads: "Where a measurement is taken is a design decision with the
+same standing as what is measured, and this one was inherited rather than chosen." The same now applies
+one level out — **the REGIME a measurement is taken in has that standing too**, and `input_gain = 10.0`
+was likewise inherited rather than chosen. A finding stated without its operating point is a finding
+stated without half its conditions.
+
+
+### D129 — TWO SWEEPS WITHOUT SELECTION: representational quality is INVARIANT to P (45x) and the conjunction is CREATED BY GAIN, not by the substrate. No capacity-bounded readout sees the relation at any density or any gain. PR is set by the REGIME, not by P.
+**2026-07-26 · Finding + instrument corrections · scripts/trial_representation_sweep.py, scripts/trial_operating_point_sweep.py · runs/representation/20260725-221816, runs/operating_point/20260726-105755 · random UNDEVELOPED genomes, no GA, no development, no fitness**
+
+**WHY NO SELECTION.** D124/D125 spent arms discovering that a task was unselectable. Both sweeps here
+measure representational properties directly on random undeveloped genomes, which removes a circularity
+(selection cannot be used to discover the P at which a task first becomes selectable) and costs ~15 min
+per sweep instead of days. **Scope limit, recorded up front (PJM):** random genomes measure what happens
+BY DEFAULT, not what selection could find. Producing the second-order-to-readable conversion is exactly
+what selection would be doing, so a null here does NOT license "a GA arm must fail" — only a null with
+negligible across-genome spread would, and spread was not adequately sampled at n=4.
+
+---
+
+**SWEEP 1 — DENSITY (P = 49 to 2205, a 45x range; density 0.02-0.9 at fixed N=50; probe stage).**
+`w0_for_density` applied at every point, so P is not confounded with total synaptic drive.
+
+- **PR_state: 5.48 to 7.99, NO TREND** (7.07 at P=49, 6.16 at P=2205, slightly declining). Effective
+  dimensionality is invariant to a 45x change in parameter count. **This is the encoding-saturation
+  mechanism failing to engage on the axis the study is built around.**
+- **loc_best: 0.549-0.561 at every density**, against a pure-noise floor measured at 0.563 mean /
+  0.586 p95. Every value is AT OR BELOW the noise floor. No individual neuron carries the relation at
+  any P. `loc_mean` 0.511-0.516, `n_above` 1.2-3.5 (synthetic no-signal control reads ~1),
+  `PR_task` excess negative in six of eight rows.
+- **Pooled linear never clears** (0.473-0.510 vs nulls 0.542-0.553). **quad clears everywhere**
+  (0.731-0.777) with no P trend. The relation is present at second order at every P and reachable by
+  no capacity-bounded readout at any P.
+- **RSA clears in three of eight rows** at effect sizes 0.001-0.0055 with no ordering in P: noise.
+
+**⚠ SWEEP 1 KILLED ITS OWN HEADLINE CANDIDATE — the self-referential scalars.** `cos(delay, test)` and
+`corr` were proposed as a way to get a SECOND-ORDER readout at D095 capacity (a distance has cross terms;
+the reference is the network's own prior activity, not a fitted mean or covariance). They scored
+**0.961 at density 0.02 — P=49, essentially no recurrent network at all — the HIGHEST value in the
+column**, and stayed flat at 0.90-0.96 across the entire 45x range. A readout that scores identically on
+a network with 49 synapses and one with 2205 is not measuring network function; it is reading the
+superposition of decaying trace and fresh probe at the INPUT neurons. `quad_input` (0.808-0.831)
+exceeding full-state `quad` (0.731-0.777) says the same thing from the other side.
+
+**The lesson generalises and corrects a claim made twice in this project.** D095 requires bounded
+readout CAPACITY — and that is necessary but NOT SUFFICIENT. `cos(delay, test)` has two fitted
+parameters and its functional FORM *is* the DMTS comparison: it solves the task in the readout. **A
+legitimate readout must be capacity-bounded AND task-agnostic in form.** Note that the D120 controls
+would NOT have caught this — `omit_cue` and `scramble` both sit at chance for `cos`, by construction.
+What caught it was the density sweep itself. **A candidate fitness should be screened against P: if it
+scores the same on a network with no synapses, it is reading the stimulus.**
+
+---
+
+**SWEEP 2 — OPERATING POINT (input_gain 0.5 to 50, a 100x range, at FIXED density 0.3, P=735).**
+Only the regime varies, so nothing here is a P effect.
+
+- **THE CONJUNCTION IS CREATED BY GAIN.** `quad` reads 0.482 / 0.495 / 0.489 (at null, gain <= 2) then
+  **0.614 / 0.740 / 0.904 / 0.995** (gain 5 / 10 / 20 / 50). At low gain the conjunction genuinely is
+  not there; at gain 50 it is essentially perfect. **This supersedes D128's framing:** "the relation is
+  available only at second order" was a fact about GAIN 10, which sits mid-curve — not a fact about the
+  substrate.
+- **PR IS STRONGLY MOVABLE, AND MOVES INVERSELY.** `PR/null` 0.85 / 0.87 / 0.88 / 0.75 / **0.39 / 0.24
+  / 0.20**; absolute PR 25.8 down to 1.31. Expressivity RISES as effective dimensionality COLLAPSES —
+  the opposite direction to the expansion encoding saturation predicts. At gain 50 the network is
+  roughly one effective dimension. **PR = 5.94 at gain 10 reproduces D075's ~7: that number was
+  measuring the REGIME, not the network.**
+- **SATURATION-AS-DEAD-UNITS IS REFUTED.** `frac_lowvar` ~0.000 at every gain including 50, while mean
+  rate climbs 0.2985 -> 0.6047. Nothing goes flat. D128's proposed mechanism (saturation closing the
+  amplitude channel at entry) is not what is happening.
+- **loc_best NEVER LEAVES ITS NOISE FLOOR AT ANY GAIN**: 0.551-0.559 against per-run nulls 0.552-0.563
+  and the measured pure-noise floor of 0.563. `loc_mean` 0.512-0.516 flat. **Across a 100x gain range
+  and a 45x P range, no capacity-bounded readout has ever seen the relation.**
+- `linear` clears only at gain 50 and only marginally (0.559 vs null 0.538). `lin_sd` was not printed,
+  so the CORRECTED clearing rule (below) cannot be applied to it; in sweep 1 `lin_sd` ran 0.014-0.038,
+  which would put the threshold near 0.05 against an observed margin of 0.021. **Treat as unsupported.**
+
+---
+
+**⚠ INSTRUMENT CORRECTIONS MADE THIS SESSION.**
+1. **The clearing rule was a bare `metric > null`.** It flagged `loc_best` as clearing at 0.555 against
+   a null of 0.554 — a 0.001 margin on two noisy estimates, the null itself from 6 draws. Now requires
+   exceeding the null by > 2 across-genome sds; verified to reject both spurious calls and retain
+   `quad` at gain 50. **A comparison of two noisy estimates is not a test.**
+2. **PR_state had never had a null** and was reported as "5.5-8.0" with no baseline. Null added:
+   shuffle each neuron across trials independently, destroying cross-neuron correlation while preserving
+   marginals. Validated — ratio 1.000 on uncorrelated activity, 0.097 on 3 latent factors, 0.063 on 1.
+   Only PR relative to its null is interpretable.
+3. **loc_best's noise floor measured**: 0.563 mean / 0.586 p95 on pure noise at N=50. Max-over-N is
+   upward biased by selection; this retroactively confirms sweep 1's `loc_best` column was entirely noise.
+4. **`_expand` crashed on sub-slices** — hardcoded k=14 components against the 10 input neurons. Fixed
+   to `k = min(14, n_features, n_samples-1)`; regression-tested at widths 3-50; D128 unaffected.
+5. **`quad_input` vs full-state `quad` is NOT a matched comparison** (10 vs 14 components, so 65 vs 119
+   features at n=400). The apparent excess is suggestive, not established.
+
+---
+
+**WHAT IS ESTABLISHED.** The substrate holds the cue essentially perfectly (D128). The relation is
+present in the state at second order once gain is sufficient, and perfectly so at gain 50. **No
+capacity-bounded readout sees it at any density or any gain tested.** PR is set by the operating regime,
+not by P — so on the parameter axis this study is built around, the representational quantity that
+encoding saturation would act through does not move.
+
+**WHAT IS OPEN.**
+- **Has recurrence ever contributed anything here?** `quad_input` >= full-state `quad` at every density
+  hints it has not. The k-mismatch must be fixed before this is taken seriously, but if a feedforward
+  read of ten input neurons matches the full network across regimes, the recurrent dynamics have been
+  inert throughout and that reframes the whole investigation.
+- **Recurrent COUPLING STRENGTH has never been varied independently.** `w0` has always been derived
+  from density by `w0_for_density`, a rule designed to control the drive confound. Whether the coupling
+  it produces puts the network anywhere near a useful dynamical regime — ordered, critical, chaotic —
+  has never been asked. That is a different parameter from `input_gain` (external drive) and is the one
+  the reservoir literature would say governs memory and expansion.
+
+**HONEST LIMITATIONS.** n=4 genomes throughout, so across-genome spread — the quantity that determines
+whether selection has a gradient — is poorly estimated everywhere. Undeveloped random genomes only. No
+sd reported in sweep 1's scalar table. Single task (DMTS rung 0), single N, probe stage only.
+
+**LESSON.** Two independent sweeps, ~15 minutes each, on random genomes, replaced what would have been
+weeks of GA arms and produced a sharper answer than the arms would have. **When a study's dependent
+variable can be measured directly on unselected networks, measure it there first.** The corollary is
+D115's rule moved one level up: before spending selection on a task, verify that the task's
+discriminating quantity is visible to the fitness at all.
+
+
 
 
