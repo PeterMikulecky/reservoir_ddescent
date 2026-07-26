@@ -761,3 +761,104 @@ noise-fragile, while symmetric critically-normalized dynamics work at multi-seco
 connections" — the reservoir-computing position D111 rejected, here advanced as a claim about BIOLOGY. If
 true, "P = recurrent synapses" may not be the parameter count governing generalization. A live threat to
 the H-A/H-B framing worth tracking (they note an alternative: task-specific dynamics "turning on").
+
+
+# ADDITION to REFERENCES.md
+# Insert as a new top-level section. Placement suggestion: immediately after the
+# "Engineered-ceiling circuit basis" section, since it is the direct continuation of that thread.
+
+## Structure as a precondition, and how a GENOME can specify it (searched 2026-07-26, after D130)
+
+*Context: D130 ablated all recurrent connectivity (`genome.mag` zeroed, `tau_slow` retained) against
+intact networks on paired genomes. Where the task is solvable (50 ms delay) the ABLATED network held the
+cue at 1.000 and read `quad` at 0.786-0.840 — equal to or above intact. Where passive decay fails
+(200/400 ms) the intact network failed identically at every coupling. The recurrent network contributes
+nothing, so P — which counts recurrent synapses — could never have mattered.*
+
+*This independently re-derives, on the trial task, what D092 already found on the covariance task:
+**random undeveloped nets do not carry context, because slow current only yields persistent memory when
+wired into an attractor TOPOLOGY; random connectivity lacks it.** Two tasks, two methods, one answer. The
+question is therefore no longer WHETHER structure is required — it is how a genome can specify structure
+without the experimenter hand-wiring the solution (which D092's quarantine rightly forbids).*
+
+### The minimum structure is a connectivity STATISTIC, not a hand-wired circuit
+
+**Litwin-Kumar, A., Doiron, B. (2012).** Slow dynamics and high variability in balanced cortical networks
+with clustered connections. *Nature Neuroscience* 15(11), 1498–1505.
+— 🔴🔴 **The single most important reference for the post-D130 redesign.** Excitatory connections in
+cortex are clustered rather than uniform. In balanced E/I networks, *even modest clustering* changes
+network behaviour qualitatively: clusters transiently increase or decrease firing rate, producing SLOW
+DYNAMICS alongside fast spiking variability. Stimulation biases the network toward particular activity
+states and reduces firing-rate variability, matching cortical observations.
+— **Why it matters to us.** This is the missing timescale. Our substrate's entire memory is single-neuron
+`tau_slow` leak (D130), and clustering is the documented route to a network-level slow timescale that
+leak cannot supply. Crucially it is a *statistical bias in the connection distribution*, not an
+engineered attractor — which is exactly the kind of thing a genome could plausibly encode and evolution
+could plausibly find. It sits between our two dead ends: random connectivity (no memory, D130) and the
+hand-wired ceiling (memory, but quarantined as a template, D092).
+— ⚠ **Scale caveat.** Their networks use ~1600 excitatory neurons across many clusters. At N=50 the
+ceiling affords 2 clusters of ~20 E neurons; at N=100, roughly 4. Cluster SIZE, not count, is what N buys
+back — and 2 clusters at N=50 is already demonstrated to work (D092).
+
+**Recent clustered-network theory (2025), for the finite-size caveat.** Under 1/N weight scaling,
+clustered spiking networks converge to deterministic mean-field dynamics only in the large-N limit; at
+smaller N, stable fixed points and other attractors become METASTABLE, with finite-size fluctuations
+shaping firing rates and driving transitions between states.
+— **Implication for us:** at N=50–100 we should expect noisy, transition-prone attractors rather than
+clean persistent states. That is a measurement problem (more trials, more genomes) and possibly a
+*feature* — metastability is a plausible substrate for the regulation-level transitions we are looking
+for — but it must not be mistaken for failure. *(Pin the citation before relying on it.)*
+
+**Polk, A., Litwin-Kumar, A., Doiron, B. (2012).** Correlated neural variability in persistent state
+networks. *PNAS* 109(16), 6295–6300.
+— 🟡 Spiking variability causes persistent states to DRIFT, degrading memory over time; the usual
+assumption of independent input fluctuations across cells is what this paper relaxes. Directly relevant
+to how long a held cue can survive in a small noisy network, and to reading our delay-length axis.
+
+### Genome encoding: why our current genome cannot express structure
+
+*Our genome is DIRECT — per-synapse `mag` plus per-neuron `signs` (D038), ~735 free parameters at
+density 0.3, N=50. Clustered topologies occupy a vanishing fraction of that space, so random draws never
+contain one and single-synapse mutation almost never builds one. This is a VOCABULARY problem, not a
+selection-pressure problem, and it may be sufficient on its own to explain D124/D125/D129/D130.*
+
+**Stanley, K. O., D'Ambrosio, D. B., Gauci, J. (2009).** A hypercube-based indirect encoding for evolving
+large-scale neural networks. *Artificial Life* 15(2), 185–212. *(HyperNEAT; see also Stanley 2007 on
+CPPNs, Genetic Programming and Evolvable Machines 8(2), 131–162.)*
+— 🟢 The canonical indirect encoding: connectivity is a FUNCTION over a coordinate space rather than a
+list of synapses, so a small genome specifies large structured connectivity.
+
+**Elbrecht, D., Schuman, C. (2020).** Neuroevolution of spiking neural networks using compositional
+pattern producing networks. *ICONS / ACM.*
+— 🟢🔴 CPPN indirect encoding applied specifically to SPIKING networks, which is our case. Reports the
+approach's key hazard directly: **mutating a single gene can change connectivity across a large portion
+of the network**, so mutation-rate and encoding hyperparameters need care. For us this is a warning about
+mutational smoothness — an encoding where every mutation is catastrophic is not evolvable, and our
+replicator dynamics assume graded fitness differences.
+
+**GENE / geometric encoding (Cartesian-genetic-programming meta-evolution, 2024, arXiv:2403.14019).**
+— 🟢🔴 **The closest fit to what we should build.** A connection's weight is computed as a
+(pseudo-)distance between the two linked neurons' latent positions, so **genome size grows LINEARLY with
+neuron count instead of quadratically.** That is precisely the property we need for an interpretable P
+axis: `P_gene = N*d + const`, tunable through the latent dimension `d`, and decoupled from the synapse
+count. The paper also shows the distance function itself can be optimised rather than hand-chosen.
+
+**Evolving efficient genetic encoding for deep SNNs (2024, arXiv:2411.06792).**
+— 🟡 Frames the motivation in exactly our terms: the brain's neurons and synapses develop from only
+~20,000 genes, motivating encodings that regulate large networks at low genomic cost. Their method
+evolves initial WIRING RULES rather than weights.
+— **Relevance:** this is the genotype≠phenotype compression our project is already about (D083/D104).
+An indirect encoding is not a technical convenience for us — it IS a regulatory level specifying another
+level, which is the phenomenon the study exists to examine.
+
+### The distinction this section is really about
+
+D092 quarantines the engineered ceiling: never a template, seed, or comparison for evolved networks. That
+rule is correct and stands. But it does not settle a distinction the post-D130 redesign turns on:
+
+> **Seeding a specific solution is contamination. Enlarging the genome's VOCABULARY so that structured
+> solutions are reachable is not.** A genome that can express any clustering — including none — still
+> requires evolution to find which one, and can still fail. That is categorically different from handing
+> evolution the ceiling's two-cluster topology.
+
+Whether that distinction survives scrutiny is a live question, recorded in HYPOTHESIS_LOG under ENCODING.

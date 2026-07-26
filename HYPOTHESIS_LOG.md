@@ -383,3 +383,82 @@ DECISIONS-level design turn; this entry records only that one branch is closed b
   refutation is not a readout artifact and is now a statement about the task rather than the measurement.
   (DECISIONS D125.)
 
+
+  # ADDITION to HYPOTHESIS_LOG.md
+# Insert as a new top-level section after SELECTABILITY. Add the dated bullet to the revision history.
+
+## ENCODING — is the genome's VOCABULARY the binding constraint?
+
+*Opened 2026-07-26, after D130. This section exists because every null this project has recorded on the
+trial task is equally well explained by a hypothesis that was never stated: that the genome cannot
+express the structures the task requires, so no amount of selection pressure could have found them.*
+
+**E1 (the vocabulary hypothesis).** The genome is DIRECT — per-synapse `mag` plus per-neuron `signs`
+(D038). Clustered/attractor topologies are a vanishing fraction of that space; random draws never contain
+one and single-synapse mutation almost never builds one. **Prediction: the trial-task nulls (D124, D125,
+D129, D130) are consequences of encoding, not of the task, the readout, the operating point, or the
+absence of selection pressure — and they would persist under ANY of those fixes while the encoding is
+direct.**
+
+Evidential standing at the time of writing:
+- D092 (covariance task): random undeveloped nets do not carry context; slow current yields persistent
+  memory only when wired into an attractor TOPOLOGY, which random connectivity lacks. The hand-wired
+  ceiling supplies the topology and carries.
+- D130 (trial task, independent method): ablating ALL recurrent connectivity changes nothing where the
+  task is solvable, and where passive decay fails the intact network fails identically at every coupling.
+  The substrate's entire memory is single-neuron `tau_slow` leak.
+- Litwin-Kumar & Doiron (2012): *modest* clustering — a statistical bias in the connection distribution,
+  not an engineered circuit — is sufficient to produce network-level slow dynamics in balanced E/I nets.
+
+Two independent tasks and two independent methods agree that structure is a precondition. E1 asserts the
+further claim that our genome cannot reach it. **E1 is NOT yet tested.** The test is not another sweep:
+it is to build an encoding that CAN express clustering and re-run the same measurements. If the nulls
+persist under a structured genome, E1 is refuted and the problem lies deeper.
+
+**E2 (the seeding/vocabulary distinction).** D092 quarantines the engineered ceiling: never a template,
+seed, or comparison for evolved networks. E2 claims a distinction that quarantine does not draw:
+
+> Seeding a specific solution is contamination. Enlarging the genome's VOCABULARY so that structured
+> solutions are REACHABLE is not. A genome that can express any clustering — including none — still
+> requires evolution to find which clustering, and can still fail.
+
+**Why E2 is load-bearing and not merely semantic.** If it is false, the post-D130 redesign is
+illegitimate and this project cannot use a structured genome at all without contaminating its own result.
+If it is true, the redesign is required rather than optional, because the current vocabulary makes the
+study's central question unaskable.
+
+**The falsification condition, fixed now.** E2 fails if the structured genome's PRIOR — its random
+initialisation — already solves the task, or already contains the specific topology the ceiling uses. So:
+- **Every structured-genome arm must report gen-0 performance against the task's chance floor**, and
+- **gen-0 must be at chance.** A structured genome whose random draws already perform is a seeded genome
+  wearing a different name, whatever its author intended.
+- The gen-0 check is a REQUIRED first output of any structured-genome run, not a diagnostic to be added
+  later.
+
+**E3 (regulation is the encoding).** Under D104/H-E the project treats development as its implementation
+of implicit regularization. An indirect encoding adds a second, GENETIC level of the same kind: genes
+specify connection statistics, statistics specify synapses. That is not a technical convenience — it is
+literally "a level that modulates another level," which FRAMING §0 names as the definition of regulation
+and the thing whose origin the project exists to explain.
+
+Consequence, and the reason this bears on the P axis: under a direct encoding, genome size and synapse
+count are the SAME NUMBER, which is why P was never ambiguous. Under an indirect encoding they decouple —
+`P_gene` (what selection acts on) and `P_syn` (network capacity) become separate axes. **E3 predicts that
+`P_gene` is the correct double-descent axis**, because in the evolutionary analogy the genome is the
+model and the trials are the constraints. `P_syn` should be held fixed or reported separately, never
+silently conflated.
+
+**What would refute the section as a whole.** A structured genome, with a demonstrated at-chance gen-0
+prior, that still produces flat error-vs-`P_gene` curves and a `loc_best` at its noise floor. That
+outcome would mean the encoding was never the constraint, and would return the project to the substrate
+question (can these neurons support persistent activity at all) with one fewer explanation available.
+
+### Revision history addition
+- **2026-07-26** — ENCODING opened after D130. E1 (the genome's direct per-synapse vocabulary cannot
+  express the clustered topology that persistent activity requires, and this alone may explain every
+  trial-task null), E2 (seeding a solution vs enlarging the vocabulary are different acts, with an
+  at-chance gen-0 prior as the falsification condition), E3 (an indirect encoding IS a regulatory level,
+  and `P_gene` rather than `P_syn` is therefore the double-descent axis). None yet tested; the test is a
+  build, not a sweep.
+
+
