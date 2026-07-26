@@ -194,40 +194,108 @@ def persistence_contrast(delays=(1, 2, 4, 8), seed: int = 1) -> dict:
 # ==================================================================================================
 # CHECK 2b - RELATION PERSISTENCE: is MATCH/NON-MATCH present at read time? (the DMTS invariant)
 # ==================================================================================================
-def relation_persistence(seed: int = 1, developed: bool = True) -> dict:
-    """Decode MATCH vs NON-MATCH (not cue identity) from the full state, per stage.
+def relation_persistence(seed: int = 1, n_trials: int = 400, n_genomes: int = 3) -> dict:
+    """Decode MATCH vs NON-MATCH (not cue identity) from the full state, per stage, UNDEV vs DEV.
 
     WHY THIS AND NOT CUE IDENTITY (D126). Cue-identity persistence was the right invariant for the
-    RETIRED trial_xor target, where the network had to hold WHICH cue in order to do an arbitrary
-    lookup. DMTS does not need that: the probe drive can interact with the held trace to produce a
-    match signal while cue identity itself is swamped. So cue identity at the noise floor during
-    probe/read is NOT evidence against DMTS -- it measures a property the task does not require.
+    RETIRED trial_xor target, where the network had to hold WHICH cue to do an arbitrary lookup. DMTS
+    does not need that: the probe drive can interact with the held trace to produce a match signal
+    while cue identity is swamped. Cue identity at the floor during probe/read is NOT evidence against
+    DMTS -- it measures a property the task does not require.
 
-    What DMTS requires is that the RELATION be present when the response is read. This decodes exactly
-    that, against the decoder's own shuffled-label null.
+    POWER (why n_trials defaults to 400, not the config's 40). With N=50 neurons as features, 40 trials
+    puts the decoder in the p > n regime: the null p95 lands near 0.65, so only an effect of ~+0.15
+    could ever clear it, and a negative reads as "cannot detect" rather than "absent" -- a distinction
+    that matters, because "the relation is absent" would be the most consequential claim available here.
+    400 trials puts n well above p and tightens the null. Cost is a longer behave(), not more
+    development, so it is cheap.
 
-    READ: relation at read CLEARS the null -> the network computes the relation and selection's job is
-          ROUTING it to the output cell (a localization problem, D127).
-          relation at read AT the null -> the information is not there at all, and selection has
-          nothing to route; DMTS is in trouble before generation 0.
+    Averaged over n_genomes random genomes: a single genome is one draw, and this project has had to
+    withdraw three numbers that were exactly that.
+
+    READ: relation at READ clears the null -> information is present; selection's job is ROUTING it to
+          the output cell (a localization problem, D127, already instrumented).
+          at the null with adequate power -> information genuinely absent; selection has nothing to
+          route, and DMTS is in trouble before generation 0.
     """
     nc = SC.make_net_cfg()
     cfg = SC.make_trial_evolve_cfg()
-    task = SC.make_trial_task()
-    g = random_genome(nc, cfg.density, w0=cfg.w0, ei_split=cfg.ei_split, seed=seed)
-    net = EvoNet(g, nc)
-    if developed:
-        net.develop(task.E_train, eta=cfg.dev_eta, dev_ms=cfg.dev_ms,
-                    warmup_ms=SC.WARMUP_MS, n_checkpoints=4, seed=seed)
-    B = net.behave(task.E_test, noise_seed=2)
+    task = SC.make_trial_task(n_trials=n_trials, n_val=n_trials, n_test=n_trials)
     rel = (task.cue_test == task.probe_test).astype(int)      # 1 = match, 0 = non-match
     out = {}
-    for stage in ("cue", "delay", "probe", "read"):
-        X = B["state"][stage_rows(task, "test", stage)]
-        d = decode(X, rel)
-        nm, n95 = decode_null(X, rel)
-        out[stage] = dict(decode=round(d, 3), null_mean=round(nm, 3), null_p95=round(n95, 3),
-                          clears=bool(d > n95))
+    for cond in ("undeveloped", "developed"):
+        per_stage = {st: [] for st in ("cue", "delay", "probe", "read")}
+        nulls = {st: [] for st in per_stage}
+        for k in range(n_genomes):
+            g = random_genome(nc, cfg.density, w0=cfg.w0, ei_split=cfg.ei_split, seed=seed + k)
+            net = EvoNet(g, nc)
+            if cond == "developed":
+                net.develop(task.E_train, eta=cfg.dev_eta, dev_ms=cfg.dev_ms,
+                            warmup_ms=SC.WARMUP_MS, n_checkpoints=4, seed=seed + k)
+            B = net.behave(task.E_test, noise_seed=2 + k)
+            for st in per_stage:
+                X = B["state"][stage_rows(task, "test", st)]
+                per_stage[st].append(decode(X, rel))
+                nulls[st].append(decode_null(X, rel, n_rep=30)[1])
+            print("    %s genome %d done" % (cond, k), flush=True)
+        out[cond] = {st: dict(decode=round(float(np.mean(per_stage[st])), 3),
+                              sd=round(float(np.std(per_stage[st], ddof=1)), 3) if n_genomes > 1 else 0.0,
+                              null_p95=round(float(np.mean(nulls[st])), 3),
+                              clears=bool(np.mean(per_stage[st]) > np.mean(nulls[st])))
+                     for st in per_stage}
+    out["_meta"] = dict(n_trials=n_trials, n_genomes=n_genomes, n_features=nc.N)
+    return out
+
+
+# ==================================================================================================
+# CHECK 2c - TRACE SURVIVAL: does the held cue survive the PROBE DRIVE? (the swamping question)
+# ==================================================================================================
+def trace_survival(seed: int = 1, n_trials: int = 400, n_genomes: int = 3) -> dict:
+    """Cue identity decoded at each stage on NON-MATCH TRIALS ONLY, vs the shuffled-label null.
+
+    WHY NON-MATCH ONLY -- a confound the earlier checks do not handle. Under DMTS (D126) cue and probe
+    are drawn from the SAME pattern set, so on MATCH trials the probe input IS the cue pattern: cue
+    identity is then decodable straight off the probe drive with no held trace involved. Pooling match
+    and non-match therefore mixes "the trace survived" with "the probe re-presented the cue," and the
+    pooled number (CHECK 1/CHECK 2's cue@probe) answers neither. Restricting to NON-MATCH trials makes
+    the probe uninformative about cue identity by construction, so anything decodable there came from
+    the trace.
+
+    WHAT IT DIAGNOSES. CHECK 1 showed cue identity at 1.00 at the last delay segment and ~0.50 during
+    probe, suggesting the probe drive swamps the residual trace. If the trace is unreadable while the
+    probe is on, there is nothing for a match comparison to operate on, which would be a MECHANISTIC
+    explanation for a null in CHECK 2b -- and a different problem from "the task is unselectable."
+
+    THIS IS A DIAGNOSTIC, NOT A FIX. If the trace is swamped, the levers (relative cue/probe amplitude,
+    read timing, trace time constant) are all task/operating-point parameters OUTSIDE D126's
+    pre-registered rung axis. Changing one reactively because a null appeared is precisely the move the
+    framework forbids; it would need its own DECISIONS entry and rationale. Measure first.
+    """
+    nc = SC.make_net_cfg()
+    cfg = SC.make_trial_evolve_cfg()
+    task = SC.make_trial_task(n_trials=n_trials, n_val=n_trials, n_test=n_trials)
+    nonmatch = np.where(task.cue_test != task.probe_test)[0]      # probe cannot reveal the cue here
+    cue = task.cue_test
+    out = {}
+    for cond in ("undeveloped", "developed"):
+        acc = {st: [] for st in ("cue", "delay", "probe", "read")}
+        nul = {st: [] for st in acc}
+        for k in range(n_genomes):
+            g = random_genome(nc, cfg.density, w0=cfg.w0, ei_split=cfg.ei_split, seed=seed + k)
+            net = EvoNet(g, nc)
+            if cond == "developed":
+                net.develop(task.E_train, eta=cfg.dev_eta, dev_ms=cfg.dev_ms,
+                            warmup_ms=SC.WARMUP_MS, n_checkpoints=4, seed=seed + k)
+            B = net.behave(task.E_test, noise_seed=2 + k)
+            for st in acc:
+                X = B["state"][stage_rows(task, "test", st)][nonmatch]
+                acc[st].append(decode(X, cue[nonmatch]))
+                nul[st].append(decode_null(X, cue[nonmatch], n_rep=30)[1])
+            print("    trace/%s genome %d done" % (cond, k), flush=True)
+        out[cond] = {st: dict(decode=round(float(np.mean(acc[st])), 3),
+                              null_p95=round(float(np.mean(nul[st])), 3),
+                              clears=bool(np.mean(acc[st]) > np.mean(nul[st]))) for st in acc}
+    out["_meta"] = dict(n_nonmatch=int(len(nonmatch)), n_genomes=n_genomes)
     return out
 
 
@@ -262,6 +330,7 @@ def run_all() -> dict:
     return dict(d121=d121_regression(),
                 persistence=persistence_contrast(),
                 relation=relation_persistence(),
+                trace=trace_survival(),
                 controls=degenerate_checks())
 
 
@@ -297,14 +366,34 @@ if __name__ == "__main__":
     print("         is the blocker, and the D126 task swap is necessary but not sufficient.")
 
     print("\n== CHECK 2b  RELATION (match/non-match) decodability -- the DMTS invariant ==")
-    print("   cue identity is NOT what DMTS needs; the relation at READ is. Compare to the NULL, not 0.5.")
-    print("   stage  | decode | null_mean  null_p95 | clears null?")
-    print("   -------+--------+---------------------+-------------")
-    for st, v in relation_persistence().items():
-        print("   %-6s | %.3f  |   %.3f      %.3f   | %s"
-              % (st, v["decode"], v["null_mean"], v["null_p95"], "YES" if v["clears"] else "no"))
-    print("   READ: clears at READ -> information is present, selection's job is ROUTING (D127).")
+    rp = relation_persistence()
+    md = rp.pop("_meta")
+    print("   n_trials=%d, n_genomes=%d, n_features=%d  (n >> p, so the null is tight and a negative means"
+          % (md["n_trials"], md["n_genomes"], md["n_features"]))
+    print("    ABSENT rather than merely undetectable). Compare to the NULL, never to 0.5.")
+    print("   condition    | stage  | decode (sd) | null_p95 | clears?")
+    print("   -------------+--------+-------------+----------+--------")
+    for cond in ("undeveloped", "developed"):
+        for st in ("cue", "delay", "probe", "read"):
+            v = rp[cond][st]
+            print("   %-12s | %-6s | %.3f (%.3f)|  %.3f   | %s"
+                  % (cond, st, v["decode"], v["sd"], v["null_p95"], "YES" if v["clears"] else "no"))
+    print("   READ: clears at READ -> information present, selection's job is ROUTING (D127).")
     print("         at null at READ -> information absent; selection has nothing to route.")
+
+    print("\n== CHECK 2c  TRACE SURVIVAL: does the held cue survive the PROBE DRIVE? ==")
+    ts = trace_survival(); tm = ts.pop("_meta")
+    print("   cue identity on NON-MATCH trials only (n=%d), where the probe cannot reveal the cue."
+          % tm["n_nonmatch"])
+    print("   A drop from delay -> probe means the probe drive SWAMPS the trace, which would explain")
+    print("   a CHECK 2b null mechanically. Diagnostic only -- the levers are outside D126's rung axis.")
+    print("   condition    | stage  | decode | null_p95 | clears?")
+    print("   -------------+--------+--------+----------+--------")
+    for cond in ("undeveloped", "developed"):
+        for st in ("cue", "delay", "probe", "read"):
+            v = ts[cond][st]
+            print("   %-12s | %-6s | %.3f  |  %.3f   | %s"
+                  % (cond, st, v["decode"], v["null_p95"], "YES" if v["clears"] else "no"))
 
     print("\n== CHECK 3  degenerate-strategy controls (must sit at chance 0.50) ==")
     for k, v in degenerate_checks().items():
