@@ -1,0 +1,41 @@
+# analysis log: delay_persistence_probe
+# timestamp: 2026-07-25T17:57:25.735295
+# command: scripts/delay_persistence_probe.py
+# D121 regression + delay persistence (undeveloped vs DEVELOPED) + controls
+#====================================================================
+
+[logging to runs/persistence\20260725-175725_delay_persistence_probe.log]
+== CHECK 1  D121 regression (zero-plasticity develop == no development) ==
+   max|delta| state at noise=0 : 0.000e+00  -> PASS
+   per-stage cue decode (undeveloped, zeroDev), real noise:
+      cue     undev=0.95  dev=0.95
+      delay   undev=1.00  dev=1.00
+      probe   undev=0.50  dev=0.47
+      read    undev=0.52  dev=0.55
+
+== CHECK 2  delay persistence: UNDEVELOPED vs DEVELOPED ==
+   selection acts on DEVELOPED nets -- the developed row is the one that matters
+   delay        |  undeveloped        |  developed          |  cue@delay change
+   -------------+---------------------+---------------------+------------------
+   1 ( 50 ms)   |  cue=0.95 delay=1.00 |  cue=0.88 delay=1.00 |  +0.00
+   2 (100 ms)   |  cue=0.92 delay=0.95 |  cue=0.95 delay=0.83 |  -0.12
+   4 (200 ms)   |  cue=1.00 delay=0.35 |  cue=0.98 delay=0.40 |  +0.05
+   8 (400 ms)   |  cue=0.98 delay=0.70 |  cue=0.97 delay=0.67 |  -0.03
+   READ: largest drop = -0.12 -- a large negative drop means DEVELOPMENT, not the target,
+         is the blocker, and the D126 task swap is necessary but not sufficient.
+
+== CHECK 2b  RELATION (match/non-match) decodability -- the DMTS invariant ==
+   cue identity is NOT what DMTS needs; the relation at READ is. Compare to the NULL, not 0.5.
+   stage  | decode | null_mean  null_p95 | clears null?
+   -------+--------+---------------------+-------------
+   cue    | 0.452  |   0.512      0.681   | no
+   delay  | 0.551  |   0.506      0.655   | no
+   probe  | 0.502  |   0.502      0.671   | no
+   read   | 0.549  |   0.517      0.650   | no
+   READ: clears at READ -> information is present, selection's job is ROUTING (D127).
+         at null at READ -> information absent; selection has nothing to route.
+
+== CHECK 3  degenerate-strategy controls (must sit at chance 0.50) ==
+   normal    val_acc=0.525
+   omit_cue  val_acc=0.538
+   scramble  val_acc=0.500
