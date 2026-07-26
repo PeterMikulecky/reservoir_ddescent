@@ -5711,3 +5711,106 @@ checked. D120's floor was verified at 2 cues and then carried forward as a gener
 design; it is not one. Re-verify construction-level guarantees at every rung of a pre-registered axis,
 and do it in the cheap layer — this took numpy seconds and would have cost rung 2 entirely.
 
+
+### D127 — LOCALIZATION MADE A STANDING MEASUREMENT: every arm records single-neuron AND all-neuron scores, and PARTICIPATION RATIO is pre-registered as the primary endpoint for concentration-vs-distribution through second descent. Fitness stays single-neuron — for a reason that is NOT the one first given.
+**2026-07-25 · Measurement design decision (pre-registration) · ddescent/trial_eval.py, scripts/trial_selection_run.py · no data · extends D126's sweep design; operationalizes the provisional H-E**
+
+**WHY NOW AND NOT LATER (PJM).** If a peak appears and localization was not recorded alongside it, the
+concentration trajectory cannot be recovered without re-running every arm — and the P-sweep is the
+expensive object in this study. The measurement is nearly free (the states already exist in `behave()`;
+scoring 50 neurons is 50 two-parameter least-squares fits). So it is a now-or-expensive decision, and it
+is cheap now. This entry fixes it BEFORE the first sweep.
+
+**WHAT IS MEASURED.** Per genome, each of the N neurons scored INDEPENDENTLY with its own D095-weak
+affine readout — 50 weak reads, never one pooled decoder across neurons. From that per-neuron score
+vector: `single` (neuron 0, the fitness), `mean`, `best`, `gap = best − mean`, `n_above` (count above a
+noise-calibrated threshold), and **PR**. Two hooks, both nearly free:
+- **Per generation, best genome** — via D122's `report_fn`, which already runs once per generation and
+  flows into `history`. Gives the concentration TRAJECTORY during selection, at ~1/pop_size of one
+  extra scoring pass.
+- **Post-arm, whole final population** — in `trial_selection_run.py`, beside the existing post-arm
+  control test. Gives the AMONG-NETWORKS distribution at each P.
+
+**THE PRIMARY ENDPOINT, DEFINED PRECISELY.** With `x_j = max(0, score_j − chance)` over the N neurons
+(chance = 0.5 for `val_acc`, 0 for `trial_score`):
+
+> **PR = (Σ x_j)² / Σ x_j²** — the effective number of neurons carrying task signal. Range 1…N.
+
+PR is chosen over `gap` deliberately. D125 established that `best` is a lottery: max-over-N rises with
+in-degree at fixed N and showed zero between-genome consistency (reliability 0.000 in all eight cells).
+Since **P is the independent variable of the sweep**, any metric whose expectation drifts with P is the
+wrong instrument for reading a P-trajectory. PR is extremum-free, and participation ratio is already
+this project's idiom for effective dimensionality (D075's `PR_mean ~ 7`).
+
+**WHAT "PRIMARY ENDPOINT" MEANS HERE — the word is doing methodological work, not typographic.** PR's
+trajectory constitutes the H-E test and its read is fixed below, in advance. `mean`, `best`, `gap` and
+`n_above` are DESCRIPTIVE SECONDARIES that may inform interpretation but **cannot on their own support a
+claim.** The hazard this guards is concrete: four localization metrics across ~10 P points is forty
+numbers, and something will trend. Designating the primary before the data is the multiple-comparison
+form of the reactive-choice failure the framework blocks elsewhere.
+
+**PRE-REGISTERED READ (fixed now, before any curve).**
+- **PR RISES with P through a second descent** → DE-CONCENTRATION: added capacity spreads the
+  computation across the network. H-E's distribution branch.
+- **PR FLAT near 1 while the single-neuron score climbs** → CONCENTRATION: selection routed to the
+  readout's afferent support rather than distributing. H-E's concentration branch. A real result, not a
+  failure.
+- **PR FLAT near 1 with `mean` never clearing chance** → the single-neuron score was routing all along;
+  this is a WARNING about how to read the entire P-curve, not a localization finding.
+- **PR indistinguishable from its null at every P** → no localization signal; H-E untested by this sweep.
+
+**⚠ PR REQUIRES ITS OWN NULL, COMPUTED AT EVERY P.** "PR = 7" is meaningless without knowing what PR
+reads when there is no signal: with all neurons at chance, `x_j` is noise clipped at zero and PR still
+returns a number. So **PR is computed on SCRAMBLED targets alongside every real measurement**, per P
+point, and reported as `PR_null`. Only `PR − PR_null` is interpreted. The null is recomputed at each P
+rather than once, because the per-neuron score noise distribution may itself vary with P. This is D116's
+lesson applied to a metric instead of a floor: know what it reads when nothing is there.
+
+**INTERPRETABILITY GATE.** PR is reported from the first arm but **not interpreted until `mean` clears
+chance.** On DMTS at generation 0 nothing is above chance by construction, so early-arm PR is noise
+against noise. Reporting it from the start is what makes the trajectory continuous; interpreting it
+early would be reading the null.
+
+**FITNESS STAYS SINGLE-NEURON — and the reason first given was WRONG (correction, credit PJM).** The
+initial rationale was that a mean-over-neurons fitness would reopen the reservoir-computing degeneracy.
+**It would not.** Fifty independent weak reads aggregated by a mean grant the readout NO mixing power —
+each is still a two-parameter affine on one neuron, exactly the D095 capacity. What would reopen the RC
+hazard is a single pooled decoder fitted across neurons, which is separately forbidden and was never at
+issue. PJM's counter-argument is the correct one and cuts the other way: it is SINGLE-neuron fitness
+that carries a localization hazard, since it can be satisfied by routing to one cell's afferent support
+rather than by the network computing anything — the concern already named in the H-E draft as "the RC
+degeneracy re-entering through the readout SOURCE."
+
+The actual reason to keep fitness single-neuron is different and, on this design, decisive:
+**mean-over-neurons selects FOR distribution, and distribution is the dependent variable.** A fitness
+rewarding every neuron's correlation with the target is a direct pressure toward redundant distributed
+coding; under it, the PR trajectory would read out the fitness function rather than a property of the
+network. Single-neuron fitness is asymmetric in exactly the useful way: it constrains ONE neuron and
+leaves the other N−1 unconstrained by selection, so their score distribution is an OBSERVATION rather
+than a target. PJM's localization worry does not disappear under this choice — it becomes MEASURABLE,
+as the concentration branch of the read above.
+
+**PARALLEL SELECTIONS — committed, with a pre-registered trigger rather than a start date.** The clean
+resolution of "capacity-driven or selection-metric-driven?" is two arms at the same P grid — one selected
+on `single`, one on `mean` — each tracking BOTH scores, giving a 2×2. This is adopted as the design.
+It is NOT run in sweep one, for a reason that costs nothing: **a second arm is not expensive to
+retrofit** (arms are independent and can be run later at the identical grid), whereas the MEASUREMENT is,
+which is why only the measurement is mandated now. Sweep one answers D126's prior question — does a peak
+exist at all — and if it does not, the 2×2 is moot. **Trigger: run the mean-selected arm iff sweep one
+produces a peak meeting D126's criterion.** Fixed here so the decision is not made reactively later.
+
+**HONEST LIMITATIONS.**
+- PR has never been watched move on a task this substrate can perform. Pre-registering it as primary is
+  a commitment made without having seen its behaviour — accepted deliberately (PJM) as the price of
+  having a primary at all, but it means a null PR result is weak evidence rather than a refutation.
+- `gap` is retained for continuity with D125 despite its in-degree confound; it is a secondary and must
+  not be read as a P-trajectory.
+- The per-neuron affine fits are IN-SAMPLE, like the D095 readout they mirror. The suspected small-`n_val`
+  overfitting flagged in D124 applies here too and is untested; at small `n_val` PR may be inflated by fit
+  variance. Report `n_val` alongside PR, and prefer the largest available.
+
+**LESSON.** "Primary endpoint" is a commitment, not an emphasis. If a metric is called primary, its
+formula, its null, and the mapping from its trajectory to each conclusion must all be fixed before the
+data — otherwise the word means only that it was the one that moved.
+
+

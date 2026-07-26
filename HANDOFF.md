@@ -26,7 +26,7 @@ newest `### D` entry, the D entry wins and this file is stale — say so rather 
 
 ---
 
-## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-25 (D126)*
+## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-25 (D127)*
 
 The trial task is built, correct, and **unselectable**. The `cue→delay→probe` XOR task (D120) works
 exactly as designed — chance floor by construction, controls that remove what they claim, clock-aligned
@@ -50,8 +50,13 @@ the triggers for moving up it, the sweep design (`n_seeds` = 5, staged, with a p
 requirement on any peak), and the read of every outcome. Rung 1's numeric dimensioning is deliberately
 left open, to be set from calibration data — reliability and low-P solvability — never from a curve.
 
-**NEXT ACTION — execute D126's sequence, each step gating the next.** (1) Make the shared-pattern edit
-and verify the controls still sit at chance and the floor is intact. (2) `trial_reliability_probe` at
+**NEXT ACTION — execute D126's sequence, each step gating the next.** (1) **Task-construction half
+DONE** (D126 amendment): `shared_patterns=True` ships, rung 0's floor is verified held-out over 20 seeds
+(cue-only 0.4996, probe-only 0.5000, constant 0.500, joint 1.000; match trials have <cue,probe>=1.0), and
+a correction was made — the (cue,probe) type grid loses the floor for `n_cues>2`, so the family is now
+relation-balanced. **Still owed on step 1: the network-level controls** — `omit_cue` and `scramble` on a
+developed net plus the leakage check. The oracle cannot test `omit_cue` at all (blanking the cue stimulus
+leaves the cue INDEX intact), so it is network-level by nature. (2) `trial_reliability_probe` at
 rung 0, n=30 — is there a gen-0 gradient? Hours, not overnight. (3) The **low-P solvability screen** —
 a few arms at the bottom of the P range only, NOT a sweep; answers "too simple?" cheaply and measures
 the arm-to-arm SD that sets `n_seeds`. (4) Dimension rung 1 from (2)+(3), probe it, lock both. (5) Sweep
@@ -62,8 +67,14 @@ penalizes a degenerate rate regime).
 
 ## §2. OPEN THREADS — *volatile*
 
-- **The D126 edit is not yet made.** `trial_task.py` still builds `trial_xor`; the entry is a
-  pre-registration written before the code was touched. Nothing has been measured on DMTS.
+- **Network-level controls on DMTS not yet run** — `omit_cue`, `scramble`, leakage, on a developed net.
+  Gates the reliability probe; nothing about the network has been measured on DMTS.
+- **The D127 localization measurement is DECIDED but NOT BUILT.** All-neuron scoring, PR + its
+  scrambled-target null, on the `report_fn` hook and post-arm in the runner. Must ship before sweep one —
+  retrofitting means re-running arms. Touches `trial_eval.py` and `trial_selection_run.py`; end-to-end
+  verification needs Brian2, so the real check is a short run on PJM's machine.
+- **Parallel mean-selected arm** (D127): committed design, NOT part of sweep one. Trigger is fixed —
+  run it iff sweep one produces a peak meeting D126's criterion.
 - **Task-family parameterization** — variable-delay sampling and an optional in-delay distractor, so
   D126's rungs are config rows rather than separate code paths. Small, and owed before rung 1.
 - **`behave_batch` is stale relative to D103** (omits `I_wta` and the eSTDP synapses) and dormant — it is
