@@ -40,7 +40,7 @@ re-derivation.
 
 ---
 
-## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-26 (D130 -- recurrence contributes nothing)*
+## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-26 (D131 -- structured genome pre-registered)*
 
 **The recurrent network has never contributed anything, and that explains everything else.** D130
 ablated all recurrent connectivity (`genome.mag` zeroed, `tau_slow` retained) against intact networks on
@@ -56,17 +56,27 @@ those synapses do nothing; so P cannot matter. The study's independent variable 
 computation it is meant to modulate. `loc_best` has sat at its measured noise floor in every condition of
 every sweep -- a 45x P range, a 100x gain range, and now 3 couplings x 3 delays x ablation.
 
-**NEXT ACTION -- undecided. The finding is a fork, not a to-do.** D130's limitation is the live question:
-it measured RANDOM UNDEVELOPED genomes, so it establishes what recurrence does BY DEFAULT, not what
-selection or development could build (PJM's standing D125 objection, applying with full force). Three
-directions, none started:
-1. **Test whether recurrence is BUILDABLE.** A GA arm scored on a delay past `tau_slow`, where the
-   ablated network provably fails -- selection would have to construct persistent activity or fail
-   visibly. Expensive, and D130 says gen-0 fitness would start at chance.
-2. **Fix the substrate first.** No memory beyond leak may mean the neuron model or connectivity
-   statistics cannot support persistent activity at all. That is a modelling question, not a sweep.
-3. **Reconsider the task.** DMTS requires working memory this substrate lacks. A task whose demands the
-   substrate can meet would change what is being asked.
+**THE REDESIGN IS DECIDED AND PRE-REGISTERED (D131), NO CODE YET.** The diagnosis is that the genome
+cannot EXPRESS the structures the task requires: it is direct (per-synapse `mag` + `signs`, D038), and
+clustered topologies are a vanishing fraction of that space, so random draws never contain one and single
+-synapse mutation almost never builds one. That single unstated assumption may account for D124, D125,
+D129 and D130 together (HYPOTHESIS_LOG SS-ENCODING E1). The design: **block genome** (block assignment per
+neuron + K x K block-weight matrix, `P_gene = N + K^2`, knob K) with **shared-xi** within-block
+heterogeneity, **per-neuron top-k** sparsification holding `P_syn = N*k` fixed, **N=100 / n_cues=4**, and
+a **nested split** (pairs seen/unseen; train/val trials within seen, preserving D113). `P_gene` is the
+double-descent axis; `P_syn` is a nuisance CONTROL, not a capacity.
+
+**NEXT ACTION -- D131's build order, each step gating the next.** (1) Block genome behind the existing
+`Genome` interface. (2) **Known-positive**: hand-set K=2 + inhibitory pool must reproduce the D092
+ceiling's carry, INCLUDING its decay across the delay (a flat carry is the random-net confound, not
+memory). (3) **Gen-0 prior check** -- random structured genomes must be AT CHANCE, or the encoding is
+seeded under another name. (4) **Ablation repeated** on structured genomes past `tau_slow`; if recurrence
+still contributes nothing, E1 is refuted and the redesign has failed -- STOP. (5) Mutational smoothness,
+across single-gene mutations and across xi draws. (6) Only then the `P_gene` sweep. Steps 2-5 are cheap
+and any of them can end the line.
+
+**Develop at N=50 / K=2** (where the ceiling gives a known positive) and move to N=100 only for the
+sweep; N=100 is ~4x per run.
 
 **DO NOT** resume D126's sweep sequence. A P-sweep whose fitness cannot read the task's discriminating
 quantity would repeat D124 at far greater cost. **DO NOT** push `input_gain` past ~50: PR is already 1.31
@@ -81,6 +91,9 @@ task-agnostic, and `cos(delay, test)` *is* the DMTS comparison.
 
 ## §2. OPEN THREADS — *volatile*
 
+- **Every headline result under the new encoding must replicate across >=3 independent xi draws** (D131).
+  If a P-curve's shape changes with xi, the shared scaffold is doing hidden work and the finding does not
+  stand.
 - **`readout_window_ms = 60` exceeds `present_ms = 50`.** Every stage sample carries 10 ms of its
   predecessor -- inherited from the era when `present_ms` was 150. Affects every trial-task measurement,
   not just these checks. Needs a deliberate value and its own entry, not a quiet edit.

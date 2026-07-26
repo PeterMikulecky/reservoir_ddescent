@@ -6208,6 +6208,169 @@ variable is disconnected from its dependent variable — a conclusion that a GA 
 ever, after weeks. **When a study's mechanism is in doubt, ablate the mechanism before sweeping its
 parameter.**
 
+### D131 — STRUCTURED GENOME: the encoding is redesigned so that clustered topology is EXPRESSIBLE. N=100, n_cues=4, block genome with shared-xi heterogeneity, per-neuron top-k sparsification, nested pair/trial split, and `P_gene` (not `P_syn`) as the double-descent axis. Pre-registered before any code exists.
+**2026-07-26 · Design decision (P-curve-defining) · ddescent/evonet.py, ddescent/trial_task.py, ddescent/study_config.py · NO DATA · follows D130; implements HYPOTHESIS_LOG §ENCODING E1-E3**
+
+**WHY A REDESIGN IS FORCED.** D130 ablated all recurrent connectivity (`genome.mag` zeroed, `tau_slow`
+retained) against intact networks on paired genomes: where the task is solvable the ablated network
+matched or beat intact, and where passive decay fails the intact network failed identically at every
+coupling from 0.25x to 8x. Recurrence contributes nothing, so P — which counts recurrent synapses —
+could never have mattered, and D129's flat density sweep was a necessity rather than a null. D092 had
+already found the same thing on the covariance task by a different route: random connectivity lacks the
+attractor topology that persistent memory requires. Litwin-Kumar & Doiron (2012) supply the missing
+piece — *modest* clustering, a statistical bias in the connection distribution rather than an engineered
+circuit, is sufficient to produce network-level slow dynamics in balanced E/I networks.
+
+The current genome is DIRECT: per-synapse `mag` plus per-neuron `signs` (D038). Clustered topologies are
+a vanishing fraction of that space; random draws never contain one and single-synapse mutation almost
+never builds one. **This is a vocabulary problem, and it alone may explain D124, D125, D129 and D130.**
+
+---
+
+**THE DESIGN.**
+
+**1. Block genome (stochastic block model).** Each neuron carries a block-assignment gene
+`b_i in {1..K}` (N genes); a `K x K` matrix gives block-to-block connection weight (K^2 genes); E/I
+identity per neuron is unchanged (D038). A synapse's expected strength is a lookup on the blocks of its
+two endpoints. Strong within-block and weak between-block entries produce clusters — the structure D092's
+ceiling demonstrates and D130 showed random connectivity lacks. **`P_gene = N + K^2`; the knob is K, "how
+many kinds of neuron the genome can name."**
+
+**2. Within-block heterogeneity via a SHARED xi field.** `W_ij = block_weight(b_i, b_j) * xi_ij`, with
+`xi` drawn once per run and identical for every individual in the population. Without it every synapse
+in a block-pair is identical, top-k selection is a mass of exact ties, and a neuron's inputs take at most
+K distinct values. See the reviewer section below for why xi is shared rather than per-individual.
+
+**3. Per-neuron top-k sparsification.** Generate all pairwise strengths; each neuron keeps its k
+strongest INPUTS, `k = density * (N-1)`, so `P_syn = N * k` exactly. Chosen over global top-M because
+global competition lets one strong cluster consume the budget and leave neurons with NO inputs at all,
+and because fixing in-degree removes a confound this project has already been bitten by — D125 found
+best-over-neurons rises with in-degree at fixed N, which is why `loc_best` behaved as a lottery.
+⚠ The cost: real cortex has heterogeneous in-degree and this legislates it away. Revisit by making k a
+per-neuron gene once the uniform version works.
+
+**4. `P_gene` is the double-descent axis; `P_syn` is a fixed CONTROL.** Under a direct encoding these
+are the same number, which is why P was never ambiguous; under a structured encoding they decouple.
+`P_syn` is NOT "network capacity" — it is only a synapse count, held fixed the way `w0_for_density`
+holds drive fixed (D129), so that "more genes" cannot smuggle in "more synapses." What `P_gene` expresses
+is RESOLUTION: the same synapses carved into finer arrangements. In the evolutionary analogy the fitted
+object is the genome and the constraints are the trials, so overparameterization means more heritable
+degrees of freedom than the task constrains. **Reporting rule: every result states both numbers and how
+sparsity was imposed. A curve plotted against "P" without saying which is a defect.**
+
+**5. N = 100, n_cues = 4.** N does not buy bigger clusters (40E/2 clusters and 80E/4 clusters both give
+~20 E per cluster); it buys MORE clusters. The binding argument is measurement, not substrate: at
+`n_cues = 2` there are only 4 cue-probe pairs and a held-out set is barely definable, while at
+`n_cues = 4` there are 16 pairs and a 12/4 split is feasible. Cost is ~4x per run (D130's sweep was 75
+min at N=50). **Develop and debug at N=50, K=2 — where the D092 ceiling gives a known positive — and move
+to N=100 only for the sweep.**
+
+**6. Nested split (the generalization dimension).** The `K^2` cue-probe pairs split into SEEN and UNSEEN;
+unseen pairs are touched by NOTHING — not development, not fitness. Within seen pairs, trials split into
+train (development) and val (fitness), preserving D113 exactly. Three error measures result:
+- **val** (seen pairs, fitness trials) — what selection optimises;
+- **test-on-SEEN** (seen pairs, held-out trials) — generalization to new NOISE, what "test error" has
+  meant in this project so far;
+- **test-on-UNSEEN** (unseen pairs) — generalization to new STIMULUS STRUCTURE.
+
+The decomposition is the point. A genome that memorises pairs shows a gap between the last two; one that
+has found the identity rule does not. **A second descent appearing in one and not the other is itself a
+finding**, and separating them says WHAT KIND of overfitting occurs past the threshold.
+
+**7. Why the interpolation threshold should be INSIDE the swept range.** At N=100,
+`P_gene = 100 + K^2`: K=2 -> 104, K=10 -> 200, K=12 -> 244, K=20 -> 500, K=30 -> 1000. With 12 seen pairs
+at ~20 trials each, constraints ~ 240, so P_crit falls near K ~ 12 — inside a K=2..30 sweep. Note
+`P_gene >= N` always, since assignments cost N genes regardless; N and the constraint count must
+therefore be chosen together. **Because trials-per-pair is a free knob, P_crit can be POSITIONED rather
+than hoped for** — which is FRAMING's two-failure-mode problem (a flat curve meaning "too hard" or "too
+simple") addressed by construction rather than by argument.
+
+---
+
+**WHAT WE WOULD SAY TO A REVIEWER WHO CHALLENGES THE SHARED xi.**
+
+*The challenge: every individual in the population inherits the same random multiplier field. Real
+organisms do not share a wiring template. Is this not an artefact that makes the result unreproducible in
+any biologically plausible setting?*
+
+**1. Concede the biology immediately.** It has no population-level analogue and we do not claim one. It
+is a variance-reduction device, and it is stated as such rather than defended as realism.
+
+**2. State what it buys, precisely.** Two alternatives were considered and both are worse for a reason
+internal to this study.
+- *xi redrawn per individual.* The same genome then builds different networks, so fitness acquires a
+  variance term unrelated to the genome. This project has had three separate results destroyed by fitness
+  unreliability (D115, D124, D129); selection cannot act on a signal below its own measurement noise, and
+  adding a noise source to the genotype->phenotype map is the one intervention most likely to reproduce
+  those failures.
+- *xi seeded from the mutable genome.* A single mutation then rebuilds the entire connectivity from
+  scratch — the catastrophic-mutation hazard Elbrecht & Schuman (2020) report for CPPN encodings — and
+  replicator dynamics require graded fitness differences.
+
+**3. Name what it is, structurally.** A fixed scaffold of POTENTIAL contacts, with genes determining
+which are realised and how strongly. That is not a wild abstraction: developmental neuroscience
+distinguishes the space of possible contacts (set by arborisation and physical apposition) from the
+synapses actually formed (set by molecular matching and activity). Shared xi models the first as a
+constant of the experiment and lets the genome vary the second. It is a strong idealisation of a real
+distinction, not an invention.
+
+**4. Give the falsification condition, and commit to it in advance.** If the result depends on the
+particular xi, it is an artefact. So: **every headline result is replicated across at least 3 independent
+xi draws, and the finding must hold in all of them.** If a P-curve's shape changes with xi, we report
+that and the finding does not stand. This is the same discipline the project already applies to noise
+seeds, applied one level out.
+
+**5. Say what would make us abandon it.** If the ablation check (build step 4) shows recurrence
+contributing only under some xi draws and not others, the shared field is doing hidden work and the
+design is wrong. And if per-individual xi turns out NOT to inflate fitness variance materially at the
+population sizes used, the reliability argument evaporates and the realistic version should be adopted.
+That is measurable at the point it matters — it is build step 5's smoothness measurement with xi as the
+varied factor — and we would rather run it than argue about it.
+
+---
+
+**BUILD ORDER — each step gates the next; nothing expensive before its precondition.**
+1. Block genome behind the existing `Genome` interface; `EvoNet` unchanged. Verify `P_syn = N*k` holds
+   exactly as K varies.
+2. **Known-positive check.** A hand-set block genome (K=2 + inhibitory pool) must reproduce the D092
+   ceiling's carry: cue selects the matching cluster, persists, and DECAYS across the delay. The decay is
+   the validated part of the measure (D092) — a flat carry is the random-net confound, not memory. If
+   this fails, the implementation is wrong and nothing after it matters.
+3. **⚠ GEN-0 PRIOR CHECK — the E2 falsification condition.** Random structured genomes must be AT CHANCE
+   on the task. A structured prior that already performs is a seeded genome under another name, whatever
+   its author intended. Required first output of every structured-genome run, not a later diagnostic.
+4. **Ablation, repeated.** D130's intact-vs-ablated on structured genomes at a delay past `tau_slow`.
+   **If recurrence still contributes nothing, E1 is refuted and this redesign has failed** — stop rather
+   than proceeding to a sweep.
+5. **Mutational smoothness.** Distribution of |fitness change| per single-gene mutation, and across xi
+   draws. If most mutations are catastrophic, selection has no gradient regardless of expressivity.
+6. Low-P solvability screen (D126 step 3), then the `P_gene` sweep with D127's localization
+   instrumentation attached and D126's peak criterion in force.
+
+Steps 2-5 are cheap and each can end the line. Only step 6 is expensive.
+
+**PRE-REGISTERED READ.**
+- *Ceiling reproduced, gen-0 at chance, recurrence contributes, curve has a peak* -> H-A supported on a
+  substrate where the mechanism demonstrably operates; proceed to H-B.
+- *Ceiling reproduced, gen-0 at chance, recurrence contributes, curve FLAT* -> the encoding was the
+  constraint but P still does not move error; a substantive negative about evolution+development in this
+  paradigm, and much stronger than D129's because the mechanism is now known to be live.
+- *Recurrence still contributes nothing (step 4)* -> E1 refuted. The problem is the neuron model or the
+  substrate's capacity for persistent activity, not the encoding. Return to the substrate question with
+  one fewer explanation available.
+- *Gen-0 already performs (step 3)* -> the structured prior is seeded. Redesign the encoding, do not
+  proceed.
+
+**HONEST STATUS.** No data, no code. Written before `evonet.py` was touched so its rationale provably
+predates the result. Whether a structured genome restores a P-dependence is exactly what this
+pre-registers and is not assumed.
+
+**LESSON.** Four sweeps, an ablation, and eleven instrument revisions were spent characterising nulls
+that a single unstated assumption could have produced: that the genome could express the structures the
+task required. **Before spending selection — or sweeps — on a search space, check that the target is IN
+the search space.** The vocabulary of the encoding is a scientific claim, not an implementation detail.
+
+
 
 
 
