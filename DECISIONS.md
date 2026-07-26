@@ -5813,4 +5813,82 @@ produces a peak meeting D126's criterion.** Fixed here so the decision is not ma
 formula, its null, and the mapping from its trajectory to each conclusion must all be fixed before the
 data — otherwise the word means only that it was the one that moved.
 
+### D127 — AMENDMENT (2026-07-25, same day): the pre-registered PR formula was WRONG and is corrected before any data. Also: D125's `single(n0)` column was not the fitness neuron.
+**Appended to D127 · ddescent/trial_eval.py, scripts/trial_selection_run.py · synthetic verification only, no network data · a pre-registered endpoint changed, so it is recorded rather than silently substituted**
+
+**WHY THIS IS AN ENTRY AND NOT A COMMIT MESSAGE.** D127 pre-registered PR's formula. Changing a
+pre-registered endpoint without recording it would destroy the point of pre-registering — a reader
+could not tell a definition fixed before the data from one adjusted after it. The correction was found
+by unit-testing the metric against synthetic states of KNOWN concentration, before any network run, and
+the timing is on the record precisely so the endpoint's provenance stays checkable.
+
+**THE ERROR.** D127 defined `x_j = max(0, score_j − chance)` with chance = 0.5 for accuracy. **The
+per-neuron readouts are fit IN-SAMPLE, so a pure-noise neuron does not score 0.5.** At n_val = 200 it
+floors near 0.56. Subtracting 0.5 therefore leaves every one of the N neurons carrying substantial
+positive mass, and PR is dominated by the noise floor rather than by the signal.
+
+Measured on synthetic states (N=50, n=200), the original formula:
+
+| true carriers | PR (as pre-registered) |
+|---|---|
+| 1 (perfect) | **29.1** |
+| 5 | 19.4 |
+| 50 (weak) | 48.9 |
+
+A single perfect carrier among 49 noise neurons read PR ≈ 29 — indistinguishable from fully
+distributed. The metric was **anti-correlated with concentration over part of its range**, and would
+have produced numbers on real data that looked meaningful and were not.
+
+**THE CORRECTION.** Reference the measured NULL, not theoretical chance. `thr` = 95th percentile of the
+pooled scrambled-target score distribution; `x_j = max(0, score_j − thr)`; PR unchanged otherwise. The
+null was already mandated by D127 as PR's zero point — it is now also its ORIGIN. Re-measured on the
+same synthetic states:
+
+| true carriers | PR (corrected) | PR_null |
+|---|---|---|
+| 1 | **1.2** | 1.9 |
+| 2 | 2.2 | 2.0 |
+| 5 | 5.0 | 1.6 |
+| 15 | 14.9 | 1.9 |
+| 50 | 46.7 | 2.0 |
+
+PR now tracks the carrier count across the full range. Everything else in D127 stands: PR remains the
+primary endpoint, the null is still computed at every P, the interpretability gate is unchanged, and
+`mean`/`best`/`gap`/`n_above` remain descriptive secondaries.
+
+**⚠ A LIMITATION THE TEST ALSO EXPOSED.** In the NULL regime PR is a high-variance statistic: with only
+~5% of N neurons above threshold, a zero-carrier draw returned excess +1.6 on one seed where 0 is
+expected. So **"excess ≈ 0" carries wide error bars and is weak evidence of absence.** This strengthens
+rather than replaces the interpretability gate: PR is uninformative until `loc_mean` clears the null,
+and a near-zero excess before that point should not be read as "no localization."
+
+**⚠ SEPARATE CORRECTION — D125's `single(n0)` was not the fitness neuron.** `trial_allneuron_probe.py`
+took state column 0 and labelled it "single (neuron 0) — reproduces the overnight baseline." Output
+neurons are the LAST `d` units (`EvoNetConfig.out_slice()` = `slice(N−d, N)`), and inputs are the FIRST
+`n_in`, so column 0 is an INPUT neuron and never the cell the fitness reads. **D125's conclusion is
+UNAFFECTED** — it rests on the across-neuron distribution over all 50 neurons, which includes the
+designated output cell, and every neuron was at chance either way. But the labelled column in that
+table is wrong, and the `single(n0)` = 0.409 that D125 explicitly declined to promote was input-neuron-0,
+which makes it less meaningful still. The D127 instrumentation reads `out_index = N − d` and is
+therefore comparable to fitness; `trial_allneuron_probe.py` retains the mislabel and should be fixed or
+retired before it is run again.
+
+**WHAT WAS BUILT.** `trial_eval._per_neuron_scores` / `_participation_ratio` / `localization_report`,
+called on the `report=True` path only (D122's `report_fn` hook, once per generation, ~1/pop_size
+overhead); and `trial_selection_run.post_arm_localization`, giving the among-networks distribution over
+the final population. `loc_*` keys are absent when `report=False`, so their absence is itself the signal
+that a result came from the selection path rather than the report path.
+
+**VERIFICATION STATUS.** Metric logic verified against synthetic states of known concentration
+(above). **The end-to-end path is UNRUN** — no Brian2 in the authoring sandbox — so the first real
+execution is the first arm on PJM's machine, and the `loc_*` keys should be eyeballed for plausibility
+before any sweep depends on them.
+
+**LESSON.** A pre-registered metric is a claim about a computation, and claims get tested. Unit-testing
+this one against known-concentration inputs took minutes and caught a definition that was backwards
+over part of its range; pre-registering it without testing would have locked in the error and made it
+harder to fix later, because changing it after seeing data is exactly what pre-registration forbids.
+**Test the instrument before the instrument is load-bearing.**
+
+
 

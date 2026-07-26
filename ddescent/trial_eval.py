@@ -24,12 +24,17 @@ from .evonet import EvoNet, EvoNetConfig, Genome
 from .evolve import _affine_nmse, covariance_powerlaw_exponent
 
 
-def _score_split(net, task, split: str, noise_seed: int) -> tuple[float, float]:
-    """(NMSE, accuracy) on one split, read from the READ segment of each trial."""
+def _score_split(net, task, split: str, noise_seed: int, want_state: bool = False):
+    """(NMSE, accuracy) on one split, read from the READ segment of each trial.
+
+    want_state=True additionally returns the FULL per-neuron state at the read rows, (n_trials, N),
+    which the D127 localization diagnostic scores neuron-by-neuron. It costs nothing extra: the state
+    is already computed by behave(); only the report path asks for it.
+    """
     E, Y, _, _ = task._split(split)
     B = net.behave(E, noise_seed=noise_seed)
     rows = task.response_rows(split)
-    R = B["rates"][rows]                       # (n_trials, N)
+    R = B["rates"][rows]                       # (n_trials, n_out) -- the D095 designated slice
     err = _affine_nmse(Y, R)
     # accuracy: refit the same affine map and compare signs. The readout is gain+offset on ONE
     # neuron per output (D095) — it cannot mix neurons, so the network must route the answer to the
@@ -39,7 +44,72 @@ def _score_split(net, task, split: str, noise_seed: int) -> tuple[float, float]:
         A = np.vstack([R[:, j], np.ones(len(R))]).T
         coef, *_ = np.linalg.lstsq(A, Y[:, j], rcond=None)
         acc_cols.append(np.sign(A @ coef + 1e-12) == np.sign(Y[:, j]))
+    if want_state:
+        return float(err), float(np.mean(acc_cols)), B["state"][rows], Y
     return float(err), float(np.mean(acc_cols))
+
+
+# ==================================================================================================
+# D127 - LOCALIZATION: is the computation concentrated on the readout cell, or distributed?
+# ==================================================================================================
+def _per_neuron_scores(S, y):
+    """Accuracy of EVERY neuron scored INDEPENDENTLY, each with its own D095-weak affine readout.
+
+    N weak reads, never one pooled decoder across neurons: pooling would restore exactly the mixing
+    power D095 removes, and would reopen the RC degeneracy. Each read is gain+offset on one neuron.
+    """
+    ones = np.ones(len(y))
+    acc = np.empty(S.shape[1])
+    for j in range(S.shape[1]):
+        A = np.vstack([S[:, j], ones]).T
+        coef, *_ = np.linalg.lstsq(A, y, rcond=None)
+        acc[j] = np.mean(np.sign(A @ coef + 1e-12) == np.sign(y))
+    return acc
+
+
+def _participation_ratio(scores, thr: float) -> float:
+    """PR = (sum x)^2 / sum x^2 over x = max(0, score - thr): the EFFECTIVE NUMBER of neurons carrying
+    task signal. Range ~1..N. Extremum-free, unlike best-over-N, whose expectation rises with in-degree
+    at fixed N (D125) -- fatal for a metric read along a P axis.
+
+    thr MUST come from the measured NULL, not from theoretical chance. The per-neuron readout is fit
+    IN-SAMPLE, so a pure-noise neuron does not score 0.5: at n_val=200 it floors near 0.56. Subtracting
+    0.5 therefore leaves every neuron with positive mass and PR is dominated by the noise floor -- a
+    single perfect carrier among 49 noise neurons reads PR ~29 instead of ~1 (measured). Referencing the
+    scrambled-target null removes that bias by construction.
+    """
+    x = np.clip(np.asarray(scores, float) - thr, 0.0, None)
+    tot = float(x.sum())
+    return float(tot * tot / (float(np.sum(x * x)) + 1e-18)) if tot > 0 else 0.0
+
+
+def localization_report(S, y, out_index: int, n_null: int = 5, seed: int = 0) -> dict:
+    """D127 primary endpoint (PR) plus descriptive secondaries, with PR's own scrambled-target null.
+
+    THE NULL IS NOT OPTIONAL. With every neuron at chance, x = max(0, score - chance) is still
+    positive noise and PR returns a number, so "PR = 7" is meaningless on its own. Only PR - PR_null
+    is interpreted (D127). The null is recomputed wherever this is called, never reused across P,
+    because the per-neuron score-noise distribution may itself vary with P.
+
+    INTERPRETABILITY GATE (D127): do not read PR until loc_mean clears chance. At generation 0 on a
+    chance-floor task nothing is above chance and PR is noise against noise.
+    """
+    sc = _per_neuron_scores(S, y)
+    rng = np.random.default_rng(seed)
+    null_vecs = [_per_neuron_scores(S, y[rng.permutation(len(y))]) for _ in range(max(1, n_null))]
+    null_pool = np.concatenate(null_vecs)
+    thr = float(np.percentile(null_pool, 95))     # self-calibrating: 95th pct of the NULL score pool
+    pr = _participation_ratio(sc, thr)
+    # PR_null: the SAME procedure applied to null draws, so "no signal" has a measured PR, not 0.
+    pr_null = float(np.mean([_participation_ratio(v, thr) for v in null_vecs]))
+    return dict(
+        loc_pr=pr, loc_pr_null=pr_null, loc_pr_excess=pr - pr_null,   # PRIMARY (D127)
+        loc_single=float(sc[out_index]),                              # the neuron the FITNESS reads
+        loc_mean=float(sc.mean()), loc_best=float(sc.max()),          # secondaries, descriptive only
+        loc_gap=float(sc.max() - sc.mean()),
+        loc_n_above=int((sc > thr).sum()), loc_thr=thr, loc_null_mean=float(null_pool.mean()),
+        loc_n_neurons=int(S.shape[1]),
+    )
 
 
 def trial_evaluate(genome: Genome, task, net_cfg: EvoNetConfig, cfg=None,
@@ -71,9 +141,16 @@ def trial_evaluate(genome: Genome, task, net_cfg: EvoNetConfig, cfg=None,
     ev, va = [], []                                  # validation err / acc  (SELECTION)
     te, ta, tr, tra = [], [], [], []                 # test / train          (REPORT ONLY)
     alpha, cue_ctrl, scr_ctrl = [], [], []
+    loc = {}                                         # D127 localization, report path only
     for a in range(n_assays):
         s_va = (gseed + gen_off + 4 * a + 1) & 0x7FFFFFFF
-        e, acc = _score_split(net, task, "val", s_va)     # D113: the ONLY split feeding selection
+        if report and a == 0:
+            e, acc, S_val, Y_val = _score_split(net, task, "val", s_va, want_state=True)
+            loc = localization_report(S_val, Y_val[:, 0],
+                                      out_index=net_cfg.N - net_cfg.d,   # LAST d units are the output
+                                      seed=gseed & 0xFFFF)
+        else:
+            e, acc = _score_split(net, task, "val", s_va)  # D113: the ONLY split feeding selection
         ev.append(e); va.append(acc)
         if report:
             s_te = (gseed + gen_off + 4 * a + 2) & 0x7FFFFFFF
@@ -101,6 +178,7 @@ def trial_evaluate(genome: Genome, task, net_cfg: EvoNetConfig, cfg=None,
         # kept so `_fitness` and the existing history machinery keep working unchanged
         encoding=1.0 - val_err, carrying=0.0, regulation=1.0 - val_err,
     )
+    out.update(loc)          # D127: loc_* present only when report=True; absent keys are the signal
     return out
 
 

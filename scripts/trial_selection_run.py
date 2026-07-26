@@ -91,6 +91,34 @@ def climb_metrics(history):
                 best_test_start=float(bt[0]), best_test_end=float(bt[-1]), best_test_min=float(bt.min()))
 
 
+def post_arm_localization(pop, task, net_cfg, cfg, n_max: int = 12):
+    """D127 second hook: the AMONG-NETWORKS localization distribution at this P.
+
+    The report_fn hook gives the per-generation trajectory on the BEST genome; this gives the spread
+    across the final population, which is what says whether genomes differ in HOW distributed their
+    solution is. Scores every neuron with its own D095-weak affine (never a pooled decoder) and reports
+    PR against its scrambled-target null.
+
+    INTERPRETABILITY GATE (D127): PR is meaningless while loc_mean sits at the null level -- at that
+    point it is noise against noise. Reported always, interpreted only once mean clears.
+    """
+    from ddescent.trial_eval import trial_evaluate
+    rows = []
+    for g in pop[:n_max]:
+        r = trial_evaluate(g, task, net_cfg, cfg, report=True)
+        if "loc_pr" in r:
+            rows.append(r)
+    if not rows:
+        return {}
+    def col(k): return np.array([r[k] for r in rows], float)
+    return dict(n=len(rows),
+                pr_mean=float(col("loc_pr").mean()), pr_sd=float(col("loc_pr").std(ddof=1)) if len(rows)>1 else 0.0,
+                pr_null_mean=float(col("loc_pr_null").mean()),
+                pr_excess_mean=float((col("loc_pr")-col("loc_pr_null")).mean()),
+                single_mean=float(col("loc_single").mean()), mean_mean=float(col("loc_mean").mean()),
+                best_mean=float(col("loc_best").mean()), n_above_mean=float(col("loc_n_above").mean()))
+
+
 def post_arm_controls(best_genome, net_cfg, cfg):
     """The DECISIVE control test: on the EVOLVED best, omit_cue and scramble must fall to chance
     while 'normal' is (ideally) above it. Reported, not gated (a first arm may not climb)."""
@@ -163,6 +191,7 @@ def main():
         fits = np.array([trial_evaluate(g, task, net_cfg, cfg)["trial_score"] for g in pop])
         best = pop[int(np.argmax(fits))]
         m["post_arm_controls"] = post_arm_controls(best, net_cfg, cfg)
+        m["post_arm_localization"] = post_arm_localization(pop, task, net_cfg, cfg)
         m.update(dict(config_hash=h, code_version=CODE_VERSION, pop=args.pop, gens=args.gens,
                       delay=args.delay, dev_ms=args.dev_ms, n_assays=args.assays,
                       workers=args.workers, seconds=secs,
@@ -175,6 +204,13 @@ def main():
         print("=" * 78)
         print(f"  fit_slope={m['fit_slope']:+.5f} | fit {m['fit_start']:.4f}->{m['fit_end']:.4f} "
               f"| best_test {m['best_test_start']:.3f}->{m['best_test_end']:.3f} (min {m['best_test_min']:.3f})")
+        L = m.get("post_arm_localization") or {}
+        if L:
+            print("\n[localization] D127, final population (n=%d):" % L["n"])
+            print("   PR=%.2f +/- %.2f   PR_null=%.2f   excess=%+.2f   <- PRIMARY (read only once mean clears null)"
+                  % (L["pr_mean"], L["pr_sd"], L["pr_null_mean"], L["pr_excess_mean"]))
+            print("   secondaries (descriptive only): single=%.3f mean=%.3f best=%.3f n_above=%.1f"
+                  % (L["single_mean"], L["mean_mean"], L["best_mean"], L["n_above_mean"]))
         c = m["post_arm_controls"]
         print(f"  POST-ARM CONTROLS (decisive): normal={c['normal']:.3f} "
               f"omit_cue={c['omit_cue']:.3f} scramble={c['scramble']:.3f}")
