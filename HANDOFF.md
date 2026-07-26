@@ -40,55 +40,49 @@ re-derivation.
 
 ---
 
-## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-25 (D127 amended; localization BUILT)*
+## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-25 (D128 -- the conjunction exists)*
 
-The trial task is built, correct, and **unselectable**. The `cue→delay→probe` XOR task (D120) works
-exactly as designed — chance floor by construction, controls that remove what they claim, clock-aligned
-assays (D121), a GA driver that runs it end to end (D122). But a well-powered reliability investigation
-(D124) found no selectable gradient anywhere in it: forty generations flat, evolved indistinguishable
-from random, and every lever that leaves P's meaning intact — fitness basis (five tried), delay
-(0/50/100 ms), assay count, development on/off — falsified. The last surviving alternative was that this
-was an artifact of scoring one arbitrary neuron; **D125 tested and rejected it** — no neuron among 50
-carries the task in an unselected population, so the all-neuron-aggregate arm is ruled out. The
-diagnosis is now task-design, not measurement and not the plasticity rule: `trial_xor`'s target is
-arbitrary by construction, hence orthogonal to every dynamics-native property an E/I reservoir produces,
-and unsupervised development is target-blind. **H-A…H-D are not refuted; they are BLOCKED on
-selectability**, because no error-vs-P curve can be measured while selection has no gradient to follow.
+**The conjunction exists, and the fitness has been looking in the wrong place for it.** D128 is the
+turn: second-order decode of match/non-match reads **0.783 at the PROBE segment** (null 0.539, sd 0.014
+over 3 genomes) and **0.524 at the READ segment**, where `response_rows()` samples. The signal is
+sustained across the probe window, not transient, and it is available only to a QUADRATIC readout --
+linear decode at probe is 0.479, chance. So the flat results of D124 and D125 are now mechanically
+explained by two separable faults: a **TIMING** error (the fitness samples ~50 ms after the information
+has decayed) and an **ORDER** mismatch (the relation is quadratic in the rates; D095's readout is a
+two-parameter affine). Neither is "the substrate cannot bind." Upstream of both, the substrate is
+healthy: the cue is held at ~1.00 through every stage, undeveloped and developed alike (D128 / CHECK 2c),
+so memory and encoding are not the problem and development is not the blocker.
 
-**THE PATH FORWARD IS DECIDED AND PRE-REGISTERED (D126).** `trial_xor` is replaced by **DMTS
-(match / non-match)** via a **shared cue/probe pattern set** — one line in `cue_delay_probe`, which
-turns the existing target into a natural relation the substrate can compute as trace overlap. The
-chance floor survives by construction, and the controls, trial structure, D095 readout and GA driver
-are untouched. D126 also pre-registers the complexity axis (plain → variable delay → K≥4 → distractor),
-the triggers for moving up it, the sweep design (`n_seeds` = 5, staged, with a per-seed consistency
-requirement on any peak), and the read of every outcome. Rung 1's numeric dimensioning is deliberately
-left open, to be set from calibration data — reliability and low-P solvability — never from a curve.
+**WHY THE RELATION IS SECOND-ORDER (structural, not incidental).** Cue and probe enter through the SAME
+ten input neurons -- the architecture has one environment pathway -- so role is carried by timing alone.
+Match puts `(a+b, 0)` in the pattern basis, non-match `(a, b)`: not linearly separable, and the only
+discriminating features are the norm and the cross term, both quadratic. `state` is additionally a 60 ms
+mean of a 5 ms-sampled rate trace, so spike timing and synchrony are averaged away and rate structure is
+the sole remaining channel.
 
-**NEXT ACTION — execute D126's sequence, each step gating the next.** (1) **Task-construction half
-DONE** (D126 amendment): `shared_patterns=True` ships, rung 0's floor is verified held-out over 20 seeds
-(cue-only 0.4996, probe-only 0.5000, constant 0.500, joint 1.000; match trials have <cue,probe>=1.0), and
-a correction was made — the (cue,probe) type grid loses the floor for `n_cues>2`, so the family is now
-relation-balanced. **Still owed on step 1: the network-level controls** — `omit_cue` and `scramble` on a
-developed net plus the leakage check. The oracle cannot test `omit_cue` at all (blanking the cue stimulus
-leaves the cue INDEX intact), so it is network-level by nature. (2) **`delay_persistence_probe` FIRST, not the
-reliability probe** — its new `persistence_contrast` reports cue decode UNDEVELOPED vs DEVELOPED. This
-reorder matters: selection acts on developed nets, so if development degrades the held cue there is
-nothing for a match comparison to read at probe time, and a flat reliability result would be misread as
-"the task change didn't help." Minutes, and it forks the diagnosis — cue survives development means the
-target was the blocker and D126 holds; cue destroyed means the blocker is DEVELOPMENT, the task swap was
-necessary but not sufficient, and RL-in-development or a gentler development scheme returns as the lever.
-(3) `trial_reliability_probe` at rung 0, n=30 — is there a gen-0 gradient? Hours, not overnight. (4) The **low-P solvability screen** —
-a few arms at the bottom of the P range only, NOT a sweep; answers "too simple?" cheaply and measures
-the arm-to-arm SD that sets `n_seeds`. (5) Dimension rung 1 from the calibration data, probe it, lock
-both. (6) Sweep one rung. Also owed alongside the edit: parameterize variable-delay sampling and an optional in-delay
-distractor so the rungs are config rows rather than code paths, and add the **mild firing-rate penalty**
-to fitness (`mean_exc` drifting 0.80→0.64 was the only thing selection gripped, and nothing currently
-penalizes a degenerate rate regime).
+**NEXT ACTION.** The operating point (D119), untouched since it was recorded as a live lever. Under the
+reservoir premise the network should convert a conjunction into a rate difference a linear reader can
+see; D128 shows the conjunction forms and that conversion does not happen. `input_gain = 10.0` is
+annotated in the config as "the useful regime; NOT the PR-optimal one," and D075 measured `PR_mean ~ 7`
+of 50 -- a network operating close to linearly. If the input neurons saturate, doubled drive yields the
+same rate as single drive and the amplitude channel is shut at entry. **The decisive cheap test: sweep
+`input_gain` and measure whether the relation becomes LINEARLY decodable at the probe stage.**
+Undeveloped, no `develop()` calls, minutes. Also owed and NOT yet done: the developed condition at the
+probe stage (CHECK 2e ran undeveloped only), and a decision on `readout_window_ms=60` against
+`present_ms=50`.
+
+**DO NOT** resume D126's sweep sequence until the order problem is resolved. A P-sweep whose fitness
+cannot read the task's discriminating quantity would repeat D124 at far greater cost.
 
 ## §2. OPEN THREADS — *volatile*
 
-- **Network-level controls on DMTS not yet run** — `omit_cue`, `scramble`, leakage, on a developed net.
-  Gates the reliability probe; nothing about the network has been measured on DMTS.
+- **`readout_window_ms = 60` exceeds `present_ms = 50`.** Every stage sample carries 10 ms of its
+  predecessor -- inherited from the era when `present_ms` was 150. Affects every trial-task measurement,
+  not just these checks. Needs a deliberate value and its own entry, not a quiet edit.
+- **Developed condition at the PROBE stage is unmeasured.** CHECK 2e ran undeveloped only.
+- **The input-neuron localisation check is unrun**: decode the relation from neurons 0-9 alone at probe.
+  Absent there means saturation eats it at entry; present there but absent downstream means the
+  recurrent network discards it.
 - **D127 localization is BUILT but UNRUN end-to-end.** `trial_eval.localization_report` on the
   `report_fn` hook, `trial_selection_run.post_arm_localization` over the final population. Metric logic
   verified against synthetic states of known concentration; the network path has never executed (no

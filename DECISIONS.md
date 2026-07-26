@@ -5891,4 +5891,97 @@ harder to fix later, because changing it after seeing data is exactly what pre-r
 **Test the instrument before the instrument is load-bearing.**
 
 
+### D128 — THE CONJUNCTION EXISTS. It is formed during the PROBE segment (quad 0.783 vs null 0.539) and has decayed by the READ segment, where the fitness samples. The blocker is not "the substrate cannot bind" — it splits into a TIMING error and an ORDER mismatch, both addressable.
+**2026-07-25 · Finding, supersedes the provisional null of the D127-era CHECK 2d · scripts/delay_persistence_probe.py · runs/persistence/20260725-204309 · 3 genomes, 400 trials, undeveloped and developed**
+
+**HOW THE QUESTION AROSE (PJM).** Asked how the probe-then-read sequence had been chosen — whether the
+response is sampled during the probe, immediately after, or later. The layout is
+`cue=0, delay=1, probe=2, read=3`, and the READ segment is SILENT (the drive builder leaves it at zero),
+so the fitness samples 50 ms after probe offset. That structure was inherited from D120 and had never
+been examined. It turns out to be where the signal disappears.
+
+**THE FINDING.** Second-order decode (`quad`: PCA on centred state -> all pairwise products) of
+match/non-match, against a shuffled-target null, undeveloped, n=400 trials, 3 genomes:
+
+| window | stage | quad decode (sd) | null p95 | clears |
+|---|---|---|---|---|
+| wide 60 ms | **probe** | **0.783 (0.014)** | 0.539 | **YES** |
+| wide 60 ms | read | 0.524 (0.018) | 0.535 | no |
+| early 10 ms | probe | 0.622 (0.037) | 0.544 | YES |
+| early 10 ms | read | 0.553 (0.029) | 0.542 | YES (tail) |
+| late 10 ms | probe | 0.553 (0.009) | 0.544 | YES |
+| late 10 ms | read | 0.526 (0.036) | 0.547 | no |
+
+1. **The conjunction is FORMED.** 0.783 at probe is the largest effect measured on this task, with an
+   sd of 0.014 across genomes — consistent, not a lucky draw.
+2. **It DECAYS before the fitness reads it.** 0.783 at probe -> 0.524 at read. The marginal clear in
+   `early 10 ms / read` is its tail.
+3. **It is SUSTAINED, not transient.** The wide 60 ms window beats both 10 ms slices. A millisecond
+   coincidence would be destroyed by averaging and the narrow windows would win; instead the extra
+   samples buy noise reduction, so the signal is spread across the probe window. (The prior transient
+   hypothesis is refuted.)
+4. **It is SECOND-ORDER ONLY.** CHECK 2b's linear decode at probe is 0.479 — chance. At the moment the
+   information exists, only a quadratic readout can reach it.
+
+**WHAT THIS CORRECTS.** The D127-era CHECK 2d reported nothing clearing and was read as "the trace and
+probe never interact." That check ran `quad` at the READ stage only, which is precisely where the signal
+has gone; CHECK 2b covered every stage but only LINEARLY. The provisional null was an artifact of
+testing the right readout at the wrong stage. **No conclusion should have been drawn from it, and this
+entry supersedes it.**
+
+**THE BLOCKER, SPLIT.** Two independent problems, both now located rather than conjectured:
+- **TIMING.** `response_rows()` samples the READ segment. The relation is at chance there. The fitness
+  has been reading a segment from which the information has decayed.
+- **ORDER.** Even sampled at the probe, the relation is quadratic in the rates while D095's readout is
+  a two-parameter affine. A linear reader cannot see a second-order quantity however long selection runs.
+
+**WHY THE ENCODING MAKES IT SECOND-ORDER (the structural reason, PJM).** Cue and probe enter through the
+SAME ten input neurons (`drive[:, :n_in] = input_gain * E`; the architecture has one environment
+pathway), so role is carried only by timing. In the pattern basis the trial types land at
+match -> `(a+b, 0)` or `(0, a+b)`, non-match -> `(a, b)` or `(b, a)`. Those are not linearly separable:
+summing the two match constraints and the two non-match constraints requires the same quantity to be
+both above and below any threshold. The discriminating features are exactly the norm (`a+b` vs
+`sqrt(a^2+b^2)`) and the cross term (zero on match, positive on non-match) — both quadratic. And
+`state[k] = win.mean(axis=1)` is a 60 ms mean of a 5 ms-sampled rate trace, so synchrony and spike
+timing are averaged away and rate structure is the only channel left.
+
+**THIS EXPLAINS D124 AND D125 COMPLETELY.** Selection was flat because the fitness sampled a segment
+where the relation had decayed, for a quantity it could not have read in any case. Both prior nulls are
+now mechanically accounted for, and the same account applies to the retired `trial_xor` — which is why
+the D126 task swap, a real improvement in design, did not move the result.
+
+**⚠ INSTRUMENT PROVENANCE — this took four versions and the finding only appeared in the fourth.**
+(i) `decode()` returned max-over-folds, noise floor 0.60 not 0.50; (ii) the first nonlinear feature set
+could not express the relation even when fully present — `square` had no cross terms, `activity` used
+the neuron-basis norm, `randtanh` never left tanh's linear regime — and its POSITIVE-CONTROL FAILURE WAS
+MISREAD AS CONFIRMATION; (iii) `quad` ran PCA on z-scored data, which equalises variances and destroys
+the ordering PCA needs; (iv) the working version, validated to clear both positive controls (0.945
+axis-aligned, 0.627 realistic superposition) and stay at null on the negative control, then pointed at
+the probe stage. **A negative from an instrument that has not passed a positive control carries no
+information.** Three earlier versions would each have reported "no conjunction."
+
+**HONEST LIMITATIONS.** CHECK 2e is UNDEVELOPED only (development has been indistinguishable in 2b/2c/2d
+and undeveloped costs no `develop()` call) — the developed condition at the probe stage is NOT yet
+measured. 3 genomes, one density, one operating point. The wide probe window spans [90, 150] ms and so
+includes the last 10 ms of the delay segment: `readout_window_ms=60` exceeds `present_ms=50`, so every
+stage sample carries 10 ms of its predecessor. That contamination cannot manufacture this result (the
+relation requires the probe, which has not occurred during the delay) but it does mean stage labels are
+approximate throughout, and the window mismatch needs its own decision.
+
+**WHAT IT POINTS AT.** The operating point (D119), untouched since it was recorded as a live lever.
+`input_gain = 10.0` is annotated in the config as "the useful regime; NOT the PR-optimal one," and
+D075 measured `PR_mean ~ 7` of 50 — a network operating close to linearly. Under the reservoir premise
+the network is supposed to convert a conjunction into a rate difference a linear reader can see; the
+evidence says the conjunction forms but that conversion does not happen. If the input neurons saturate,
+doubled drive gives the same rate as single drive and the amplitude channel is closed at entry. The
+decisive cheap test is whether the relation becomes LINEARLY available at the probe stage as gain is
+lowered.
+
+**LESSON.** Where a measurement is taken is a design decision with the same standing as what is
+measured, and this one was inherited rather than chosen. The read segment was invisible in every
+discussion until it was asked about directly — and it was the difference between "the substrate cannot
+bind" and "the fitness looks 50 ms too late at the wrong order."
+
+
+
 
