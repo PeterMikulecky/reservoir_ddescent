@@ -77,7 +77,20 @@ from trial_operating_point_sweep import pr_with_null, loc_best_null
 # 0.554 -- a comparison of two noisy estimates is not a test).
 MARGIN_SD = 2.0
 
-DEFAULT_SCALES = [0.25, 0.5, 1.0, 2.0, 4.0, 8.0]
+# Threshold on the PAIRED |t| for calling a recurrence contribution real. Set from the MEASURED null,
+# not from convention: with n=6 paired genomes the null |t| reaches 2.52 at p95 and 3.86 at p99
+# (20k simulated draws), and this sweep tests 27 cells, whose expected maximum under the null is ~2.77.
+# A threshold of 2.0 therefore sits BELOW the noise -- it would flag roughly one cell per run by chance,
+# and the first pass duly called +0.047 on n=3 a contribution. 4.0 clears p99 at n=6, so a single
+# flagged cell across the whole grid is informative.
+T_THRESHOLD = 4.0
+
+DEFAULT_SCALES = [1.0, 2.0, 4.0]
+# Delay segments to test. tau_slow = 100 ms and present_ms = 50 ms, so delay=1 (50 ms) is WITHIN reach
+# of passive single-neuron decay -- which is why the first pass found the ablated arm holding the cue at
+# 1.000 and learned nothing from it. Recurrence can only be NEEDED past tau_slow, so the informative
+# rungs are 4 (200 ms) and 8 (400 ms).
+DEFAULT_DELAYS = [1, 4, 8]
 QUAD_K = 10          # MATCHED across every condition, including the 10-neuron input slice
 
 
@@ -86,20 +99,23 @@ def _ablate(g):
     return replace(g, mag=np.zeros_like(g.mag))
 
 
-def sweep(scales, density, n_genomes=3, n_trials=400, seed=1):
+def sweep(scales, delays, density, n_genomes=6, n_trials=400, seed=1):
+    """Intact vs ablated at each (delay, coupling). Genomes are PAIRED: the same seed builds the genome
+    for both arms, so the intact-minus-ablated difference is per-genome and its sd is meaningful."""
     cfg = SC.make_trial_evolve_cfg()
     nc = SC.make_net_cfg()
-    task = SC.make_trial_task(n_trials=n_trials, n_val=n_trials, n_test=n_trials)
-    rel = (task.cue_test == task.probe_test).astype(int)
-    y = rel * 2.0 - 1.0
-    cue = task.cue_test
-    probe_idx = stage_rows(task, "test", "probe")
-    delay_idx = stage_rows(task, "test", "delay")
     w0_base = SC.w0_for_density(density)
     out, t0 = [], time.time()
     keys = ("cue_delay", "quad", "quad_in", "lin", "loc_best", "loc_best_nullv",
             "pr_ratio", "rate", "frac_lowvar", "quad_null", "lin_null")
-    for si, sc in enumerate(scales):
+    for si, (delay, sc) in enumerate([(d, s_) for d in delays for s_ in scales]):
+        task = SC.make_trial_task(n_trials=n_trials, n_val=n_trials, n_test=n_trials,
+                                  delay_segments=delay)
+        rel = (task.cue_test == task.probe_test).astype(int)
+        y = rel * 2.0 - 1.0
+        cue = task.cue_test
+        probe_idx = stage_rows(task, "test", "probe")
+        delay_idx = stage_rows(task, "test", "delay")
         for arm in ("intact", "ablated"):
             acc = {k: [] for k in keys}
             for gi in range(n_genomes):
@@ -126,23 +142,24 @@ def sweep(scales, density, n_genomes=3, n_trials=400, seed=1):
                 acc["loc_best_nullv"].append(loc_best_null(Xp, y, nc.N - nc.d, seed=gi))
                 p, pn = pr_with_null(Xp, seed=gi)
                 acc["pr_ratio"].append(p / (pn + 1e-12))
-            row = dict(scale=sc, arm=arm, w0=round(w0_base * sc, 4))
+            row = dict(scale=sc, arm=arm, delay=delay, w0=round(w0_base * sc, 4), per_genome=acc)
             for k in acc:
                 row[k] = float(np.mean(acc[k]))
                 row[k + "_sd"] = float(np.std(acc[k], ddof=1)) if n_genomes > 1 else 0.0
             out.append(row)
             el = time.time() - t0
             done = 2 * si + (1 if arm == "ablated" else 0) + 1
-            print("   w0x%-5g %-8s done   [%.0fs elapsed, ~%.0fs left]"
-                  % (sc, arm, el, el / done * (2 * len(scales) - done)), flush=True)
+            print("   delay=%d w0x%-5g %-8s done   [%.0fs elapsed, ~%.0fs left]"
+                  % (delay, sc, arm, el, el / done * (2 * len(scales) * len(delays) - done)), flush=True)
     return out
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--scales", type=float, nargs="+", default=DEFAULT_SCALES)
+    ap.add_argument("--delays", type=int, nargs="+", default=DEFAULT_DELAYS)
     ap.add_argument("--density", type=float, default=None)
-    ap.add_argument("--genomes", type=int, default=3)
+    ap.add_argument("--genomes", type=int, default=6)
     ap.add_argument("--trials", type=int, default=400)
     ap.add_argument("--seed", type=int, default=1)
     a = ap.parse_args()
@@ -155,49 +172,78 @@ def main():
               % (dens, round(dens * 50 * 49), SC.make_net_cfg().input_gain, a.genomes, a.trials))
         print("w0 multipliers on w0_for_density(%.3f)=%.4f; 1.0 IS the project's current setting."
               % (dens, SC.w0_for_density(dens)))
-        print("All quad uses k=%d for EVERY condition, so comparisons are matched.\n" % QUAD_K)
-        rows = sweep(a.scales, dens, a.genomes, a.trials, a.seed)
+        print("All quad uses k=%d for EVERY condition, so comparisons are matched." % QUAD_K)
+        print("delays=%s segments (%s ms); tau_slow=%.0f ms, so delay>=%d exceeds passive decay."
+              % (a.delays, [d * 50 for d in a.delays], SC.make_net_cfg().tau_slow,
+                 int(np.ceil(SC.make_net_cfg().tau_slow / 50)) + 1))
+        print("Genomes are PAIRED across arms (same seed), so differences are per-genome.\n")
+        rows = sweep(a.scales, a.delays, dens, a.genomes, a.trials, a.seed)
 
-        by = {(r["scale"], r["arm"]): r for r in rows}
+        by = {(r["delay"], r["scale"], r["arm"]): r for r in rows}
+
+        def paired(delay, sc, key):
+            """Per-genome intact-minus-ablated difference: mean, sd, and t. Genomes are paired by seed,
+            so this is a paired difference and its sd reflects genome-to-genome variation in what
+            recurrence CONTRIBUTES -- not variation in the metric itself."""
+            i = np.array(by[(delay, sc, "intact")]["per_genome"][key], float)
+            b = np.array(by[(delay, sc, "ablated")]["per_genome"][key], float)
+            d = i - b
+            sd = float(np.std(d, ddof=1)) if len(d) > 1 else 0.0
+            t = float(d.mean() / (sd / np.sqrt(len(d)) + 1e-12)) if sd > 0 else 0.0
+            return float(d.mean()), sd, t
+
         print("\n  INTACT vs ABLATED  (ablated = recurrent connectivity zeroed, tau_slow retained)")
-        print("  w0x   arm      | cue@delay |  quad  | quad_in | linear | loc_best (floor) |  PR/null | lowvar")
-        print("  ------+--------+-----------+--------+---------+--------+------------------+----------+-------")
-        for sc in a.scales:
-            for arm in ("intact", "ablated"):
-                r = by[(sc, arm)]
-                mark = "*" if (r["loc_best"] - r["loc_best_nullv"]) > MARGIN_SD * max(r["loc_best_sd"], 1e-6) else " "
-                print("  %-5g %-8s|   %.3f   | %.3f  |  %.3f  | %.3f  | %.3f (%.3f)%s |  %5.2f   | %.3f"
-                      % (sc, arm, r["cue_delay"], r["quad"], r["quad_in"], r["lin"],
-                         r["loc_best"], r["loc_best_nullv"], mark, r["pr_ratio"], r["frac_lowvar"]))
+        print("  delay  w0x   arm      | cue@delay |  quad  | quad_in | loc_best (floor) | PR/null | lowvar")
+        print("  -------+-----+--------+-----------+--------+---------+------------------+---------+-------")
+        for delay in a.delays:
+            for sc in a.scales:
+                for arm in ("intact", "ablated"):
+                    r = by[(delay, sc, arm)]
+                    mark = "*" if (r["loc_best"] - r["loc_best_nullv"]) > MARGIN_SD * max(r["loc_best_sd"], 1e-6) else " "
+                    print("  %d(%3dms) %-4g %-8s|   %.3f   | %.3f  |  %.3f  | %.3f (%.3f)%s |  %5.2f  | %.3f"
+                          % (delay, delay * 50, sc, arm, r["cue_delay"], r["quad"], r["quad_in"],
+                             r["loc_best"], r["loc_best_nullv"], mark, r["pr_ratio"], r["frac_lowvar"]))
 
-        print("\n  RECURRENCE CONTRIBUTION  (intact minus ablated; ~0 means connectivity adds nothing)")
-        print("  w0x   | d cue@delay | d quad  | d linear | d loc_best |  d PR/null")
-        print("  ------+-------------+---------+----------+------------+-----------")
-        for sc in a.scales:
-            i, b = by[(sc, "intact")], by[(sc, "ablated")]
-            print("  %-5g |   %+.3f    | %+.3f  |  %+.3f   |   %+.3f    |   %+.2f"
-                  % (sc, i["cue_delay"] - b["cue_delay"], i["quad"] - b["quad"],
-                     i["lin"] - b["lin"], i["loc_best"] - b["loc_best"],
-                     i["pr_ratio"] - b["pr_ratio"]))
+        print("\n  RECURRENCE CONTRIBUTION -- PAIRED per-genome difference, mean (sd) t")
+        print("  A contribution counts only if |t| > %.1f, set from the MEASURED null: at n=6 the null" % T_THRESHOLD)
+        print("  |t| reaches 3.86 at p99 and ~2.77 as the expected max over this grid's 27 cells. The")
+        print("  first pass used a hardcoded 0.05 difference with no variance reference, and called")
+        print("  +0.047 on n=3 a contribution; a threshold of 2.0 would also sit below the noise.")
+        print("  delay  w0x  |     d cue@delay      |        d quad        |      d loc_best")
+        print("  -------+----+----------------------+----------------------+---------------------")
+        verdicts = []
+        for delay in a.delays:
+            for sc in a.scales:
+                cells = []
+                for key in ("cue_delay", "quad", "loc_best"):
+                    m, sd, t = paired(delay, sc, key)
+                    cells.append("%+.3f (%.3f) t=%+5.2f%s" % (m, sd, t, "*" if abs(t) > T_THRESHOLD else " "))
+                    verdicts.append((delay, sc, key, m, t))
+                print("  %d(%3dms) %-4g| %s | %s | %s" % (delay, delay * 50, sc, cells[0], cells[1], cells[2]))
+        print("  (* = |t| exceeds the threshold, i.e. recurrence measurably contributes)")
 
-        dq = [by[(s, "intact")]["quad"] - by[(s, "ablated")]["quad"] for s in a.scales]
-        dm = [by[(s, "intact")]["cue_delay"] - by[(s, "ablated")]["cue_delay"] for s in a.scales]
-        lb = [r for r in rows
-              if (r["loc_best"] - r["loc_best_nullv"]) > MARGIN_SD * max(r["loc_best_sd"], 1e-6)]
         print("\nREAD:")
-        print("  Largest recurrence contribution: quad %+.3f, memory %+.3f." % (max(dq), max(dm)))
-        if max(abs(min(dq)), max(dq)) < 0.05 and max(abs(min(dm)), max(dm)) < 0.05:
-            print("  RECURRENCE CONTRIBUTES NOTHING at any coupling tested. The network is a feedforward")
-            print("  transform of the stimulus, and P -- which counts recurrent synapses -- cannot matter")
-            print("  because those synapses do not. This would reframe the project.")
+        sig = [v for v in verdicts if abs(v[4]) > T_THRESHOLD]
+        pos = [v for v in sig if v[3] > 0]
+        for delay in a.delays:
+            abl = [by[(delay, sc, "ablated")]["cue_delay"] for sc in a.scales]
+            print("  delay=%d (%3d ms): ABLATED holds the cue at %.3f-%.3f%s"
+                  % (delay, delay * 50, min(abl), max(abl),
+                     "  <- passive decay suffices; recurrence CANNOT be required here"
+                     if min(abl) > 0.9 else "  <- passive decay FAILS; recurrence could be required"))
+        if not pos:
+            print("  NO condition shows a positive recurrence contribution at |t| > %.1f." % T_THRESHOLD)
+            print("  Across %d delays (to %d ms, %.1fx tau_slow) and %d couplings, the recurrent network"
+                  % (len(a.delays), max(a.delays) * 50, max(a.delays) * 50 / 100.0, len(a.scales)))
+            print("  adds nothing to memory, expansion, or readability. Everything measured on this task")
+            print("  is a FEEDFORWARD transform of the stimulus through per-neuron tau_slow dynamics.")
+            print("  Consequence: P counts recurrent synapses, those synapses do nothing, so P cannot")
+            print("  matter -- which explains D129's flat density sweep as a necessity, not a null.")
         else:
-            print("  Recurrence DOES contribute. The coupling with the largest gap is the regime worth")
-            print("  working in, and a P sweep should be re-run there before P is judged inert.")
-        if lb:
-            print("  loc_best leaves its floor at: %s -- first GA gradient seen in this project."
-                  % ", ".join("w0x%g/%s" % (r["scale"], r["arm"]) for r in lb))
-        else:
-            print("  loc_best never leaves its floor at any coupling, in either arm.")
+            print("  Positive contribution at: %s"
+                  % ", ".join("delay=%d w0x%g (%s %+.3f)" % (d, s_, k, m) for d, s_, k, m, _ in pos))
+            print("  Recurrence is load-bearing there; re-run the density sweep in that regime before")
+            print("  concluding anything about P.")
         print("\n  Fixed density and input_gain; random undeveloped genomes; no selection, no development.")
 
 
