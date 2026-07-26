@@ -302,7 +302,7 @@ def trace_survival(seed: int = 1, n_trials: int = 400, n_genomes: int = 3) -> di
 # ==================================================================================================
 # CHECK 2d - IS THE CONJUNCTION THERE AT ALL? linear vs nonlinear readouts of the relation
 # ==================================================================================================
-def _expand(X, kind: str, seed: int = 0):
+def _expand(X, kind: str, seed: int = 0, k_override: int | None = None):
     """Feature maps of increasing power, applied to the SAME states.
 
     WHY THE FIRST VERSION OF THIS WAS BROKEN (2026-07-25). The relation, in the pattern basis, is
@@ -329,7 +329,11 @@ def _expand(X, kind: str, seed: int = 0):
         # k must not exceed the available dimensionality: quad is also applied to sub-slices (e.g. the
         # n_in=10 input neurons), where Vt has fewer rows than a hardcoded k and triu_indices(k) then
         # indexes past the projection. Clamp to what the data actually supports.
-        k = min(14, X.shape[1], max(2, X.shape[0] - 1))
+        # k_override forces a MATCHED component count across conditions. Without it, comparing quad on
+        # a 50-neuron state (k=14 -> 119 features) against a 10-neuron slice (k=10 -> 65) compares two
+        # different amounts of overfitting, not two representations -- the flaw that made D129's
+        # quad_input vs quad excess merely suggestive.
+        k = min(k_override or 14, X.shape[1], max(2, X.shape[0] - 1))
         Xc = X - X.mean(0)
         U, S, Vt = np.linalg.svd(Xc, full_matrices=False)
         Z = Xc @ Vt[:k].T
