@@ -568,3 +568,8 @@ change what P means or what is selected — (i) the task's XOR chance floor (D12
 point (gain/noise, D119, never moved), (iii) reframe selection onto the heritable structure that moved
 (composition/regulation). Deferred deliberately; picking reactively off a null is the move the framework
 guards against.
+
+## 2026-07-27 00:06 — `E9-evolve__20260727-000625__exp__g7a01299__ceiling-validation`  <!-- auto -->
+- type `exp` · stage `E9` · git `g7a01299` (20260726-161758_block_architecture_probe.log) · status **complete**
+- result: Engineered-ceiling carry validation (nmda=0.7, P=1080): selectivity 4.29(100ms)->1.69(600ms); selective=True, graceful_decay=True. VALIDATED known-positive. Carry measure = decay-across-delay (D092b).
+- _interpretation:_ 
