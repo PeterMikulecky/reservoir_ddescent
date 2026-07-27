@@ -1,0 +1,70 @@
+# analysis log: task_screen
+# timestamp: 2026-07-26T21:31:05.452262
+# command: scripts/task_screen.py
+# which task is SELECTABLE at gen 0 AND requires recurrence? (D132)
+#====================================================================
+
+[logging to runs/task_screen\20260726-213105_task_screen.log]
+tasks=['accumulate', 'delayed', 'dmts']  N=[100]  genomes=10  draws=3  trials=600  density=0.30
+Random UNDEVELOPED genomes. No GA, no development. dmts is the known-NEGATIVE control.
+
+   accumulate at N=100:
+      genome 0 done
+      genome 1 done
+      genome 2 done
+      genome 3 done
+      genome 4 done
+      genome 5 done
+      genome 6 done
+      genome 7 done
+      genome 8 done
+      genome 9 done
+     done [3903s elapsed]
+   delayed at N=100:
+      genome 0 done
+      genome 1 done
+      genome 2 done
+      genome 3 done
+      genome 4 done
+      genome 5 done
+      genome 6 done
+      genome 7 done
+      genome 8 done
+      genome 9 done
+     done [6693s elapsed]
+   dmts at N=100:
+      genome 0 done
+      genome 1 done
+      genome 2 done
+      genome 3 done
+      genome 4 done
+      genome 5 done
+      genome 6 done
+      genome 7 done
+      genome 8 done
+      genome 9 done
+     done [8545s elapsed]
+
+  CHANCE LEVEL for |r| at n_test=300 is 0.115 (95th pct of the null). NOT zero.
+
+  task        N   | single | pooled | inputs | pooled-inputs | pooled_abl | d_abl
+  ----------------+--------+--------+--------+---------------+------------+------
+  accumulate  100 | 0.054  | 0.356* | 0.475* |     -0.119     |   0.309    | +0.048
+  delayed     100 | 0.038  | 0.049  | 0.055  |     -0.006     |   0.055    | -0.006
+  dmts        100 | 0.046  | 0.049  | 0.039  |     +0.010     |   0.052    | -0.004
+  (* = clears the chance level. pooled-inputs = what RECURRENT PROCESSING adds.)
+
+  task        N   | above chance? | selectable | needs recurrence | VERDICT
+  ----------------+---------------+------------+------------------+--------
+  accumulate  100 |     True      |    False   |      False       | fail
+  delayed     100 |     False     |    False   |      False       | fail
+  dmts        100 |     False     |    False   |      False       | fail
+  (selectable and needs-recurrence are only evaluated where POOLED clears chance --
+   D130's rule: a variance or difference test means nothing when both arms are noise.)
+
+READ:
+  POOLED clears chance where SINGLE does not, for: accumulate
+  The information IS in the state and the D095-weak readout cannot reach it. That
+  is a READOUT finding, and it would explain every null in this project -- loc_single
+  and loc_best have sat at their noise floors in every sweep. The fitness readout,
+  not the task, would then be what needs redesigning (D127's all-neuron arm).
