@@ -65,7 +65,8 @@ DEFAULT_STRENGTHS = [2.0, 2.5, 3.0, 3.5, 4.0]
 
 def ei_block_genes(nc, K_exc: int, within: float, between: float = 0.5,
                    inh_to_exc: float = 1.0, exc_to_inh: float = 1.0,
-                   inh_frac: float = 0.2, seed: int = 0) -> BlockGenes:
+                   inh_frac: float = 0.2, seed: int = 0, task=None,
+                   w_drive: float = 3.0, selective_input: bool = True) -> BlockGenes:
     """K_exc excitatory blocks plus ONE shared inhibitory block (the ceiling's architecture).
 
     Block K_exc is the inhibitory pool: every neuron in it is inhibitory, every neuron elsewhere is
@@ -88,7 +89,22 @@ def ei_block_genes(nc, K_exc: int, within: float, between: float = 0.5,
     B[:K_exc, K_exc] = inh_to_exc                              # shared inhibition -> exc
     B[K_exc, K_exc] = between
     signs = np.where(assign == K_exc, -1.0, 1.0)               # sign is a BLOCK property here
-    return BlockGenes(assign=assign, B=B, signs=signs)
+
+    # CUE-SELECTIVE INPUT ROUTING -- the component whose absence made the first probe uninformative.
+    # The D092b ceiling wires input[:5] -> cluster A, input[5:] -> cluster B ("symmetry-breaking" in
+    # its own source). Here the cues are orthonormal DIRECTIONS over n_in channels rather than disjoint
+    # channel groups, so the analogous wiring is W_in row i = the positive part of cue pattern i:
+    # excitatory cluster i is then driven maximally by cue i. Only the positive part, since magnitudes
+    # must be >= 0 -- selectivity is partial but differential, which is all the mechanism needs.
+    # WARNING - QUARANTINE (D092): this uses task knowledge and is a KNOWN-POSITIVE instrument only.
+    # Never a seed, template, or initial population for evolved networks.
+    W_in = np.full((K, nc.n_in), 0.2)
+    if selective_input and task is not None:
+        pats = np.asarray(task.meta["cue_patterns"])           # (n_cues, K_dim == n_in)
+        for i in range(min(K_exc, pats.shape[0])):
+            row = np.clip(pats[i], 0.0, None)
+            W_in[i] = w_drive * row / (row.sum() + 1e-12)
+    return BlockGenes(assign=assign, B=B, W_in=W_in, signs=signs)
 
 
 def measure(nc, density, xi, genes, task, rel, cue, n_seeds, ablate: bool):
@@ -121,6 +137,9 @@ def main():
     ap.add_argument("--trials", type=int, default=400)
     ap.add_argument("--density", type=float, default=0.3)
     ap.add_argument("--delay", type=int, default=1)
+    ap.add_argument("--no-selective-input", action="store_true",
+                    help="ablate the cue->cluster routing: the A/B test of whether W_in "
+                         "is what the first probe was missing.")
     ap.add_argument("--xi-seeds", type=int, nargs="+", default=[7],
                     help="D131 requires >=3 independent xi draws for any headline result, "
                          "and a STOP CONDITION is the most headline result there is.")
@@ -138,6 +157,8 @@ def main():
               % (nc.N, a.k_exc, a.density, a.delay, a.delay * 50, nc.nmda_frac))
         print("xi draws: %s  (D131: a headline result must hold across all of them, or it does not stand)"
               % a.xi_seeds)
+        print("cue-selective input routing: %s" % ("ON (W_in = cue patterns)" if not a.no_selective_input
+                                                    else "OFF (ablated -- the first probe's condition)"))
         print("Sweeping WITHIN-cluster excitatory strength. Sign is a BLOCK property here, so the")
         print("inhibitory pool is SHARED (the D092 ceiling architecture) rather than split across")
         print("clusters as in the first check -- where local inhibition cancelled each cluster.\n")
@@ -146,7 +167,8 @@ def main():
         for xs in a.xi_seeds:
             xi = make_xi(nc.N, seed=xs)
             for w in a.strengths:
-                genes = ei_block_genes(nc, a.k_exc, within=w, seed=1)
+                genes = ei_block_genes(nc, a.k_exc, within=w, seed=1, task=task,
+                                       selective_input=not a.no_selective_input)
                 i = measure(nc, a.density, xi, genes, task, rel, cue, a.genomes, ablate=False)
                 b = measure(nc, a.density, xi, genes, task, rel, cue, a.genomes, ablate=True)
                 rows.append((xs, w, i, b))

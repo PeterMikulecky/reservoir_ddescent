@@ -14,9 +14,18 @@ changes. What changes is how `mag` is CONSTRUCTED: from block statistics rather 
 THE ENCODING (D131).
     assign : (N,) int in [0, K)        -- which block each neuron belongs to      -> N genes
     B      : (K, K) float >= 0         -- expected magnitude, block j -> block i  -> K^2 genes
+    W_in   : (K, n_in) float >= 0      -- how strongly input CHANNEL j drives block i -> K*n_in genes
     signs  : (N,) +-1                  -- E/I identity, unchanged from D038       -> N genes
-  P_gene = N + K^2 (+ N sign genes, as before). The knob is K: "how many kinds of neuron the genome
-  can name." Strong diagonal / weak off-diagonal entries in B produce CLUSTERS.
+  P_gene = N + K^2 + K*n_in. The knob is K: "how many kinds of neuron the genome can name."
+  Strong diagonal / weak off-diagonal entries in B produce CLUSTERS.
+
+  W_IN IS NOT OPTIONAL, and its absence is why the first architecture probe found recurrence useless at
+  every coupling. The validated D092b ceiling wires input[:5] -> cluster A and input[5:] -> cluster B,
+  labelled in its own source as symmetry-breaking. Without a cue-selective input->cluster mapping NO
+  CLUSTER IS SELECTIVE FOR ANY CUE, so there is nothing for recurrence to sustain and no loop gain can
+  help. The block statistics alone cannot express "this input channel drives that cluster" -- which is
+  E1 recurring a third time, after per-synapse weights could not express clusters and per-neuron signs
+  could not express "this block is inhibitory".
 
 TWO THINGS THAT ARE NOT OPTIONAL, both learned the hard way:
 
@@ -54,6 +63,7 @@ class BlockGenes:
     """The evolvable genes. `to_genome()` renders them into the phenotype EvoNet consumes."""
     assign: np.ndarray        # (N,) int in [0, K)
     B: np.ndarray             # (K, K) >= 0, expected magnitude block j (pre) -> block i (post)
+    W_in: np.ndarray          # (K, n_in) >= 0, drive from input CHANNEL j into block i
     signs: np.ndarray         # (N,) +1 / -1, per-neuron E/I identity (D038)
 
     @property
@@ -74,11 +84,11 @@ class BlockGenes:
         old direct encoding these were the same number, which is why P was never ambiguous; they
         decouple here and must never be conflated in reporting.
         """
-        return int(self.assign.size + self.B.size)
+        return int(self.assign.size + self.B.size + self.W_in.size)
 
     def p_gene_total(self) -> int:
         """Every evolvable gene, including the N sign genes. Reported alongside, never as the axis."""
-        return int(self.assign.size + self.B.size + self.signs.size)
+        return int(self.assign.size + self.B.size + self.W_in.size + self.signs.size)
 
 
 def make_xi(N: int, seed: int) -> np.ndarray:
@@ -109,6 +119,9 @@ def to_genome(genes: BlockGenes, xi: np.ndarray, density: float,
 
     # expected magnitude from block statistics, then within-block heterogeneity from the shared field
     expected = genes.B[genes.assign[:, None], genes.assign[None, :]]      # (N, N), [post, pre]
+    # INPUT COLUMNS are governed by W_in, not by B: the cue->cluster mapping the ceiling requires.
+    n_in = genes.W_in.shape[1]
+    expected[:, :n_in] = genes.W_in[genes.assign, :]
     mag = expected * xi * w0
     mag = mag * np.where(genes.signs < 0, inh_gain, 1.0)[np.newaxis, :]   # column j = presynaptic
     np.fill_diagonal(mag, 0.0)
@@ -135,8 +148,9 @@ def random_block_genes(cfg: EvoNetConfig, K: int, ei_split: float = 0.8,
     rng = np.random.default_rng(seed)
     assign = rng.integers(0, K, size=cfg.N)
     B = rng.lognormal(mean=0.0, sigma=0.5, size=(K, K))
+    W_in = rng.lognormal(mean=0.0, sigma=0.5, size=(K, cfg.n_in))
     signs = np.where(rng.random(cfg.N) < ei_split, 1.0, -1.0)
-    return BlockGenes(assign=assign, B=B, signs=signs)
+    return BlockGenes(assign=assign, B=B, W_in=W_in, signs=signs)
 
 
 def clustered_block_genes(cfg: EvoNetConfig, K: int, within: float = 4.0, between: float = 0.5,
@@ -154,8 +168,9 @@ def clustered_block_genes(cfg: EvoNetConfig, K: int, within: float = 4.0, betwee
     rng.shuffle(assign)
     B = np.full((K, K), between, dtype=float)
     np.fill_diagonal(B, within)
+    W_in = rng.lognormal(mean=0.0, sigma=0.5, size=(K, cfg.n_in))
     signs = np.where(rng.random(cfg.N) < ei_split, 1.0, -1.0)
-    return BlockGenes(assign=assign, B=B, signs=signs)
+    return BlockGenes(assign=assign, B=B, W_in=W_in, signs=signs)
 
 
 def mutate_blocks(genes: BlockGenes, b_sigma: float = 0.15, assign_p: float = 0.02,
@@ -174,10 +189,12 @@ def mutate_blocks(genes: BlockGenes, b_sigma: float = 0.15, assign_p: float = 0.
     """
     rng = np.random.default_rng(seed)
     B = genes.B * rng.lognormal(mean=0.0, sigma=b_sigma, size=genes.B.shape)
+    W_in = genes.W_in * rng.lognormal(mean=0.0, sigma=b_sigma, size=genes.W_in.shape)
     assign = genes.assign.copy()
     flip = rng.random(assign.size) < assign_p
     assign[flip] = rng.integers(0, genes.K, size=int(flip.sum()))
     signs = genes.signs.copy()
     s_flip = rng.random(signs.size) < sign_flip_p
     signs[s_flip] *= -1.0
-    return BlockGenes(assign=assign, B=np.clip(B, 0.0, None), signs=signs)
+    return BlockGenes(assign=assign, B=np.clip(B, 0.0, None),
+                      W_in=np.clip(W_in, 0.0, None), signs=signs)
