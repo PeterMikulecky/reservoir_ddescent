@@ -1,0 +1,64 @@
+# analysis log: block_architecture_probe
+# timestamp: 2026-07-26T16:17:58.780887
+# command: scripts/block_architecture_probe.py --xi-seeds 7 11 13
+# is there ANY block architecture where recurrence matters?
+#====================================================================
+
+[logging to runs/block_genome\20260726-161758_block_architecture_probe.log]
+N=100  K_exc=4 + 1 inhibitory block  density=0.30  delay=1 (50 ms)  nmda_frac=0.50
+xi draws: [7, 11, 13]  (D131: a headline result must hold across all of them, or it does not stand)
+Sweeping WITHIN-cluster excitatory strength. Sign is a BLOCK property here, so the
+inhibitory pool is SHARED (the D092 ceiling architecture) rather than split across
+clusters as in the first check -- where local inhibition cancelled each cluster.
+
+   xi=7 within=2     done  (rate 0.061, silent 11%)
+   xi=7 within=2.5   done  (rate 0.063, silent 7%)
+   xi=7 within=3     done  (rate 0.066, silent 5%)
+   xi=7 within=3.5   done  (rate 0.070, silent 4%)
+   xi=7 within=4     done  (rate 2.845, silent 21%)
+   xi=11 within=2     done  (rate 0.066, silent 16%)
+   xi=11 within=2.5   done  (rate 0.070, silent 16%)
+   xi=11 within=3     done  (rate 0.079, silent 12%)
+   xi=11 within=3.5   done  (rate 0.622, silent 17%)
+   xi=11 within=4     done  (rate 2.886, silent 35%)
+   xi=13 within=2     done  (rate 0.067, silent 18%)
+   xi=13 within=2.5   done  (rate 0.069, silent 15%)
+   xi=13 within=3     done  (rate 0.070, silent 12%)
+   xi=13 within=3.5   done  (rate 0.072, silent 8%)
+   xi=13 within=4     done  (rate 0.075, silent 6%)
+
+  xi  within | rate  | silent | CUE: intact/abl (d)      | RELATION quad: intact/abl (d)
+  ----+-------+-------+--------+--------------------------+------------------------------
+    7 2      | 0.061 |    11% | 0.965 / 1.000  (-0.035) | 0.772 / 0.757  (+0.016)
+    7 2.5    | 0.063 |     7% | 0.967 / 1.000  (-0.033) | 0.773 / 0.757  (+0.016)
+    7 3      | 0.066 |     5% | 0.962 / 1.000  (-0.038) | 0.779 / 0.757  (+0.022)
+    7 3.5    | 0.070 |     4% | 0.957 / 1.000  (-0.043) | 0.791 / 0.757  (+0.034)
+    7 4      | 2.845 |    21% | 0.854 / 1.000  (-0.146) | 0.528 / 0.757  (-0.228)
+   11 2      | 0.066 |    16% | 0.977 / 1.000  (-0.023) | 0.787 / 0.757  (+0.031)
+   11 2.5    | 0.070 |    16% | 0.985 / 1.000  (-0.015) | 0.788 / 0.757  (+0.031)
+   11 3      | 0.079 |    12% | 0.984 / 1.000  (-0.016) | 0.758 / 0.757  (+0.001)
+   11 3.5    | 0.622 |    17% | 0.937 / 1.000  (-0.063) | 0.668 / 0.757  (-0.089)
+   11 4      | 2.886 |    35% | 0.778 / 1.000  (-0.222) | 0.529 / 0.757  (-0.228)
+   13 2      | 0.067 |    18% | 0.978 / 1.000  (-0.022) | 0.740 / 0.757  (-0.017)
+   13 2.5    | 0.069 |    15% | 0.977 / 1.000  (-0.023) | 0.760 / 0.757  (+0.003)
+   13 3      | 0.070 |    12% | 0.980 / 1.000  (-0.020) | 0.769 / 0.757  (+0.013)
+   13 3.5    | 0.072 |     8% | 0.975 / 1.000  (-0.025) | 0.763 / 0.757  (+0.006)
+   13 4      | 0.075 |     6% | 0.982 / 1.000  (-0.018) | 0.742 / 0.757  (-0.015)
+  (* = intact exceeds ablated on the RELATION by >0.05 AND clears its own null)
+
+  REPLICATION ACROSS xi -- does any (strength, xi) cell show a relation gain?
+     within=2      d quad across xi: +0.016 +0.031 -0.017   mean +0.010
+     within=2.5    d quad across xi: +0.016 +0.031 +0.003   mean +0.017
+     within=3      d quad across xi: +0.022 +0.001 +0.013   mean +0.012
+     within=3.5    d quad across xi: +0.034 -0.089 +0.006   mean -0.016
+     within=4      d quad across xi: -0.228 -0.228 -0.015   mean -0.157
+
+READ:
+  best RELATION gain from recurrence: +0.034 at within=3.5 (clears null)
+  best CUE-CARRY gain from recurrence: -0.015 at within=2.5
+  unstable / saturating at within >= 3.5 (rate blow-up or silent units)
+  NO ARCHITECTURE AND NO LOOP GAIN MAKES RECURRENCE MATTER, across 3 xi draws.
+  E1 is REFUTED: the
+  encoding was never the constraint, because the target is not in the space at all.
+  STOP (D131 step 4). Return to the neuron model and the substrate's capacity for
+  persistent activity -- with one fewer explanation available.
