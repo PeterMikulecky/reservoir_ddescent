@@ -1,0 +1,12 @@
+{
+  "probe": "ceiling_validation",
+  "nmda_frac": 0.7,
+  "N": 50,
+  "delays_ms": [
+    0,
+    100,
+    300,
+    600
+  ],
+  "P": 1080
+}

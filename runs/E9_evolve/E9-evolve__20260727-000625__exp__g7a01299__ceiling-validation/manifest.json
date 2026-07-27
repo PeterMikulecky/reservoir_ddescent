@@ -1,0 +1,26 @@
+{
+  "run_id": "E9-evolve__20260727-000625__exp__g7a01299__ceiling-validation",
+  "runhash": "abc37557",
+  "stage": "E9",
+  "slug": "evolve",
+  "type": "exp",
+  "tag": "ceiling-validation",
+  "git_commit": "7a01299",
+  "git_dirty": false,
+  "git_message": "20260726-161758_block_architecture_probe.log",
+  "created_utc": "2026-07-27T00:06:25.981506+00:00",
+  "finished_utc": "2026-07-27T00:06:29.932616+00:00",
+  "status": "complete",
+  "hostname": "PJM_Lap",
+  "user": "Peter Mikulecky",
+  "runs_root": "C:\\dev\\reservoir_ddescent\\runs",
+  "script_path": "scripts/run_ceiling_validation.py",
+  "script_argv": [
+    "scripts/run_ceiling_validation.py",
+    "--nmda",
+    "0.7"
+  ],
+  "seeds": null,
+  "upstream_run_ids": [],
+  "notes": "D092b: validate the engineered-ceiling known-positive. CARRY = cue-matched cluster persists+decays through silent delay."
+}
