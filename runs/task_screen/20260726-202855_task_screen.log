@@ -1,0 +1,65 @@
+# analysis log: task_screen
+# timestamp: 2026-07-26T20:28:55.410312
+# command: scripts/task_screen.py
+# which task is SELECTABLE at gen 0 AND requires recurrence? (D132)
+#====================================================================
+
+[logging to runs/task_screen\20260726-202855_task_screen.log]
+tasks=['accumulate', 'delayed', 'dmts']  N=[100]  genomes=10  draws=3  trials=200  density=0.30
+Random UNDEVELOPED genomes. No GA, no development. dmts is the known-NEGATIVE control.
+
+   accumulate at N=100:
+      genome 0 done
+      genome 1 done
+      genome 2 done
+      genome 3 done
+      genome 4 done
+      genome 5 done
+      genome 6 done
+      genome 7 done
+      genome 8 done
+      genome 9 done
+     done [1302s elapsed]
+   delayed at N=100:
+      genome 0 done
+      genome 1 done
+      genome 2 done
+      genome 3 done
+      genome 4 done
+      genome 5 done
+      genome 6 done
+      genome 7 done
+      genome 8 done
+      genome 9 done
+     done [2445s elapsed]
+   dmts at N=100:
+      genome 0 done
+      genome 1 done
+      genome 2 done
+      genome 3 done
+      genome 4 done
+      genome 5 done
+      genome 6 done
+      genome 7 done
+      genome 8 done
+      genome 9 done
+     done [3221s elapsed]
+
+  task        N   | mean |r| | best  | signal_sd | noise_sd | reliability | ablated | d_abl
+  ----------------+----------+-------+-----------+----------+-------------+---------+------
+  accumulate  100 |    0.077 | 0.174 |  0.0440   |  0.0376  |    0.579    |  0.053  | +0.024
+  delayed     100 |    0.077 | 0.107 |  0.0258   |  0.0567  |    0.172    |  0.095  | -0.018
+  dmts        100 |    0.069 | 0.099 |  0.0216   |  0.0449  |    0.188    |  0.061  | +0.008
+
+  PASS = selectable (reliability > 0.30) AND recurrence-dependent (d_ablate > 0.05)
+  task        N   | selectable | needs recurrence | VERDICT
+  ----------------+------------+------------------+--------
+  accumulate  100 |    True    |      False       | fail
+  delayed     100 |    False   |      False       | fail
+  dmts        100 |    False   |      False       | fail
+
+READ:
+  NOTHING PASSES. Check the two columns separately -- a task that is selectable but
+  not recurrence-dependent means P cannot matter (D129/D130 again); one that needs
+  recurrence but is unselectable means selection has no gradient (D124 again).
+  If N was varied and neither helped, that bounds the substrate rather than the task.
