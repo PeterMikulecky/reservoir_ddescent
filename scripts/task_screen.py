@@ -115,23 +115,62 @@ TASKS = dict(accumulate=make_accumulate, delayed=make_delayed, dmts=make_dmts)
 
 
 # ==================================================================================================
-def score(net, E, y, read_rows, out_index, noise_seed):
-    """D095-weak readout: a TWO-PARAMETER affine on ONE designated neuron, scored HELD-OUT.
+def _held_out_r(X, y, ridge: float = 1.0):
+    """Pearson r of a HELD-OUT RIDGE fit. X is (n_trials, n_features); fit on half, score on half.
 
-    Held-out because in-sample affine fits do not sit at chance (D129: the per-neuron floor is ~0.56 at
-    n=200, which is what broke the first PR definition). Fit on half the trials, score on the other.
-    Returned as Pearson r between prediction and target -- bounded, and 0 is the true no-skill point.
+    RIDGE IS NOT OPTIONAL FOR THE POOLED READOUT. With N=100 features fit on 100 trials, ordinary least
+    squares sits exactly at its own interpolation threshold and overfits catastrophically -- measured on
+    a stub where the driven neurons carried the input directly, pooled scored 0.051 against 0.181 for
+    the input-only readout, despite strictly more information. A diagnostic upper bound that is beaten
+    by a subset of its own features is not an upper bound. Features are standardised first so one
+    penalty is sensible across readouts of different width.
     """
-    B = net.behave(E, noise_seed=noise_seed)
-    v = B["state"][read_rows][:, out_index]
+    X = np.asarray(X, float)
     n = len(y)
     fit, test = np.arange(n) < n // 2, np.arange(n) >= n // 2
-    A = np.vstack([v[fit], np.ones(fit.sum())]).T
-    coef, *_ = np.linalg.lstsq(A, y[fit], rcond=None)
-    pred = v[test] * coef[0] + coef[1]
+    mu, sd = X[fit].mean(0), X[fit].std(0) + 1e-9
+    Xz = (X - mu) / sd
+    A = Xz[fit]
+    yc = y[fit] - y[fit].mean()
+    coef = np.linalg.solve(A.T @ A + ridge * np.eye(A.shape[1]), A.T @ yc)
+    pred = Xz[test] @ coef
     if pred.std() < 1e-12 or y[test].std() < 1e-12:
         return 0.0
     return float(np.corrcoef(pred, y[test])[0, 1])
+
+
+def r_null(n_test, n_rep=400, seed=0):
+    """The MEASURED chance level for |r| at this sample size. NOT zero.
+
+    A correlation on n held-out trials has |r| ~ 1/sqrt(n) under the null, so at n=100 the floor is
+    ~0.10 -- and the first version of this screen reported mean |r| of 0.069-0.077 as if it were
+    performance, then computed a RELIABILITY on it and called 0.579 selectable. That is
+    between-genome variance in NOISE. D130's own standing rule says a variance or difference test is
+    meaningful only when at least one arm clears its own null; this function makes that enforceable.
+    """
+    rng = np.random.default_rng(seed)
+    return float(np.percentile([abs(np.corrcoef(rng.standard_normal(n_test),
+                                                rng.standard_normal(n_test))[0, 1])
+                                for _ in range(n_rep)], 95))
+
+
+def score_all(net, E, y, read_rows, out_index, n_in, noise_seed):
+    """Every readout, from ONE simulation. Adding readouts costs no extra behave() calls.
+
+    THREE READOUTS, answering different questions:
+      single  - the D095-weak two-parameter affine on the designated neuron. THE FITNESS. If this is at
+                chance while the others are not, the readout is the bottleneck and no task will ever be
+                selectable -- which would explain every null in the project.
+      pooled  - linear over all N neurons. Diagnostic UPPER BOUND: is the information in the state at
+                all? Negatives transfer down to `single`; positives do not.
+      inputs  - linear over the n_in driven neurons only. What is available WITHOUT any recurrent
+                processing, so pooled-minus-inputs is what the network's dynamics actually add.
+    """
+    B = net.behave(E, noise_seed=noise_seed)
+    S = B["state"][read_rows]
+    return dict(single=_held_out_r(S[:, [out_index]], y),
+                pooled=_held_out_r(S, y),
+                inputs=_held_out_r(S[:, :n_in], y))
 
 
 def screen_one(task_name, N, n_genomes, n_draws, n_trials, density, seed=1):
@@ -140,28 +179,43 @@ def screen_one(task_name, N, n_genomes, n_draws, n_trials, density, seed=1):
     w0 = SC.w0_for_density(density)
     E, y, read_rows, meta = TASKS[task_name](n_trials, nc.n_in, seed=seed)
     out_index = nc.N - nc.d
+    keys = ("single", "pooled", "inputs")
 
-    per_genome, ablated = [], []
+    per = {k: [] for k in keys}
+    abl = {k: [] for k in keys}
     for gi in range(n_genomes):
         g = random_genome(nc, density, w0=w0, ei_split=cfg.ei_split, seed=seed + gi)
         net = EvoNet(g, nc)                      # built ONCE per genome, reused across noise draws
-        per_genome.append([score(net, E, y, read_rows, out_index, noise_seed=100 + d)
-                           for d in range(n_draws)])
+        draws = [score_all(net, E, y, read_rows, out_index, nc.n_in, noise_seed=100 + d)
+                 for d in range(n_draws)]
+        for k in keys:
+            per[k].append([abs(d[k]) for d in draws])
+        # ABLATION IS SCORED ON THE POOLED READOUT ONLY, and this is not a detail: with mag=0 the
+        # designated neuron has NO inputs at all (external drive reaches only neurons 0..n_in-1), so a
+        # single-neuron ablation score is structurally pure noise and would measure "is intact above
+        # chance", not "does recurrence matter". The pooled readout still sees the driven neurons, so
+        # the comparison is fair.
         net_abl = EvoNet(replace(g, mag=np.zeros_like(g.mag)), nc)
-        ablated.append(score(net_abl, E, y, read_rows, out_index, noise_seed=100))
+        a = score_all(net_abl, E, y, read_rows, out_index, nc.n_in, noise_seed=100)
+        for k in keys:
+            abl[k].append(abs(a[k]))
         print("      genome %d done" % gi, flush=True)
 
-    M = np.abs(np.array(per_genome))                      # |r|: sign is arbitrary for a random genome
-    gm = M.mean(1)
-    signal_sd = float(np.std(gm, ddof=1))                 # BETWEEN genomes: what selection could grip
-    noise_sd = float(np.mean(np.std(M, axis=1, ddof=1)))  # WITHIN genome: measurement noise
-    rel = signal_sd ** 2 / (signal_sd ** 2 + noise_sd ** 2 + 1e-12)
-    abl = np.abs(np.array(ablated))
-    return dict(task=task_name, N=N, mean=float(gm.mean()), best=float(gm.max()),
-                signal_sd=signal_sd, noise_sd=noise_sd, reliability=float(rel),
-                ablated=float(abl.mean()), d_ablate=float(gm.mean() - abl.mean()),
-                # meta carries its own "task" key, which collides with the explicit argument above
-                **{k: v for k, v in meta.items() if k not in ("task", "N")})
+    out = dict(N=N, n_test=n_trials - n_trials // 2,
+               **{k: v for k, v in meta.items() if k not in ("task", "N")})
+    out["task"] = task_name
+    out["chance"] = r_null(out["n_test"])
+    for k in keys:
+        M = np.array(per[k])
+        gm = M.mean(1)
+        sig = float(np.std(gm, ddof=1))
+        noi = float(np.mean(np.std(M, axis=1, ddof=1)))
+        out[k] = float(gm.mean())
+        out[k + "_best"] = float(gm.max())
+        out[k + "_rel"] = float(sig ** 2 / (sig ** 2 + noi ** 2 + 1e-12))
+        out[k + "_abl"] = float(np.mean(abl[k]))
+    out["d_ablate"] = out["pooled"] - out["pooled_abl"]
+    return out
 
 
 def main():
@@ -170,7 +224,9 @@ def main():
     ap.add_argument("--ns", type=int, nargs="+", default=[100])
     ap.add_argument("--genomes", type=int, default=10)
     ap.add_argument("--draws", type=int, default=3)
-    ap.add_argument("--trials", type=int, default=200)
+    ap.add_argument("--trials", type=int, default=600,
+                    help="n/2 are used to fit. With N features the pooled readout needs "
+                         "n_fit >> N; 200 trials gave 100 fit samples for 100 features.")
     ap.add_argument("--density", type=float, default=0.3)
     a = ap.parse_args()
 
@@ -187,38 +243,50 @@ def main():
                 rows.append(screen_one(t, N, a.genomes, a.draws, a.trials, a.density))
                 print("     done [%.0fs elapsed]" % (time.time() - t0), flush=True)
 
-        print("\n  task        N   | mean |r| | best  | signal_sd | noise_sd | reliability | ablated | d_abl")
-        print("  ----------------+----------+-------+-----------+----------+-------------+---------+------")
+        ch = rows[0]["chance"]
+        print("\n  CHANCE LEVEL for |r| at n_test=%d is %.3f (95th pct of the null). NOT zero."
+              % (rows[0]["n_test"], ch))
+        print("\n  task        N   | single | pooled | inputs | pooled-inputs | pooled_abl | d_abl")
+        print("  ----------------+--------+--------+--------+---------------+------------+------")
         for r in rows:
-            print("  %-11s %3d | %8.3f | %.3f |  %.4f   |  %.4f  |    %.3f    |  %.3f  | %+.3f"
-                  % (r["task"], r["N"], r["mean"], r["best"], r["signal_sd"], r["noise_sd"],
-                     r["reliability"], r["ablated"], r["d_ablate"]))
+            print("  %-11s %3d | %.3f%s | %.3f%s | %.3f%s |     %+.3f     |   %.3f    | %+.3f"
+                  % (r["task"], r["N"],
+                     r["single"], "*" if r["single"] > ch else " ",
+                     r["pooled"], "*" if r["pooled"] > ch else " ",
+                     r["inputs"], "*" if r["inputs"] > ch else " ",
+                     r["pooled"] - r["inputs"], r["pooled_abl"], r["d_ablate"]))
+        print("  (* = clears the chance level. pooled-inputs = what RECURRENT PROCESSING adds.)")
 
-        print("\n  PASS = selectable (reliability > 0.30) AND recurrence-dependent (d_ablate > 0.05)")
-        print("  task        N   | selectable | needs recurrence | VERDICT")
-        print("  ----------------+------------+------------------+--------")
+        print("\n  task        N   | above chance? | selectable | needs recurrence | VERDICT")
+        print("  ----------------+---------------+------------+------------------+--------")
         for r in rows:
-            sel, rec = r["reliability"] > 0.30, r["d_ablate"] > 0.05
-            print("  %-11s %3d |    %-5s   |      %-5s       | %s"
-                  % (r["task"], r["N"], sel, rec, "PASS" if (sel and rec) else "fail"))
+            live = r["pooled"] > ch
+            sel = live and r["single"] > ch and r["single_rel"] > 0.30
+            rec = live and r["d_ablate"] > 0.05
+            print("  %-11s %3d |     %-5s     |    %-5s   |      %-5s       | %s"
+                  % (r["task"], r["N"], live, sel, rec, "PASS" if (sel and rec) else "fail"))
+        print("  (selectable and needs-recurrence are only evaluated where POOLED clears chance --")
+        print("   D130's rule: a variance or difference test means nothing when both arms are noise.)")
 
-        winners = [r for r in rows if r["reliability"] > 0.30 and r["d_ablate"] > 0.05]
-        dm = [r for r in rows if r["task"] == "dmts"]
+        live = [r for r in rows if r["pooled"] > ch]
+        readout_gap = [r for r in rows if r["pooled"] > ch and r["single"] <= ch]
         print("\nREAD:")
-        if dm and (dm[0]["reliability"] > 0.30 and dm[0]["d_ablate"] > 0.05):
-            print("  WARNING: the known-NEGATIVE control PASSED. The screen's thresholds are wrong, or")
-            print("  something about this implementation differs from the retired task. Do not trust")
-            print("  any other row until that is explained.")
-        if winners:
-            print("  PASSING: %s" % ", ".join("%s@N=%d" % (r["task"], r["N"]) for r in winners))
-            print("  That task has gen-0 variance selection could grip AND breaks when recurrence is")
-            print("  removed -- the two conditions every retired task failed. It is the candidate for")
-            print("  the P_gene sweep; confirm with a reliability probe at full n before committing.")
+        if not live:
+            print("  NO TASK IS ABOVE CHANCE EVEN ON THE POOLED READOUT. The network state does not")
+            print("  contain the target at all, for any candidate. That is a SUBSTRATE result, not a")
+            print("  task-choice result, and no readout or encoding fix addresses it. Vary N before")
+            print("  concluding: only N=100 has been tested.")
+        elif readout_gap:
+            print("  POOLED clears chance where SINGLE does not, for: %s"
+                  % ", ".join(r["task"] for r in readout_gap))
+            print("  The information IS in the state and the D095-weak readout cannot reach it. That")
+            print("  is a READOUT finding, and it would explain every null in this project -- loc_single")
+            print("  and loc_best have sat at their noise floors in every sweep. The fitness readout,")
+            print("  not the task, would then be what needs redesigning (D127's all-neuron arm).")
         else:
-            print("  NOTHING PASSES. Check the two columns separately -- a task that is selectable but")
-            print("  not recurrence-dependent means P cannot matter (D129/D130 again); one that needs")
-            print("  recurrence but is unselectable means selection has no gradient (D124 again).")
-            print("  If N was varied and neither helped, that bounds the substrate rather than the task.")
+            print("  Tasks above chance on pooled: %s" % ", ".join(r["task"] for r in live))
+            print("  Read the pooled-inputs column: that is what recurrent processing ADDS over the")
+            print("  driven neurons alone. If it is ~0, the network is a feedforward relay (D129/D130).")
 
 
 if __name__ == "__main__":
