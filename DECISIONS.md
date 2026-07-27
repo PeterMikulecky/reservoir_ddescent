@@ -6466,6 +6466,119 @@ and only a validated positive control distinguishes them. When a null contradict
 the same substrate, the null is what needs explaining.
 
 
+### D133 — THE SIGNAL DIES AT THE FIRST SYNAPSE. Driven neurons carry the target at ~0.44; one hop out it is at chance, at EVERY N from 8 to 100, with and without autapses. The synaptic input arrives carrying signal — the NEURON fails to pass it on. Recoverable in a narrow band of recurrent coupling the study has never occupied.
+**2026-07-27 · Finding + mechanism · scripts/propagation_probe.py, task_screen · runs/propagation/20260727-165828 · random UNDEVELOPED genomes**
+
+**WHERE THIS CAME FROM.** The task screen (D132 follow-up, `accumulate`, N=100, 10 genomes, 600 trials):
+the ten DRIVEN neurons carry the target at |r| = 0.475 against a chance level of 0.115, a pooled readout
+over all 100 neurons gets 0.356, and **the D095-weak readout on the designated output neuron gets 0.054 —
+BELOW chance.** Adding the ninety non-driven neurons makes a pooled readout WORSE than the ten driven
+ones alone (`pooled - inputs` = -0.119). `delayed` and `dmts` were dead on every readout, which
+validates the screen twice: the known-negative failed as designed, and `delayed`'s failure independently
+reconfirms D130.
+
+**THE PROPAGATION RESULT.** Per-neuron |r| with the target, grouped by synaptic hops from the driven set,
+4 genomes, 300 trials, chance 0.113:
+
+| N | hop 0 (driven) | hop 1 | drop |
+|---|---|---|---|
+| 8 | 0.470 / 0.473 | 0.102 / 0.100 | 0.37 |
+| 12 | 0.419 / 0.422 | 0.093 / 0.094 | 0.33 |
+| 20 | 0.447 / 0.451 | 0.098 / 0.099 | 0.35 |
+| 50 | 0.427 / 0.429 | 0.082 / 0.085 | 0.34 |
+| 100 | 0.408 / 0.413 | 0.068 / 0.071 | 0.34 |
+
+*(each cell: autapses off / autapses ON)*
+
+1. **The signal does not survive one synapse, at any N tested.** Not attenuated — at or below chance.
+2. **N is NOT the variable.** The drop is 0.34 at N=8 and 0.34 at N=100, flat across a 12x range. The
+   hypothesis taken from Yaqoob & Wrobel (who solve temporal pattern recognition with 3-4 interneurons
+   plus one output neuron, using a single-output-neuron fitness — our exact D095 arrangement) is
+   REFUTED for this substrate. An earlier 2-genome smoke run suggested survival at N=8; more power
+   removed it, which is the D115 rule doing its job again.
+3. **Autapses change nothing** (0.100 vs 0.102 at N=8; 0.071 vs 0.068 at N=100). Self-connections are
+   excluded project-wide by `fill_diagonal` in evonet, evolve, connectivity and block_genome, and
+   Seung et al. make the autapse the minimal short-term analog memory — but self-excitation is a MEMORY
+   mechanism and this is a TRANSMISSION failure. A neuron cannot sustain a signal it never received.
+
+⚠ **CONFIG DEPARTURES, recorded because they were made silently in the run.** The probe overrides N
+(the study's value is 100, D131) as a diagnostic variable, and overrides `n_in` from 10 to 4 — necessary
+because at N=8 with n_in=10 every neuron is driven and there IS no hop 1 to measure. The override does
+not affect the result: N=50 with n_in=10 gave hop1 = 0.083, and with n_in=4 gave 0.082.
+
+---
+
+**THE MECHANISM: IT FAILS AT THE NEURON, NOT AT THE SYNAPSE.** N=50, 4 genomes:
+
+| genome | hop0 \|r\| | **synaptic INPUT to hop1** | hop1 output \|r\| | sd(hop0) | sd(hop1) | corr(in,out) |
+|---|---|---|---|---|---|---|
+| 0 | 0.441* | **0.241*** | 0.096 | 1.246 | 0.285 | 0.260 |
+| 1 | 0.420* | **0.166*** | 0.074 | 1.078 | 0.271 | 0.182 |
+| 2 | 0.416* | **0.159*** | 0.068 | 1.028 | 0.285 | 0.191 |
+| 3 | 0.429* | **0.194*** | 0.093 | 1.121 | 0.325 | 0.284 |
+
+**The signal ARRIVES.** Summed synaptic input to hop-1 neurons carries the target above chance in every
+genome. So E/I cancellation is NOT the mechanism — the leading hypothesis going in, and it is refuted.
+What fails is the neuron's own transfer: `corr(input, output)` is only **0.18-0.28**, and hop-1 neurons
+show ~4x less activity variation than driven ones (sd 0.28 vs 1.12). A neuron whose output barely tracks
+its own total synaptic input is not responding to it.
+
+**THE STRUCTURAL CAUSE, visible in the code.** `drive[:, :n_in] = input_gain * E` amplifies EXTERNAL
+input tenfold; recurrent input is plain `W @ state` with NO gain. Driven neurons receive a 10x boost that
+no downstream neuron ever sees. The architecture has an amplification asymmetry at exactly the point
+where the signal dies.
+
+---
+
+**THE LEVER, AND IT HAS AN INTERIOR OPTIMUM.** Sweeping `w0` as a multiplier on `w0_for_density`
+(N=50, 3 genomes, chance 0.115):
+
+| w0x | hop0 \|r\| | hop1 \|r\| | corr(in,out) | mean rate | **designated cell** |
+|---|---|---|---|---|---|
+| 1 (current) | 0.426* | 0.079 | 0.211 | 0.331 | 0.105 |
+| 2 | 0.404* | 0.106 | 0.282 | 0.314 | 0.142* |
+| 4 | 0.364* | **0.123*** | **0.346** | 0.323 | 0.147* |
+| 8 | 0.255* | 0.117* | 0.332 | 0.353 | **0.195*** |
+| 16 | 0.158* | 0.086 | 0.307 | 0.453 | 0.107 |
+| 32 | 0.075 | 0.070 | 0.287 | 0.603 | 0.025 |
+
+**The designated fitness cell reaches 0.195 at w0x8 — above chance for the first time in this project.**
+It has read at its noise floor in every measurement since D125. The optimum is interior and narrow:
+below it nothing crosses the synapse; above it strong recurrence swamps the external drive and the
+DRIVEN neurons degrade (hop0 0.426 -> 0.075), so by w0x32 everything is at chance. **The study has been
+operating at w0x1, on the dead side of the band.** That w0x8 is near the 10x external/recurrent
+amplification asymmetry is consistent with the structural cause.
+
+---
+
+**WHAT THIS EXPLAINS.** One fact, seen five ways: **the fitness has always read a neuron at least one hop
+from the input, and nothing crosses that hop.** D124's unselectable task; D125's `loc_best` at its noise
+floor; D129's flat density sweep; D130's "recurrence contributes nothing"; the screen's `single` = 0.054
+against `inputs` = 0.475. These were not five independent nulls.
+
+**IT ALSO REFRAMES D130.** "Recurrence contributes nothing" was the observable. The mechanism is that
+recurrent synapses do not transmit stimulus information at all at this operating point. Whether
+recurrence would be USEFUL was never testable while nothing crossed it — so D130's conclusion stands as
+an observation and is withdrawn as an inference about recurrence's potential.
+
+**HONEST LIMITATIONS.** N=50 for the mechanism and lever tables; 3-4 genomes; one task (`accumulate`);
+one density; undeveloped random genomes. The `designated` = 0.195 at w0x8 is a single condition at n=3
+and has NOT been replicated — D115's rule applies to it and it must not be promoted until it survives
+more power. `w0_for_density` exists to hold input fluctuations constant as density varies (the control
+D129 relied on), so rescaling it interacts with that control in a way that needs working through rather
+than assuming independence.
+
+**NEXT.** A proper sweep of the band: w0 x2..x16 at finer resolution, more genomes, replicated, at the
+study's N=100 and n_in=10, reporting hop0/hop1/designated and the reliability of the designated score.
+The question is whether a regime exists where the D095-weak fitness can read the task AND the driven
+representation survives — that is, whether the two curves overlap anywhere with room to spare.
+
+**LESSON.** Before asking whether a network can COMPUTE something, check that its stimulus reaches the
+cells being read. Four sweeps, an ablation, an encoding redesign and two task changes were spent on
+"can it compute" while the answer was that the fitness could not see the input at all. **Measure the
+signal path before measuring the function.**
+
+
 
 
 

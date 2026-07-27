@@ -40,7 +40,7 @@ re-derivation.
 
 ---
 
-## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-26 (D132 -- task class changes)*
+## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-27 (D133 -- the signal dies at the first synapse)*
 
 **The recurrent network has never contributed anything, and that explains everything else.** D130
 ablated all recurrent connectivity (`genome.mag` zeroed, `tau_slow` retained) against intact networks on
@@ -56,31 +56,32 @@ those synapses do nothing; so P cannot matter. The study's independent variable 
 computation it is meant to modulate. `loc_best` has sat at its measured noise floor in every condition of
 every sweep -- a 45x P range, a 100x gain range, and now 3 couplings x 3 delays x ablation.
 
-**THE ENCODING REDESIGN FAILED, AND THE SUBSTRATE IS NOT THE PROBLEM (D132).** The structured block
-genome was built and its invariants pass (P_syn fixed, no dead units, unseeded prior). The engineered
-ceiling VALIDATES at nmda 0.7 (selectivity 4.29 at 100 ms -> 1.69 at 600 ms), so persistent activity is
-achievable here. But across four architectures -- random blocks, clustered, clustered + shared inhibitory
-pool, and + cue-selective input routing -- recurrence never helped the relation, and the last and most
-ceiling-like architecture made it strictly WORSE (negative in all 15 cells, monotone in routing strength,
-across 3 xi draws). Mechanism: cue-selective clusters encode WHICH CUE, which is identical on match and
-non-match trials, so the attractor injects variance orthogonal to the relation.
+**THE SIGNAL DIES AT THE FIRST SYNAPSE, AND THAT IS ONE FACT BEHIND FIVE PRIOR NULLS (D133).** Driven
+neurons carry the target at ~0.44; one hop out it is AT CHANCE, at every N from 8 to 100 and with or
+without autapses. The synaptic INPUT to hop-1 neurons DOES carry signal (0.16-0.24, above chance), so
+E/I cancellation is refuted -- the neuron's own transfer fails, `corr(input, output)` only 0.18-0.28.
+Structural suspect, visible in the code: `drive[:, :n_in] = input_gain * E` amplifies external input 10x
+while recurrent input is plain `W @ state` with NO gain, so downstream neurons never get the boost the
+driven ones do.
 
-**The conceptual error was upstream of all four: attractors solve MEMORY, and the task's bottleneck is
-COMPARISON.** At delay=1 leak already holds the cue at 1.000; no memory is needed. **Both retired tasks
-demanded a CONJUNCTION, which is second-order in rates, and this substrate has no native second-order
-operation** -- confirmed a third way in the screen's own check, where even a perfect integrator scores
-0.099 on DMTS. That is why D126's swap did not help: it made the target grounded but left it
-second-order. E1 is NOT refuted and D131's step-4 stop does NOT fire: the four architectures were
-hand-designed by A, each failure followed by finding another component in the known-positive's source.
+**The fitness has always read a neuron at least one hop from the input.** That single fact accounts for
+D124 (unselectable), D125 (`loc_best` at its noise floor), D129 (flat density sweep), D130 (recurrence
+"contributes nothing" -- now reframed: recurrent synapses do not TRANSMIT at this operating point, so
+whether recurrence would be useful was never testable), and the screen (`single` 0.054 vs `inputs`
+0.475). Not five findings -- one, seen five ways.
 
-**NEXT ACTION: run the task screen.** `scripts/task_screen.py` tests the two properties that killed
-everything so far, on random undeveloped genomes: (a) gen-0 between-genome fitness variance above
-measurement noise (D115 machinery), and (b) does ablating recurrence destroy performance. A task passes
-only if BOTH hold. Candidates are **accumulate** (independent evidence per segment, target is the total
--- a perfect integrator scores 1.000, a leak-only reader 0.336) and **delayed** (amplitude held past
-tau_slow -- 1.000 vs 0.000), with **dmts as the known-NEGATIVE control** that should fail. N is a
-variable in the screen: "this substrate cannot" and "this substrate at N=100 cannot" are different
-claims and only the second has been tested.
+**A lever exists, with an interior optimum, and the study sits on the dead side of it.** Sweeping w0 as a
+multiplier on `w0_for_density` at N=50/n=3: `corr(in,out)` rises 0.211 -> 0.346 by w0x4, hop1 crosses
+chance, and the DESIGNATED FITNESS CELL reaches 0.195 at w0x8 -- above chance for the first time since
+D125. Past x8 recurrence swamps the external drive and the DRIVEN neurons degrade (hop0 0.426 -> 0.075
+by x32). Narrow band; the study runs at w0x1.
+
+**NEXT ACTION: `scripts/coupling_band_sweep.py`** at the study's real configuration (N=100, n_in=10),
+finer resolution across x1..x16, 8 genomes, reporting the D095 fitness AND ITS RELIABILITY -- a mean
+above chance is not a gradient (D115/D124). A tiny N=50 smoke run already returned "no overlap"
+(w0x8: fitness 0.142, reliability 0.611, but hop0 down to 0.262), so the two curves may not overlap at
+all. If they do not, the response is to change the READOUT (D127's all-neuron arm) or the input wiring,
+not the operating point.
 
 **DO NOT** resume D126's sweep sequence. A P-sweep whose fitness cannot read the task's discriminating
 quantity would repeat D124 at far greater cost. **DO NOT** push `input_gain` past ~50: PR is already 1.31
@@ -98,6 +99,8 @@ task-agnostic, and `cos(delay, test)` *is* the DMTS comparison.
 - **Every headline result under the new encoding must replicate across >=3 independent xi draws** (D131).
   If a P-curve's shape changes with xi, the shared scaffold is doing hidden work and the finding does not
   stand.
+- **If the band exists, D124/D129/D130 must be RE-RUN in it** before any of them is trusted as a
+  statement about this substrate; all three were run at w0x1, where nothing crosses the first synapse.
 - **`readout_window_ms = 60` exceeds `present_ms = 50`.** Every stage sample carries 10 ms of its
   predecessor -- inherited from the era when `present_ms` was 150. Affects every trial-task measurement,
   not just these checks. Needs a deliberate value and its own entry, not a quiet edit.
