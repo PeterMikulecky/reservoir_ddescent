@@ -144,11 +144,11 @@ def screen_one(task_name, N, n_genomes, n_draws, n_trials, density, seed=1):
     per_genome, ablated = [], []
     for gi in range(n_genomes):
         g = random_genome(nc, density, w0=w0, ei_split=cfg.ei_split, seed=seed + gi)
-        draws = [score(EvoNet(g, nc), E, y, read_rows, out_index, noise_seed=100 + d)
-                 for d in range(n_draws)]
-        per_genome.append(draws)
-        g_abl = replace(g, mag=np.zeros_like(g.mag))
-        ablated.append(score(EvoNet(g_abl, nc), E, y, read_rows, out_index, noise_seed=100))
+        net = EvoNet(g, nc)                      # built ONCE per genome, reused across noise draws
+        per_genome.append([score(net, E, y, read_rows, out_index, noise_seed=100 + d)
+                           for d in range(n_draws)])
+        net_abl = EvoNet(replace(g, mag=np.zeros_like(g.mag)), nc)
+        ablated.append(score(net_abl, E, y, read_rows, out_index, noise_seed=100))
         print("      genome %d done" % gi, flush=True)
 
     M = np.abs(np.array(per_genome))                      # |r|: sign is arbitrary for a random genome
@@ -159,7 +159,9 @@ def screen_one(task_name, N, n_genomes, n_draws, n_trials, density, seed=1):
     abl = np.abs(np.array(ablated))
     return dict(task=task_name, N=N, mean=float(gm.mean()), best=float(gm.max()),
                 signal_sd=signal_sd, noise_sd=noise_sd, reliability=float(rel),
-                ablated=float(abl.mean()), d_ablate=float(gm.mean() - abl.mean()), **meta)
+                ablated=float(abl.mean()), d_ablate=float(gm.mean() - abl.mean()),
+                # meta carries its own "task" key, which collides with the explicit argument above
+                **{k: v for k, v in meta.items() if k not in ("task", "N")})
 
 
 def main():
