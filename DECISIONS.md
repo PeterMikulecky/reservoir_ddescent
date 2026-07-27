@@ -6371,6 +6371,101 @@ task required. **Before spending selection — or sweeps — on a search space, 
 the search space.** The vocabulary of the encoding is a scientific claim, not an implementation detail.
 
 
+### D132 — THE STRUCTURED GENOME DOES NOT RESCUE THE TASK, AND THE SUBSTRATE IS NOT THE PROBLEM. The ceiling validates; recurrence still degrades the relation under every architecture tried, and adding cue-selective routing made it WORSE. The diagnosis: both XOR-binding and DMTS require a CONJUNCTION, which is second-order in rates, and this substrate has no native second-order operation. Task class changes.
+**2026-07-26 · Finding + design turn · ddescent/block_genome.py, scripts/block_genome_check.py, scripts/block_architecture_probe.py · runs/block_genome/ (4 runs) · random UNDEVELOPED genomes throughout**
+
+**WHAT WAS BUILT (D131 step 1, PASSES).** `BlockGenes` (block assignment per neuron + K x K block-weight
+matrix + shared-xi heterogeneity + per-neuron top-k) renders into the existing `Genome`, so `EvoNet` is
+unchanged. Verified: `P_syn` exactly N*k = 3000 for K=2..30, in-degree uniformly 30, zero dead units,
+Dale's law clean, and the E2 surface holds — random structured genomes have a geometric-mean cluster
+ratio of 0.87-1.16 against 8.50 for a hand-set clustered genome. **The prior is not seeded.**
+
+**THE CEILING VALIDATES — so the substrate is NOT the problem.** `run_ceiling_validation --nmda 0.7`:
+selectivity 4.29 at 100 ms decaying to 1.69 at 600 ms. Cue-selective attractor, persists through
+silence, decays gracefully (the D092b carry signature). **Persistent activity is achievable in this
+substrate at N=50.** Any claim that it is not is refuted.
+
+**FOUR ARCHITECTURES, ALL FAIL, AND THE LAST ONE FAILS WORST.**
+| architecture | d relation (intact - ablated) |
+|---|---|
+| random blocks | ~0 |
+| clustered, E/I mixed within clusters | -0.022 (and ablated held the cue BETTER: 0.999 vs 0.931) |
+| clustered + shared inhibitory pool | +0.002 to +0.034, signs flipping across xi |
+| **+ cue-selective input routing (W_in)** | **-0.038 to -0.194, NEGATIVE IN ALL 15 CELLS** |
+
+The third was the closest to the ceiling's architecture and still produced nothing that survived xi
+replication. The fourth added the one component the ceiling has that we lacked — and made it strictly
+worse, monotonically with routing strength, across 3 xi draws.
+
+**WHY W_in MADE IT WORSE (the mechanism, and it is the useful part).** Cue-selective clusters encode
+WHICH CUE. That is identical on match and non-match trials with the same cue. So the attractor injects
+strong cue-identity variance ORTHOGONAL to the relation, diluting it — stronger routing, stronger
+dilution, exactly the monotone pattern observed. Cue decodability did not improve either (0.93-0.98 vs
+1.000 ablated), because leak already had it.
+
+**THE CONCEPTUAL ERROR, WHICH IS UPSTREAM OF ALL FOUR ARCHITECTURES.** Attractors solve MEMORY. The task
+runs at delay=1 (50 ms), where leak holds the cue at 1.000 and **no memory is required**. The task's
+bottleneck is COMPARISON — D128's conjunction. Four iterations were spent adding memory machinery to a
+task whose difficulty is not memory. The instability results are consistent with this: past the critical
+coupling the network locks into winner-take-all (rate up 47x, 21-60% of units silent), the cue survives
+at 0.854 but the relation collapses to 0.528 — the attractor is too STABLE for the probe to perturb.
+
+**⚠ E1 IS NOT REFUTED, AND D131'S STEP-4 STOP DOES NOT FIRE.** The stop condition assumed the
+architecture space had been fairly sampled. It had not: each of the four architectures was hand-designed
+by A, and each failure was followed by discovering — from reading `engineered_ceiling.py` — another
+component the ceiling has and the design lacked (shared inhibition, then selective input routing, then
+disinhibitory gating). **A null from a space that excludes the working mechanism licenses nothing.**
+
+**WHAT THE CEILING ACTUALLY USES FOR COMPARISON — and it is not attractors.** `build_regulation_ceiling`
+implements context-dependent probe processing by DISINHIBITORY GATING: cluster B drives gate-inhibitor
+A, which blocks pathway A, so the held cue selects which sub-pathway transforms the probe. Nine
+functional groups at N=50, with `gate_block=20.0` and `gate_drive=15.0` against 0.1-4.0 everywhere else
+— a 200x weight range its own docstring calls the "verified crisp-gating working point."
+
+**THE DIAGNOSIS THAT REPLACES THE ENCODING HYPOTHESIS.** Both retired tasks demand a CONJUNCTION — a
+function of two things presented at different times. Conjunctions are second-order in the rates (D128:
+sum_i proj_i^2, needing cross terms across neurons), and this substrate has no native second-order
+operation. That is why D126's swap did not help: sharing the pattern set made the target GROUNDED rather
+than arbitrary, but left it second-order, which was the actual blocker. **DMTS is more like trial_xor
+than unlike it, in the way that matters (PJM).** A conjunction can be built here, but only by a
+hand-tuned nine-group gating circuit — expressible in the block vocabulary, plausibly, but a vanishingly
+small target for selection that has never yet produced anything on any task.
+
+**DECISION: THE TASK CLASS CHANGES.** Criteria, derived from the failures rather than chosen a priori:
+1. **The discriminating quantity must be FIRST-ORDER in rates** — no comparison, no binding, no "is X
+   the same as Y". A two-parameter affine must be able to read it in principle.
+2. **But it must require something LEAK ALONE CANNOT DO**, or recurrence is irrelevant and P is
+   meaningless (D129/D130). Exactly one such capability is verified in this substrate: TEMPORAL
+   INTEGRATION BEYOND `tau_slow`. Ablated nets are at chance by 200 ms; the ceiling holds to 600 ms.
+3. **It must have a generalization dimension** so error-vs-P is measurable at all (D131's nested split).
+
+Candidates: **evidence accumulation** (noisy stimulus streams, report the total — Wang 2002 slow
+reverberation as an integrator; the integration timescale gives a natural second axis) and **delayed
+scalar report** (present amplitude a, wait past tau_slow, report a — Compte et al. 2000 graded memory).
+
+**NO TASK IS CHOSEN BY ARGUMENT.** A screen decides it, on random undeveloped genomes, measuring the two
+things that killed everything so far: (a) gen-0 between-genome fitness variance against measurement noise
+(D115 machinery), and (b) intact vs ablated at the read point. A task passes only if fitness VARIES
+across genomes AND ablation DESTROYS it. DMTS goes in as a third arm and should fail both, validating the
+screen against a known negative. N is a variable in the screen, not a constant: "this substrate cannot"
+and "this substrate at N=100 cannot" are different claims and only the second has been tested.
+
+**HONEST LIMITATIONS.** Random undeveloped genomes throughout — none of this measures what selection
+could build (PJM's standing D125 objection). Hand-designed architectures, not evolved ones. One density,
+one `nmda_frac` (0.5 in the trial config; the ceiling needs ~0.7 and that discrepancy is untested for the
+block genome). The expressibility question — can `BlockGenes` represent `build_regulation_ceiling`? — was
+never run, and remains the properly-designed version of D131 step 2 if the encoding line is ever resumed.
+
+**PROCESS FAILURE, RECORDED.** Four hand-designed architectures, four runs, each failing for a different
+missing component discovered afterward by reading the known-positive's source. **The known positive
+should have been read FIRST and translated, not guessed at.** D131's build order said "known-positive
+check" as step 2 and A substituted its own architectures for it.
+
+**LESSON.** "The substrate cannot do X" and "the architectures I tried cannot do X" are different claims,
+and only a validated positive control distinguishes them. When a null contradicts a working reference in
+the same substrate, the null is what needs explaining.
+
+
 
 
 

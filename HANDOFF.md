@@ -40,7 +40,7 @@ re-derivation.
 
 ---
 
-## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-26 (D131 -- structured genome pre-registered)*
+## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-26 (D132 -- task class changes)*
 
 **The recurrent network has never contributed anything, and that explains everything else.** D130
 ablated all recurrent connectivity (`genome.mag` zeroed, `tau_slow` retained) against intact networks on
@@ -56,27 +56,31 @@ those synapses do nothing; so P cannot matter. The study's independent variable 
 computation it is meant to modulate. `loc_best` has sat at its measured noise floor in every condition of
 every sweep -- a 45x P range, a 100x gain range, and now 3 couplings x 3 delays x ablation.
 
-**THE REDESIGN IS DECIDED AND PRE-REGISTERED (D131), NO CODE YET.** The diagnosis is that the genome
-cannot EXPRESS the structures the task requires: it is direct (per-synapse `mag` + `signs`, D038), and
-clustered topologies are a vanishing fraction of that space, so random draws never contain one and single
--synapse mutation almost never builds one. That single unstated assumption may account for D124, D125,
-D129 and D130 together (HYPOTHESIS_LOG SS-ENCODING E1). The design: **block genome** (block assignment per
-neuron + K x K block-weight matrix, `P_gene = N + K^2`, knob K) with **shared-xi** within-block
-heterogeneity, **per-neuron top-k** sparsification holding `P_syn = N*k` fixed, **N=100 / n_cues=4**, and
-a **nested split** (pairs seen/unseen; train/val trials within seen, preserving D113). `P_gene` is the
-double-descent axis; `P_syn` is a nuisance CONTROL, not a capacity.
+**THE ENCODING REDESIGN FAILED, AND THE SUBSTRATE IS NOT THE PROBLEM (D132).** The structured block
+genome was built and its invariants pass (P_syn fixed, no dead units, unseeded prior). The engineered
+ceiling VALIDATES at nmda 0.7 (selectivity 4.29 at 100 ms -> 1.69 at 600 ms), so persistent activity is
+achievable here. But across four architectures -- random blocks, clustered, clustered + shared inhibitory
+pool, and + cue-selective input routing -- recurrence never helped the relation, and the last and most
+ceiling-like architecture made it strictly WORSE (negative in all 15 cells, monotone in routing strength,
+across 3 xi draws). Mechanism: cue-selective clusters encode WHICH CUE, which is identical on match and
+non-match trials, so the attractor injects variance orthogonal to the relation.
 
-**NEXT ACTION -- D131's build order, each step gating the next.** (1) Block genome behind the existing
-`Genome` interface. (2) **Known-positive**: hand-set K=2 + inhibitory pool must reproduce the D092
-ceiling's carry, INCLUDING its decay across the delay (a flat carry is the random-net confound, not
-memory). (3) **Gen-0 prior check** -- random structured genomes must be AT CHANCE, or the encoding is
-seeded under another name. (4) **Ablation repeated** on structured genomes past `tau_slow`; if recurrence
-still contributes nothing, E1 is refuted and the redesign has failed -- STOP. (5) Mutational smoothness,
-across single-gene mutations and across xi draws. (6) Only then the `P_gene` sweep. Steps 2-5 are cheap
-and any of them can end the line.
+**The conceptual error was upstream of all four: attractors solve MEMORY, and the task's bottleneck is
+COMPARISON.** At delay=1 leak already holds the cue at 1.000; no memory is needed. **Both retired tasks
+demanded a CONJUNCTION, which is second-order in rates, and this substrate has no native second-order
+operation** -- confirmed a third way in the screen's own check, where even a perfect integrator scores
+0.099 on DMTS. That is why D126's swap did not help: it made the target grounded but left it
+second-order. E1 is NOT refuted and D131's step-4 stop does NOT fire: the four architectures were
+hand-designed by A, each failure followed by finding another component in the known-positive's source.
 
-**Develop at N=50 / K=2** (where the ceiling gives a known positive) and move to N=100 only for the
-sweep; N=100 is ~4x per run.
+**NEXT ACTION: run the task screen.** `scripts/task_screen.py` tests the two properties that killed
+everything so far, on random undeveloped genomes: (a) gen-0 between-genome fitness variance above
+measurement noise (D115 machinery), and (b) does ablating recurrence destroy performance. A task passes
+only if BOTH hold. Candidates are **accumulate** (independent evidence per segment, target is the total
+-- a perfect integrator scores 1.000, a leak-only reader 0.336) and **delayed** (amplitude held past
+tau_slow -- 1.000 vs 0.000), with **dmts as the known-NEGATIVE control** that should fail. N is a
+variable in the screen: "this substrate cannot" and "this substrate at N=100 cannot" are different
+claims and only the second has been tested.
 
 **DO NOT** resume D126's sweep sequence. A P-sweep whose fitness cannot read the task's discriminating
 quantity would repeat D124 at far greater cost. **DO NOT** push `input_gain` past ~50: PR is already 1.31
