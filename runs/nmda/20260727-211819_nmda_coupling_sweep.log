@@ -1,0 +1,110 @@
+# analysis log: nmda_coupling_sweep
+# timestamp: 2026-07-27T21:18:19.546597
+# command: scripts/nmda_coupling_sweep.py --workers 6
+# does SLOW current let recurrence integrate? nmda_frac x coupling
+#====================================================================
+
+[logging to runs/nmda\20260727-211819_nmda_coupling_sweep.log]
+N=100 n_in=10 density=0.30 genomes=4 trials=300 workers=6
+nmda_frac [0.5, 0.7, 0.9, 0.98] (config is 0.5; the validated ceiling needs ~0.7)
+w0 multipliers [1, 2, 4, 8] on w0_for_density(0.30)=0.600
+Charge-split (D075): raising f moves charge into the slow channel, it does NOT add drive.
+THE BAR IS THE ABLATED SCORE, not chance -- recurrence must BEAT passive leak.
+
+   1/64 done [152s]
+   2/64 done [152s]
+   3/64 done [152s]
+   4/64 done [152s]
+   5/64 done [152s]
+   6/64 done [156s]
+   7/64 done [332s]
+   8/64 done [332s]
+   9/64 done [345s]
+   10/64 done [356s]
+   11/64 done [356s]
+   12/64 done [359s]
+   13/64 done [487s]
+   14/64 done [530s]
+   15/64 done [530s]
+   16/64 done [539s]
+   17/64 done [539s]
+   18/64 done [539s]
+   19/64 done [644s]
+   20/64 done [675s]
+   21/64 done [677s]
+   22/64 done [682s]
+   23/64 done [682s]
+   24/64 done [692s]
+   25/64 done [819s]
+   26/64 done [850s]
+   27/64 done [850s]
+   28/64 done [853s]
+   29/64 done [860s]
+   30/64 done [885s]
+   31/64 done [1006s]
+   32/64 done [1044s]
+   33/64 done [1044s]
+   34/64 done [1044s]
+   35/64 done [1044s]
+   36/64 done [1064s]
+   37/64 done [1170s]
+   38/64 done [1195s]
+   39/64 done [1195s]
+   40/64 done [1208s]
+   41/64 done [1213s]
+   42/64 done [1237s]
+   43/64 done [1337s]
+   44/64 done [1364s]
+   45/64 done [1371s]
+   46/64 done [1402s]
+   47/64 done [1402s]
+   48/64 done [1420s]
+   49/64 done [1497s]
+   50/64 done [1526s]
+   51/64 done [1534s]
+   52/64 done [1561s]
+   53/64 done [1571s]
+   54/64 done [1592s]
+   55/64 done [1663s]
+   56/64 done [1688s]
+   57/64 done [1699s]
+   58/64 done [1733s]
+   59/64 done [1740s]
+   60/64 done [1759s]
+   61/64 done [1823s]
+   62/64 done [1850s]
+   63/64 done [1850s]
+   64/64 done [1864s]
+
+  chance 0.169 | ABLATED (passive leak, the BAR) 0.542 | perfect integrator 1.000
+
+  nmda | w0x | driven | all-100 | d_ablate (sd)  t   | rate  | silent
+  -----+-----+--------+---------+--------------------+-------+-------
+  0.5  | 1   | 0.522  |  0.494  | -0.021 (0.006) -7.01  |  0.208 | 0.003
+  0.5  | 2   | 0.519  |  0.367  | -0.023 (0.014) -3.40  |  0.197 | 0.003
+  0.5  | 4   | 0.494  |  0.217  | -0.049 (0.094) -1.04  |  0.219 | 0.035
+  0.5  | 8   | 0.436  |  0.206  | -0.106 (0.107) -1.99  |  0.342 | 0.110
+  0.7  | 1   | 0.521  |  0.461  | -0.021 (0.007) -6.20  |  0.208 | 0.003
+  0.7  | 2   | 0.518  |  0.462  | -0.024 (0.013) -3.76  |  0.197 | 0.005
+  0.7  | 4   | 0.531  |  0.317  | -0.011 (0.048) -0.47  |  0.218 | 0.037
+  0.7  | 8   | 0.386  |  0.154  | -0.156 (0.200) -1.56  |  0.337 | 0.105
+  0.9  | 1   | 0.524  |  0.468  | -0.018 (0.011) -3.13  |  0.208 | 0.003
+  0.9  | 2   | 0.526  |  0.475  | -0.016 (0.016) -1.98  |  0.196 | 0.003
+  0.9  | 4   | 0.524  |  0.393  | -0.018 (0.044) -0.83  |  0.217 | 0.037
+  0.9  | 8   | 0.324  |  0.246  | -0.218 (0.247) -1.77  |  0.337 | 0.118
+  0.98 | 1   | 0.530  |  0.438  | -0.012 (0.010) -2.54  |  0.208 | 0.003
+  0.98 | 2   | 0.523  |  0.367  | -0.020 (0.012) -3.26  |  0.196 | 0.003
+  0.98 | 4   | 0.484  |  0.101  | -0.058 (0.097) -1.21  |  0.217 | 0.037
+  0.98 | 8   | 0.332  |  0.288  | -0.210 (0.209) -2.01  |  0.337 | 0.133
+  (* = PAIRED per-genome difference clears |t| > 4.0 with n >= 6 genomes.)
+  WARNING: --genomes 4 is below 6. No cell can be called significant; the sd of a
+  paired difference is not estimable from so few points, and this script's own smoke
+  run at n=2 produced a false positive. Treat every number below as descriptive.
+
+READ:
+  best d_ablate = -0.011 at nmda_frac=0.7, w0x4 (driven 0.531, paired sd 0.048, t=-0.47)
+  SLOW CURRENT DOES NOT RESCUE IT. Every knob this architecture exposes has now been
+  swept: input_gain, coupling, density, N, autapses, block architecture, task class,
+  readout, and nmda_frac. None produces a condition where recurrent synapses help.
+  The conclusion is STRUCTURAL, not a tuning failure -- the response is a different
+  architecture or a different claim, NOT another parameter.
