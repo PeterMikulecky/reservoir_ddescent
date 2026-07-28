@@ -6903,6 +6903,57 @@ has been run in it. Ten entries of gen-0 diagnostics established with precision 
 this architecture do not do — which is worth knowing, and is not what the project set out to measure.
 **When every measurement is on the prior, the finding is about the prior.**
 
+### D136 — AMENDMENT (2026-07-28): the entry's selectability claim was NOT MEASURED, and the case for the GA arm is weaker than it states.
+**Appended to D136 · corrects the "precondition met" claim · scripts/accumulate_reliability_probe.py**
+
+**WHAT D136 CLAIMED.** *"The precondition D115 requires is now met for the first time... gen-0 reads
+0.517 with between-genome sd 0.074 — a real gradient."*
+
+**⚠ THAT NUMBER WAS NEVER A MEASUREMENT OF SELECTABILITY.** The 0.074 came from six genomes at ONE noise
+draw each. It therefore conflates between-genome variance with measurement noise, which is exactly the
+decomposition D115 exists to perform and which was not performed. The claim is withdrawn as written.
+
+**WHAT PARTIAL MEASUREMENT SHOWS.** A sandbox run at n=2 genomes x 3 draws, 300 trials:
+
+| readout | mean | signal_sd | noise_sd | reliability |
+|---|---|---|---|---|
+| all-neuron (D134 fitness) | 0.524 | 0.0104 | 0.0140 | 0.358 |
+| driven-only | 0.528 | 0.0018 | 0.0112 | 0.025 |
+
+`signal_sd` is **0.010, not 0.074** — the earlier figure was overwhelmingly measurement noise. And a
+second smoke run (n=3 x 2 draws, 150 trials) returned `signal_sd` = 0.180 with one outlier genome at
+0.191 against 0.447 and 0.539. **An 18x swing between two underpowered runs: neither is a measurement**,
+and the proper one (n=10 x 4 draws, 300 trials) has not been run.
+
+**THREE CORRECTIONS TO THE CASE FOR THE ARM.**
+1. **Selectability is unverified.** It may clear D115's bar or fall under it; both partial runs are too
+   small to say.
+2. **The signal is not in the driven cells.** Driven-only reliability reads 0.025 — near zero, and
+   unsurprising: their score is passive leak and every genome shares the same `tau_slow`. Whatever
+   between-genome variance exists comes from the ninety NON-driven neurons, i.e. from how much NOISE
+   each genome contributes to the average. **A gradient made of that points toward suppressing recurrent
+   interference — toward the ablated state, not away from it.** D134's amendment predicted exactly this
+   (driven-only sd 0.008 vs 0.074 full) and D136 did not carry it forward.
+3. **The reachable climb is smaller than the scatter.** Gen-0 0.517 to the passive-leak ceiling 0.542 is
+   0.025 of headroom. The large headroom (0.542 -> 1.000) requires recurrence to build an integrator,
+   which D133, D135 and D136 itself each independently found it does not.
+
+**THE HONEST CASE FOR THE ARM, restated.** Not "it shows promise." Rather: **gen-0 measurements are
+structurally incapable of answering whether SELECTION can build a signal path** — PJM's standing D125
+objection, which applies to all ten of the entries from D125 onward — and the evolved-SNN literature
+reports that selection can. The arm is the only instrument that addresses the question. That is a real
+reason to run it and a weaker one than D136 implies.
+
+**GATE, ADDED.** Run `scripts/accumulate_reliability_probe.py --workers 6` first. If all-neuron
+reliability is **< 0.20**, D115's rule forbids the arm and the correct move is the write-up, not the run.
+If it clears, note whether driven-only clears too: if it does not, the pre-registered plateau at 0.542
+becomes the expected outcome rather than one of three.
+
+**LESSON.** A precondition asserted is not a precondition met. D136 named D115's rule and then declared
+it satisfied using a statistic that rule exists to reject — a single-draw spread reported as
+between-genome signal. **When invoking a standing rule as justification, run the rule's own test.**
+
+
 
 
 

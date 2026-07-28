@@ -40,7 +40,7 @@ re-derivation.
 
 ---
 
-## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-27 (D136 -- parameter space closed; run the GA)*
+## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-27 (D136 amended -- measure selectability BEFORE the GA)*
 
 **The recurrent network has never contributed anything, and that explains everything else.** D130
 ablated all recurrent connectivity (`genome.mag` zeroed, `tau_slow` retained) against intact networks on
@@ -94,7 +94,18 @@ coupling 0.25-8x, density 0.02-0.9, N 8-100, autapses, nmda_frac 0.5-0.98, four 
 three task classes, two readouts. **No condition exists in which recurrent synapses contribute.** No
 more parameters -- that was committed before the run and it holds.
 
-**NEXT ACTION: RUN THE GA. It is the one thing never done.** Every result from D125 onward is on RANDOM
+**⚠ D136's SELECTABILITY CLAIM WAS NOT MEASURED (amendment).** The "between-genome sd 0.074" came from
+six genomes at ONE noise draw each, conflating signal with measurement noise -- the decomposition D115
+exists to perform. Partial runs give signal_sd 0.010 (n=2, 300 trials) and 0.180 (n=3, 150 trials): an
+18x swing, so neither is a measurement. And driven-only reliability reads ~0.03, so whatever selectable
+variance exists sits in the NOISE-CONTRIBUTION of the ninety non-driven cells -- a gradient that points
+toward suppressing recurrent interference, i.e. toward the ablated state.
+
+**NEXT ACTION: `scripts/accumulate_reliability_probe.py --workers 6` FIRST.** If all-neuron reliability
+is < 0.20, D115 forbids the arm and the correct move is the write-up. If it clears, check whether
+driven-only clears too; if not, the 0.542 plateau is the EXPECTED outcome rather than one of three.
+
+**THEN THE GA ARM, if the gate passes. It is the one thing never done.** Every result from D125 onward is on RANDOM
 UNDEVELOPED genomes; the last arm was D124, on a task later shown to demand an unreachable conjunction.
 **Selection has never been run on a viable task with a viable readout.** The precondition D115 requires
 is now met for the first time: under the D134 fitness on `accumulate`, gen-0 reads 0.517 with
