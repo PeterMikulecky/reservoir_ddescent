@@ -40,7 +40,7 @@ re-derivation.
 
 ---
 
-## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-27 (D133 -- the signal dies at the first synapse)*
+## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-27 (D134 -- all-neuron fitness)*
 
 **The recurrent network has never contributed anything, and that explains everything else.** D130
 ablated all recurrent connectivity (`genome.mag` zeroed, `tau_slow` retained) against intact networks on
@@ -76,12 +76,28 @@ chance, and the DESIGNATED FITNESS CELL reaches 0.195 at w0x8 -- above chance fo
 D125. Past x8 recurrence swamps the external drive and the DRIVEN neurons degrade (hop0 0.426 -> 0.075
 by x32). Narrow band; the study runs at w0x1.
 
+**THE FITNESS READOUT CHANGES (D134).** Fitness becomes N independent two-parameter affine reads, one
+per neuron, MEAN-aggregated. D095's capacity bound is preserved exactly -- each read is still gain+offset
+on one cell, no mixing across neurons is ever fitted, so the RC degeneracy stays closed. What is
+withdrawn is the DESIGNATED OUTPUT SLICE, whose premise ("we already have designated actuators") D133
+falsified. Fits also become HELD-OUT: the in-sample per-neuron floor is 0.56, not 0.50 (D129), which
+nearly wrote a phantom finding into the log. Recorded costs: mean fitness selects FOR distribution, so
+D127's PR read REVERSES (under mean pressure, CONCENTRATION occurring anyway is the strong evidence);
+and the aggregate includes the DRIVEN neurons, so `pooled - inputs` must be watched to confirm the
+network is computing rather than relaying.
+
+**⚠ NOTHING MEASURED UNDER THE OLD FITNESS TRANSFERS.** D124's unselectability verdict was obtained under
+single-neuron fitness on a task requiring an uncomputable conjunction. **No GA arm has ever been run on a
+viable task with a viable readout** -- every result since D124 is on RANDOM UNDEVELOPED genomes, which is
+PJM's standing D125 objection applied to the whole recent program.
+
 **NEXT ACTION: `scripts/coupling_band_sweep.py`** at the study's real configuration (N=100, n_in=10),
 finer resolution across x1..x16, 8 genomes, reporting the D095 fitness AND ITS RELIABILITY -- a mean
 above chance is not a gradient (D115/D124). A tiny N=50 smoke run already returned "no overlap"
 (w0x8: fitness 0.142, reliability 0.611, but hop0 down to 0.262), so the two curves may not overlap at
 all. If they do not, the response is to change the READOUT (D127's all-neuron arm) or the input wiring,
-not the operating point.
+not the operating point. **Then the actual GA arm on `accumulate` with the D134 readout** -- a
+diagnostic, not another diagnostic, is what is owed next.
 
 **DO NOT** resume D126's sweep sequence. A P-sweep whose fitness cannot read the task's discriminating
 quantity would repeat D124 at far greater cost. **DO NOT** push `input_gain` past ~50: PR is already 1.31

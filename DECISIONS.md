@@ -6579,6 +6579,115 @@ cells being read. Four sweeps, an ablation, an encoding redesign and two task ch
 signal path before measuring the function.**
 
 
+### D134 — THE FITNESS READOUT BECOMES ALL-NEURON. D095's capacity bound is PRESERVED; what is withdrawn is the DESIGNATED OUTPUT SLICE, whose premise D133 falsified. N independent two-parameter affine reads, aggregated — no mixing power, so the RC degeneracy stays closed. Also: fits become held-out, and the shaping question is settled.
+**2026-07-27 · Method decision · ddescent/trial_eval.py, ddescent/evolve.py · amends D095 (scope), extends D127 · NO DATA — written before code**
+
+**WHAT D095 ACTUALLY ESTABLISHED, AND WHICH PART STANDS.** D095's core rule is that **readout capacity
+must be constrained**, or the GA scores well by evolving rich-but-unstructured state that a flexible
+readout decodes — measuring the READOUT's power, not the network's dynamics. That rule is not merely
+sound, it is load-bearing for this study in a way the original entry did not spell out: **a readout with
+free parameters has its OWN interpolation threshold**, so an uncapped decoder in a P-sweep could produce
+a beautiful double-descent curve belonging to the decoder rather than the network. **The capacity bound
+is retained in full and is not up for revision.**
+
+**WHAT IS WITHDRAWN, AND WHY.** D095 also fixed the readout to the DESIGNATED OUTPUT SLICE, and its
+justification was explicit: *"we evolve WEIGHTS on a FIXED architecture with a DESIGNATED input slice and
+output slice, so we already HAVE designated sensors/actuators; the discovery problem mostly does not
+apply."* **D133 falsified that premise empirically.** Driven neurons carry the target at ~0.44; one hop
+out it is at chance, at every N from 8 to 100. The designated cell sits several hops from the input in a
+random graph, and the stimulus does not reach it. The interface problem D095 argued we did not have is
+the problem we have: we designated an actuator that cannot receive.
+
+**THE CHANGE.** Fitness is computed from **N independent two-parameter affine reads — one per neuron —
+aggregated across the population of neurons.** Never a pooled decoder fitted across neurons.
+
+**WHY THIS PRESERVES D095 EXACTLY.** Each read is still gain-plus-offset on ONE neuron: precisely the
+D095 capacity. Aggregating their SCORES grants **no mixing power** — no linear combination across
+neurons is ever fitted, so the readout cannot construct a representation the network did not produce.
+What changes is WHICH cells are read, not how much the readout may fit. The RC degeneracy D095 exists to
+close stays closed; a single pooled decoder across neurons remains forbidden.
+
+**AND IT IS LESS RC-LIKE, NOT MORE (PJM).** The reservoir bargain is that a flexible readout harvests a
+rich random state. A designated-cell readout is the closer relative of that arrangement than an aggregate
+one is: it demands the network funnel everything through one pre-specified unit, which is both a stronger
+requirement and a stranger one. **Cortical patches almost certainly contribute to larger functions via
+aggregate output rather than by funneling computation through singular neurons**, so the aggregate read
+is the more biologically apt interface as well as the more interpretable one.
+
+⚠ **AN UNRECORDED DEVIATION FROM D095 ALREADY EXISTS.** D095 specifies a readout *"trained/chosen ONCE
+and held CONSTANT across the entire population and all generations — NO per-network fitting."*
+`trial_eval._score_split` fits a two-parameter affine PER NETWORK via `lstsq`. That is capacity-bounded
+but NOT population-constant, so the implementation has been running a relaxation of D095 since it was
+written, undocumented. This entry adopts the relaxation deliberately (two parameters cannot absorb a
+task) and records it rather than leaving it as silent drift.
+
+⚠ **THE FITS MUST BE HELD OUT, AND CURRENTLY ARE NOT.** `_score_split` fits in-sample. D124 flagged the
+resulting overfitting at small `n_val`; D129 quantified the damage — the per-neuron accuracy floor sits
+at **0.56, not 0.50**, which is what broke the first PR definition and nearly wrote a phantom finding
+into the log. Held-out fitting (fit on half, score on the other) costs nothing and removes the bias.
+Applies to every per-neuron read from here on.
+
+---
+
+**THE AGGREGATION FUNCTION — and a real cost, recorded rather than argued away.** D127 kept fitness
+single-neuron for a reason that survives this change: **mean-over-neurons selects FOR distribution, and
+distribution is H-E's dependent variable.** Under a mean fitness, PR's trajectory partly reads out the
+fitness function rather than a property of the network. That cost is now unavoidable, because the
+single-neuron alternative does not work at all (D133).
+
+Consequences, fixed here:
+- **Fitness is the MEAN over per-neuron scores.** Not the best: D125 showed best-over-N is a lottery
+  whose expectation rises with in-degree at fixed N — fatal for anything read along a P axis.
+- **D127's pre-registered read of PR REVERSES for the mean-selected arm.** Under single-neuron pressure,
+  de-concentration was the surprising outcome. Under mean pressure the reverse holds: **CONCENTRATION
+  occurring anyway is the strong evidence, because it costs fitness.** A rise in PR under a fitness that
+  rewards distribution is weak evidence and must not be read as H-E support.
+- **D127's parallel-arms design is not abandoned but is downgraded**, since a single-neuron arm cannot
+  be run at w0x1. If D133's band sweep finds an operating point where a designated cell IS readable, the
+  2x2 becomes possible again and the trigger in D127 stands.
+
+**THE SHAPING QUESTION, SETTLED.** Our fitness is ALREADY graded — `1 - NMSE` or a correlation, both
+continuous, both rewarding partial performance. The failure D124 recorded was never a reward-scale
+problem: **measurement noise swamped the gradient.** A continuous fitness on a signal at chance is flat.
+So the remedy is more signal or less noise, which is exactly what this change delivers — D125 measured
+that averaging N per-neuron reads cuts noise by ~sqrt(N), and on `accumulate` the aggregate INCLUDES the
+driven neurons, which carry the target at 0.475 where the designated cell reads 0.054.
+
+On further shaping, the line is clean and worth stating once:
+- **Shaping the SCALE is free.** Partial credit for partial performance is still measuring the task.
+- **AUXILIARY OBJECTIVES are not.** A firing-rate term, a connectivity term, anything not the task, and
+  selection optimizes that instead — the P-curve then reflects the auxiliary objective and one can no
+  longer say what the curve is a curve OF.
+- **D113 already protects the reported result**: fitness comes from val, test is reporting-only. The
+  double-descent curve is held-out TEST error and stays unshaped no matter what the selection signal
+  does. Fitness and reported error are different functions and never need to be the same object.
+
+---
+
+**WHAT CHANGES IN CODE.** `trial_eval` scores every neuron with its own held-out two-parameter affine
+(the machinery exists: `_per_neuron_scores`, built for D127) and returns their MEAN as fitness;
+`evolve` consumes it unchanged. `loc_single` is retained as a REPORTED DIAGNOSTIC — it is the direct
+measure of the D133 transmission failure and should be watched, not selected on.
+
+**HONEST LIMITATIONS.**
+- This is a change to the SELECTION PRESSURE, so nothing measured under the old fitness transfers.
+  D124's unselectability verdict was obtained under single-neuron fitness on a task we now know demands
+  an uncomputable conjunction; it does not carry over to `accumulate` under all-neuron fitness, and no
+  GA arm has ever been run on a viable task with a viable readout.
+- The H-E cost above is real and not fully mitigated.
+- All-neuron fitness includes the DRIVEN neurons, which carry the stimulus directly. A network could
+  score by leaving the signal in its input cells and computing nothing. **`accumulate` guards against
+  this by construction — the target is the SUM over eight segments, and driven neurons at w0x1 reach
+  only ~0.475 because leak covers ~2 of 8 — but the guard must be verified, not assumed, and the
+  `pooled - inputs` column is the measurement that does it.**
+
+**LESSON.** A method decision carries a premise, and the premise can fail independently of the argument.
+D095's capacity bound was right and remains right; its designated-slice corollary rested on "we already
+have designated actuators," which was an empirical claim nobody tested for seven months. **When a
+long-standing method entry blocks progress, separate its principle from its implementation before
+discarding either.**
+
+
 
 
 
