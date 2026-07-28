@@ -40,7 +40,7 @@ re-derivation.
 
 ---
 
-## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-27 (D134 -- all-neuron fitness)*
+## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-27 (D135 -- recurrence degrades what works)*
 
 **The recurrent network has never contributed anything, and that explains everything else.** D130
 ablated all recurrent connectivity (`genome.mag` zeroed, `tau_slow` retained) against intact networks on
@@ -76,22 +76,34 @@ chance, and the DESIGNATED FITNESS CELL reaches 0.195 at w0x8 -- above chance fo
 D125. Past x8 recurrence swamps the external drive and the DRIVEN neurons degrade (hop0 0.426 -> 0.075
 by x32). Narrow band; the study runs at w0x1.
 
-**THE FITNESS READOUT CHANGES (D134).** Fitness becomes N independent two-parameter affine reads, one
-per neuron, MEAN-aggregated. D095's capacity bound is preserved exactly -- each read is still gain+offset
-on one cell, no mixing across neurons is ever fitted, so the RC degeneracy stays closed. What is
-withdrawn is the DESIGNATED OUTPUT SLICE, whose premise ("we already have designated actuators") D133
-falsified. Fits also become HELD-OUT: the in-sample per-neuron floor is 0.56, not 0.50 (D129), which
-nearly wrote a phantom finding into the log. Recorded costs: mean fitness selects FOR distribution, so
-D127's PR read REVERSES (under mean pressure, CONCENTRATION occurring anyway is the strong evidence);
-and the aggregate includes the DRIVEN neurons, so `pooled - inputs` must be watched to confirm the
-network is computing rather than relaying.
+**THE FITNESS READOUT CHANGED (D134 + amendment).** Fitness is now N independent HELD-OUT two-parameter
+affine reads, one per neuron, aggregated as the MEAN PREDICTION -- not the mean of scores, which measured
+0.114, BELOW chance, because ten driven cells get diluted among ninety at chance. Mean-of-predictions
+reads 0.517. Weights are fixed at 1/N and never fitted, so D095's capacity bound is untouched.
 
-**⚠ NOTHING MEASURED UNDER THE OLD FITNESS TRANSFERS.** D124's unselectability verdict was obtained under
-single-neuron fitness on a task requiring an uncomputable conjunction. **No GA arm has ever been run on a
-viable task with a viable readout** -- every result since D124 is on RANDOM UNDEVELOPED genomes, which is
-PJM's standing D125 objection applied to the whole recent program.
+**AND THEN D135 CLOSED THE LAST ROUTE.** Ablating recurrence IMPROVES driven-neuron integration: 0.542
+ablated against 0.436-0.530 intact, monotonically worse as coupling rises across 16x. The fitness is
+measuring passive leak exactly -- tau_slow=100ms covers ~2 of 8 segments and sqrt(2/8)=0.500 predicts the
+observed 0.542. Worse, between-genome sd RISES with coupling (0.002 -> 0.104) while the mean falls, so
+selection would grip variation in HOW MUCH RECURRENCE HURTS. With D133 (signal does not cross the first
+synapse), every route by which P could matter is closed.
 
-**NEXT ACTION: `scripts/coupling_band_sweep.py`** at the study's real configuration (N=100, n_in=10),
+**NEXT ACTION: `scripts/nmda_coupling_sweep.py --workers 6`** -- the one variable never moved.
+`nmda_frac` is 0.5 in the trial config; the VALIDATED ceiling needs ~0.7 and attributes its attractor to
+slow reverberation. It enters as a CHARGE SPLIT (D075), so raising it redistributes charge into a channel
+lasting 20x longer rather than adding drive. Swept against w0 because the Wang mechanism needs both slow
+current AND loop gain. **THE BAR IS THE ABLATED SCORE (0.542), NOT CHANCE** -- recurrence must beat
+passive leak, and every intact condition so far has scored below it. Verified: nmda_frac does reach the
+simulation (state deltas ~0.9 against sd 0.43), and driven neurons do receive substantial recurrent input
+(sd ratio 1.05 vs external drive), so the sweep tests a real variable. Use --genomes 6 or more: the test
+is a PAIRED per-genome t at |t|>4, and a 2-genome smoke run of this script produced a false positive.
+
+**IF IT COMES BACK NEGATIVE, STOP SWEEPING.** Every knob this architecture exposes will have been tested:
+input_gain 0.5-50, coupling 0.25-8x, density 0.02-0.9, N 8-100, autapses, four block architectures, three
+task classes, two readouts, nmda_frac. The response is a different architecture or a different claim, not
+another parameter.
+
+**SUPERSEDED (kept for the record): `scripts/coupling_band_sweep.py`** at the study's real configuration (N=100, n_in=10),
 finer resolution across x1..x16, 8 genomes, reporting the D095 fitness AND ITS RELIABILITY -- a mean
 above chance is not a gradient (D115/D124). A tiny N=50 smoke run already returned "no overlap"
 (w0x8: fitness 0.142, reliability 0.611, but hop0 down to 0.262), so the two curves may not overlap at

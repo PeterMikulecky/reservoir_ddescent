@@ -6687,6 +6687,141 @@ have designated actuators," which was an empirical claim nobody tested for seven
 long-standing method entry blocks progress, separate its principle from its implementation before
 discarding either.**
 
+### D134 — AMENDMENT (2026-07-27, same day): the aggregation is over PREDICTIONS, not scores. Mean-of-scores is BELOW chance; mean-of-predictions is far above it. And the driven neurons supply all of the performance, which converts D134's "relay risk" from a caveat into the central open question.
+**Appended to D134 · measured at the study's configuration: N=100, n_in=10, density 0.3, `accumulate`, 6 genomes, 300 trials, held-out**
+
+**WHY THIS IS AN AMENDMENT AND NOT A COMMIT MESSAGE.** D134 said fitness is "the MEAN over per-neuron
+scores" without specifying what is averaged. Two readings are available and they differ enormously —
+one is unusable. Recording which, and on what evidence, keeps the method decision checkable.
+
+| aggregation | mean | between-genome sd | vs chance (0.169) |
+|---|---|---|---|
+| **mean of per-neuron SCORES** | 0.114 | 0.014 | **BELOW chance** |
+| **mean of per-neuron PREDICTIONS** | **0.517** | 0.074 | far above |
+| driven neurons only, predictions | 0.526 | 0.008 | far above |
+| designated cell (the retired readout) | 0.068 | — | below chance |
+
+**THE CORRECTION.** Averaging SCORES dilutes: ten driven cells carrying the target are averaged with
+ninety at chance, and the result lands below the noise floor. Averaging PREDICTIONS does the opposite —
+signal adds coherently while noise averages down. **Fitness is the score of the MEAN PREDICTION, not the
+mean of the scores.**
+
+**THIS DOES NOT LOOSEN D095.** The aggregation weights are FIXED at 1/N, not fitted. No free parameter
+combines neurons, so the readout still cannot construct a representation the network did not produce,
+and it still carries no interpolation threshold of its own into the P-sweep. Each per-neuron read remains
+a held-out two-parameter affine. The capacity bound is untouched; only the aggregation rule is specified.
+
+**⚠ AND THE DRIVEN NEURONS SUPPLY ALL OF IT.** Driven-only reads 0.526 against 0.517 for all 100 neurons
+— the ninety non-driven cells contribute NOTHING. That is D133 restated at the level of the new fitness,
+and it converts D134's "relay risk" from a listed caveat into the central open question: **a network
+could score well by leaving the signal in its input cells and computing nothing.**
+
+**THE VARIANCE STRUCTURE MAKES IT WORSE, AND THIS IS THE NUMBER THAT MATTERS.** Between-genome sd is
+**0.074 for the full-population prediction but only 0.008 for driven-only.** Nearly all between-genome
+variance comes from the non-driven neurons — that is, from how much NOISE each genome contributes to the
+average, not from how well it integrates. **Selection would grip the noise term.** And since P counts
+recurrent synapses, a GA arm run this way would once again optimize something disconnected from the
+study's axis, which is the D129/D130 failure in a new costume.
+
+**WHAT IS ENCOURAGING, STATED WITH ITS CAVEAT.** Driven-only at 0.526 sits well above the leak-only
+proxy (0.336, measured when `accumulate` was designed) and well below the perfect-integrator ceiling
+(1.000). There is genuine room for selection to climb, roughly 0.53 -> 1.0, and the route does not
+require the transmission D133 showed is absent: **a recurrent loop RETURNING TO THE DRIVEN NEURONS would
+extend their effective integration time constant without needing to reach any distant cell.** That is a
+far weaker requirement than reaching a designated readout, and it is exactly what `accumulate` rewards.
+The coupling band sweep is discouraging on it — `hop0` fell monotonically from 0.371 to 0.091 as w0 rose
+— but that measured per-neuron |r| on raw state, not integration quality on the aggregate, so it is not
+the same question and does not settle it.
+
+**WHAT MUST BE MEASURED BEFORE ANY GA ARM.** Does driven-neuron integration IMPROVE with recurrence at
+any coupling? Concretely: the aggregate prediction score restricted to driven neurons, swept over w0,
+against the leak-only baseline.
+- **It improves at some w0** -> recurrence has a route to matter that does not depend on transmission,
+  P has a mechanism, and the GA arm is worth running at that coupling.
+- **It is flat or falls at every w0** -> the fitness is measuring the input layer's intrinsic dynamics,
+  a GA would optimize the noise term identified above, and no arm should be run until the fitness is
+  restricted or the architecture changed.
+
+**LESSON.** "Average the per-neuron reads" is not one procedure. Averaging the SCORES and averaging the
+PREDICTIONS differ by 0.4 in performance and by a factor of five in the location of between-genome
+variance. A method entry that names an aggregation without naming what is aggregated has not specified
+the method.
+
+
+### D135 — RECURRENCE DEGRADES THE ONE THING THAT WORKS. Ablating it IMPROVES driven-neuron integration (0.542 vs 0.436-0.530 intact), monotonically across a 16x coupling range. The fitness is measuring passive leak in the input layer and nothing else. The last route by which P could matter is closed.
+**2026-07-27 · Finding · N=100, n_in=10, density 0.3, `accumulate`, 4 genomes, 300 trials, held-out · refutes the hypothesis raised in the D134 amendment**
+
+**THE HYPOTHESIS THIS TESTS.** The D134 amendment found that the driven neurons supply all of the
+new all-neuron fitness (0.526 driven-only vs 0.517 over all 100), which made "the network relays rather
+than computes" the central open question. But it also identified a route by which recurrence could still
+matter WITHOUT the transmission D133 showed is absent: **a recurrent loop returning to the driven
+neurons would extend their effective integration time constant**, needing to reach no distant cell.
+That is a far weaker requirement than reaching a designated readout, and it is exactly what `accumulate`
+rewards. This measures it directly.
+
+**THE RESULT — the opposite of the hypothesis.**
+
+| w0x | DRIVEN agg | all-100 agg | **ABLATED driven** | driven sd | rate |
+|---|---|---|---|---|---|
+| 0.5 | 0.530 | 0.459 | **0.542** | 0.008 | 0.233 |
+| 1 (current) | 0.522 | 0.494 | **0.542** | 0.002 | 0.208 |
+| 2 | 0.519 | 0.367 | **0.542** | 0.015 | 0.197 |
+| 4 | 0.494 | 0.217 | **0.542** | 0.095 | 0.219 |
+| 8 | 0.436 | 0.206 | **0.542** | 0.104 | 0.342 |
+
+*(chance 0.169; last-segment-only baseline 0.225; perfect integrator 1.000. Ablated is constant because
+w0 cannot affect a network with no recurrent connections — the intended sanity check.)*
+
+1. **Ablation IMPROVES integration.** 0.542 ablated beats every intact condition, and the gap widens
+   monotonically with coupling. Recurrence is not neutral here; it actively degrades the only signal the
+   fitness can see.
+2. **The fitness measures PASSIVE LEAK, and the arithmetic confirms it exactly.** `tau_slow` = 100 ms
+   covers ~2 of the 8 x 50 ms segments, and integrating 2 of 8 independent contributions predicts
+   sqrt(2/8) = 0.500 against an observed 0.542. The driven neurons are doing leaky integration and
+   nothing else; the network contributes no part of the score.
+3. **The variance structure is actively adverse.** Between-genome sd RISES with coupling (0.002 -> 0.104)
+   while the mean FALLS. Selection would grip variation in HOW MUCH RECURRENCE HURTS, and would evolve
+   toward less effective recurrence — the opposite of a P-dependence, and a mechanism by which a GA arm
+   could show apparent progress that means nothing.
+
+**WHAT THIS CLOSES.** D133 established that signal does not cross the first synapse. This establishes
+that recurrence does not help even the cells it already occupies. Together they close every route by
+which P — a count of recurrent synapses — could influence task performance in this architecture. The
+D134 amendment's pre-registered read said: *flat or falling at every w0 -> the fitness is measuring the
+input layer's intrinsic dynamics, and no arm should be run until the fitness is restricted or the
+architecture changed.* That branch is the one observed.
+
+**THE SWEPT SPACE, for the record.** `input_gain` 0.5-50 (D129); recurrent coupling 0.25-8x (D130) and
+0.5-8x (here); density 0.02-0.9, P = 49-2205 (D129); N = 8-100 (D133); autapses on/off (D133); four
+block architectures including the ceiling's shared-inhibitory-pool and cue-selective-routing motifs
+(D132); three task classes (D124, D126, D132); two readouts (D095, D134). **None of it produced a
+condition in which recurrent synapses contributed to task performance.**
+
+**THE ONE VARIABLE NEVER MOVED.** `nmda_frac` is 0.5 in the trial config; the VALIDATED engineered
+ceiling requires ~0.7, and its own documentation attributes the sustained attractor to slow
+reverberation. Slow NMDA-like current is the mechanism for recurrent integration, so this is not merely
+the next item on a list — it is the parameter the working positive control depends on, and it has been
+flagged as untested in HANDOFF twice. Note the charge-conserving normalisation (`w_slow = f*w*tau_fast/
+tau_slow`) means raising `f` does not add total drive; it redistributes the same charge into the slow
+channel, which is precisely what an integrator needs and what the fast channel cannot supply.
+
+**HONEST LIMITATIONS.** 4 genomes per coupling, one task, one density, one N, random undeveloped genomes
+throughout — so this measures what recurrence does BY DEFAULT, not what selection could build (PJM's
+standing D125 objection, which applies here as it has to every result since D124). The driven-only
+metric aggregates 10 neurons; a different aggregation could in principle behave differently, though
+mean-of-predictions was validated against mean-of-scores in the D134 amendment.
+
+**PROCESS NOTE.** This is the fourth consecutive "one more knob" in a single session — task class,
+encoding, coupling, and now `nmda_frac`. Three of the first three were wrong. `nmda_frac` differs in
+having a specific warrant from a validated positive control rather than being the next untested
+parameter, but that distinction is exactly what the previous three also seemed to have at the time, and
+it should be weighed accordingly.
+
+**LESSON.** An ablation that IMPROVES performance is a stronger result than one that leaves it
+unchanged. "Recurrence contributes nothing" (D130) permitted the reading that the right regime had not
+been found; "recurrence makes it worse, monotonically, across 16x of coupling" does not. **When
+searching an operating-point space, the sign of the effect is more informative than its size.**
+
 
 
 
