@@ -40,7 +40,7 @@ re-derivation.
 
 ---
 
-## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-27 (D135 -- recurrence degrades what works)*
+## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-27 (D136 -- parameter space closed; run the GA)*
 
 **The recurrent network has never contributed anything, and that explains everything else.** D130
 ablated all recurrent connectivity (`genome.mag` zeroed, `tau_slow` retained) against intact networks on
@@ -88,20 +88,27 @@ observed 0.542. Worse, between-genome sd RISES with coupling (0.002 -> 0.104) wh
 selection would grip variation in HOW MUCH RECURRENCE HURTS. With D133 (signal does not cross the first
 synapse), every route by which P could matter is closed.
 
-**NEXT ACTION: `scripts/nmda_coupling_sweep.py --workers 6`** -- the one variable never moved.
-`nmda_frac` is 0.5 in the trial config; the VALIDATED ceiling needs ~0.7 and attributes its attractor to
-slow reverberation. It enters as a CHARGE SPLIT (D075), so raising it redistributes charge into a channel
-lasting 20x longer rather than adding drive. Swept against w0 because the Wang mechanism needs both slow
-current AND loop gain. **THE BAR IS THE ABLATED SCORE (0.542), NOT CHANCE** -- recurrence must beat
-passive leak, and every intact condition so far has scored below it. Verified: nmda_frac does reach the
-simulation (state deltas ~0.9 against sd 0.43), and driven neurons do receive substantial recurrent input
-(sd ratio 1.05 vs external drive), so the sweep tests a real variable. Use --genomes 6 or more: the test
-is a PAIRED per-genome t at |t|>4, and a 2-genome smoke run of this script produced a false positive.
+**D136 CLOSED THE PARAMETER SPACE.** `nmda_frac` x coupling: all 16 cells NEGATIVE (best -0.011,
+several at |t| 3-7 in the negative direction). Across D129-D136 the swept space is `input_gain` 0.5-50,
+coupling 0.25-8x, density 0.02-0.9, N 8-100, autapses, nmda_frac 0.5-0.98, four block architectures,
+three task classes, two readouts. **No condition exists in which recurrent synapses contribute.** No
+more parameters -- that was committed before the run and it holds.
 
-**IF IT COMES BACK NEGATIVE, STOP SWEEPING.** Every knob this architecture exposes will have been tested:
-input_gain 0.5-50, coupling 0.25-8x, density 0.02-0.9, N 8-100, autapses, four block architectures, three
-task classes, two readouts, nmda_frac. The response is a different architecture or a different claim, not
-another parameter.
+**NEXT ACTION: RUN THE GA. It is the one thing never done.** Every result from D125 onward is on RANDOM
+UNDEVELOPED genomes; the last arm was D124, on a task later shown to demand an unreachable conjunction.
+**Selection has never been run on a viable task with a viable readout.** The precondition D115 requires
+is now met for the first time: under the D134 fitness on `accumulate`, gen-0 reads 0.517 with
+between-genome sd 0.074, where the retired designated-cell readout read 0.068 at chance.
+
+**READ THE ARM AGAINST THREE KNOWN LANDMARKS, not against its own starting point:**
+gen-0 **0.517** (measured) | passive-leak/ablated ceiling **0.542** (D135) | perfect integrator **1.000**.
+- climbs to ~0.542 and plateaus -> selection merely removed recurrent INTERFERENCE; a real negative,
+  and P counts synapses selection is switching off.
+- **EXCEEDS 0.542** -> recurrence contributes, P has a mechanism, and the P-sweep becomes possible.
+  Every gen-0 conclusion since D129 would then be a statement about the PRIOR, not the substrate.
+- flat at 0.517 -> no gradient despite the measured sd; D115 again at a new operating point.
+D135's variance structure (sd rising with coupling while the mean falls) is a way the first outcome
+could occur while LOOKING like progress -- which is why the 0.542 landmark matters more than the slope.
 
 **SUPERSEDED (kept for the record): `scripts/coupling_band_sweep.py`** at the study's real configuration (N=100, n_in=10),
 finer resolution across x1..x16, 8 genomes, reporting the D095 fitness AND ITS RELIABILITY -- a mean

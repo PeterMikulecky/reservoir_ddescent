@@ -6822,6 +6822,87 @@ unchanged. "Recurrence contributes nothing" (D130) permitted the reading that th
 been found; "recurrence makes it worse, monotonically, across 16x of coupling" does not. **When
 searching an operating-point space, the sign of the effect is more informative than its size.**
 
+### D136 — SLOW CURRENT DOES NOT RESCUE IT EITHER. All 16 cells of nmda_frac x coupling are NEGATIVE. The parameter space of this architecture is now closed. What remains untested is not a parameter — it is SELECTION, which this project has not run on a viable task since D124.
+**2026-07-27 · Finding + strategic turn · scripts/nmda_coupling_sweep.py · runs/nmda/20260727-211819 · N=100, n_in=10, density 0.3, `accumulate`, 4 genomes, 300 trials, held-out**
+
+**THE TEST.** `nmda_frac` was the one variable never moved: 0.5 in the trial config against the ~0.7 the
+VALIDATED engineered ceiling requires, and the ceiling attributes its sustained attractor to slow
+reverberation. It enters as a CHARGE SPLIT (D075) — raising it redistributes charge into a channel
+lasting 20x longer rather than adding drive, which is what an integrator needs and what the fast channel
+cannot supply. Swept AGAINST w0 because the Wang mechanism requires both slow current and loop gain;
+neither knob alone was the hypothesis. The bar was the ABLATED score (0.542, passive leak), not chance.
+
+**THE RESULT.** `d_ablate` (intact minus ablated, paired per genome) across nmda_frac x w0:
+
+| nmda \ w0x | 1 | 2 | 4 | 8 |
+|---|---|---|---|---|
+| 0.5 | -0.021 (t -7.01) | -0.023 (t -3.40) | -0.049 | -0.106 |
+| 0.7 | -0.021 (t -6.20) | -0.024 (t -3.76) | **-0.011** | -0.156 |
+| 0.9 | -0.018 (t -3.13) | -0.016 | -0.018 | -0.218 |
+| 0.98 | -0.012 | -0.020 (t -3.26) | -0.058 | -0.210 |
+
+**All 16 cells negative.** Under a null of random sign that is p ~ 2^-16. The best cell is -0.011, and
+several reach |t| of 3–7 in the NEGATIVE direction: recurrence does not merely fail to help, it
+reliably hurts. Raising `nmda_frac` mildly reduces the harm at low coupling (-0.021 -> -0.012 at w0x1)
+but never reverses it, and at w0x8 the harm worsens with f (-0.106 at 0.5, -0.218 at 0.9).
+
+⚠ `--genomes` defaulted to 4 while the script's own `MIN_GENOMES` guard is 6, so the significance
+warning fired. That inconsistency is A's; it does not affect this conclusion, because the guard blocks
+calling a cell POSITIVE and no cell is positive. The sign consistency across 16 cells does the work.
+
+**THE PARAMETER SPACE IS CLOSED.** Swept, across D129–D136: `input_gain` 0.5–50; recurrent coupling
+0.25–8x; density 0.02–0.9 (P = 49–2205); N = 8–100; autapses on/off; `nmda_frac` 0.5–0.98 crossed with
+coupling; four block architectures including the ceiling's shared-inhibitory-pool and cue-selective
+input-routing motifs; three task classes; two readouts. **No condition exists in which recurrent
+synapses contribute to task performance.** Per the commitment recorded in HANDOFF before this run: the
+response is a different architecture or a different claim, NOT another parameter.
+
+---
+
+**WHAT IS ACTUALLY UNTESTED, AND IT IS NOT A PARAMETER.** Every result from D125 onward — D128, D129,
+D130, D131, D132, D133, D134, D135, and this entry — was measured on **RANDOM, UNDEVELOPED genomes.**
+The last GA arm was D124, on `trial_xor`, a task later shown to demand a conjunction no
+capacity-bounded readout can reach (D128/D132). **This project has not run selection on a viable task
+with a viable readout. Not once.**
+
+That is PJM's standing D125 objection applied to the entire recent program: absence in an unselected
+population cannot establish absence under selection. It has been written into the "honest limitations"
+of ten consecutive entries while the reasoning proceeded as though the gen-0 measurements were verdicts.
+And it is exactly the gap the literature fills — Yaqoob & Wrobel's networks work BECAUSE evolution built
+the signal path; the comparison class for our random networks is their random initialisation, not their
+result.
+
+**THE PRECONDITION IS NOW MET, WHICH IT WAS NOT BEFORE.** D115's rule forbids spending an arm on a
+fitness with no gradient. Under the D134 fitness (mean prediction over N held-out per-neuron affines) on
+`accumulate`, gen-0 reads **0.517 with between-genome sd 0.074** — a real gradient, where the retired
+designated-cell readout read 0.068 at chance. The task clears chance, the readout can see it, and
+genomes differ measurably. That combination has never previously existed in this project.
+
+**THE EXPERIMENT, WITH ITS OUTCOMES PRE-REGISTERED.** Run the GA on `accumulate` with the D134 fitness.
+Three landmarks are known in advance, which is what makes it interpretable:
+- gen-0 = **0.517** (measured), ablated/passive-leak ceiling = **0.542** (D135), perfect integrator = **1.000**.
+
+- **Fitness climbs toward ~0.542 and plateaus** -> selection merely REMOVED RECURRENT INTERFERENCE,
+  evolving toward an effectively feedforward network. That confirms D133/D135/D136 under selection and
+  is a real, publishable negative: P counts synapses selection is switching off.
+- **Fitness EXCEEDS 0.542** -> selection built something passive leak cannot do. Recurrence contributes,
+  P has a mechanism, and the P-sweep the project exists to run becomes possible. Every gen-0 conclusion
+  from D129 onward would then need re-reading as a statement about the prior, not the substrate.
+- **Fitness flat at 0.517** -> no gradient after all despite the measured sd, and D115's diagnosis
+  applies at a new operating point.
+
+The first two outcomes are both informative, which is the property none of the last ten entries had.
+
+**HONEST STATUS.** No prediction is offered as to which outcome obtains. D135's variance structure —
+between-genome sd rising with coupling while the mean falls — is a mechanism by which the first outcome
+could occur while looking like progress, and the run must be read against the 0.542 landmark rather than
+against its own starting point.
+
+**LESSON.** A closed parameter space is a result about a MODEL, not about a substrate, until selection
+has been run in it. Ten entries of gen-0 diagnostics established with precision what random networks in
+this architecture do not do — which is worth knowing, and is not what the project set out to measure.
+**When every measurement is on the prior, the finding is about the prior.**
+
 
 
 
