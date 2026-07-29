@@ -6953,6 +6953,75 @@ becomes the expected outcome rather than one of three.
 it satisfied using a statistic that rule exists to reject — a single-draw spread reported as
 between-genome signal. **When invoking a standing rule as justification, run the rule's own test.**
 
+### D137 — THE GATE PASSES, BUT THE GRADIENT IS IN THE WRONG PLACE. All-neuron reliability 0.332 clears D115; driven-only reliability 0.148 does not. Genomes differ mainly in how much their non-driven cells DEGRADE the average, so selection would climb by suppressing recurrent interference. The arm is permitted; the plateau is the expected outcome.
+**2026-07-28 · Finding · scripts/accumulate_reliability_probe.py · runs/fitness_reliability/20260728-155357 · N=100, n_in=10, density 0.3, w0x1, 10 genomes x 4 draws, 300 trials**
+
+**WHAT WAS GATED.** D136 claimed D115's precondition was met, citing a between-genome sd of 0.074 that
+came from six genomes at ONE noise draw each — a statistic conflating signal with measurement noise,
+which is exactly what D115 exists to separate. The D136 amendment withdrew the claim and required this
+measurement before the GA arm. Two partial runs had given signal_sd of 0.010 and 0.180, an 18x swing, so
+neither was usable.
+
+**THE RESULT.**
+
+| readout | mean | signal_sd | noise_sd | **reliability** |
+|---|---|---|---|---|
+| all-neuron (the D134 fitness) | 0.522 | 0.0510 | 0.0723 | **0.332** |
+| driven-only | 0.540 | 0.0069 | 0.0165 | **0.148** |
+
+*(chance 0.169; ablated/passive-leak 0.515; perfect integrator 1.000. Per-genome all-neuron means:
+0.527 0.532 0.555 0.552 0.429 0.448 0.569 0.484 0.555 0.570.)*
+
+1. **The gate PASSES.** 0.332 is comfortably above the 0.1–0.2 range at which D124 declared a task
+   unselectable. There is between-genome variance above measurement noise; selection has something to
+   act on. **This is the first time in the project that a fitness has cleared D115 on a task the
+   substrate can perform.**
+2. **But the selectable variance is not in the driven cells.** Driven-only reliability is 0.148 — below
+   the bar. That is expected rather than surprising: their score is passive leak and every genome shares
+   the same `tau_slow`, so there is little for genomes to differ in. **The variance lives in the ninety
+   NON-DRIVEN neurons**, i.e. in how much they DEGRADE the average, which the per-genome spread shows
+   directly (0.429 and 0.448 at the bottom against 0.569 and 0.570 at the top).
+3. **So the gradient points toward the ablated state.** Climbing it means suppressing recurrent
+   interference. D134's amendment predicted exactly this (driven-only sd 0.008 vs 0.074 full population)
+   and D136 failed to carry it forward; this measurement confirms it at adequate power.
+
+**⚠ ONE NUMBER IN THE OUTPUT IS AN ARTIFACT AND MUST NOT BE PROMOTED.** The run reported *"mean 0.522 vs
+ablated 0.515: intact is ABOVE the passive-leak ceiling"* — which would reverse D133/D135/D136. It is
+not a finding. The gap is +0.007 against a `noise_sd` of 0.072, and **the two sides were measured with
+unequal precision**: intact used 4 draws per genome, ablated used ONE. That asymmetry is a defect in the
+script, not a property of the substrate. FIXED: ablated now receives matched draws and the comparison is
+reported as a PAIRED per-genome difference with a t statistic against D130's |t| > 4 threshold. A smoke
+re-run gives t = -0.37, correctly reported as indistinguishable from zero. **The ablated ceiling also
+moved between runs — 0.542 (D135) vs 0.515 (here) — so it is not a constant and must be re-measured in
+whatever configuration it is used as a landmark.**
+
+**WHAT THIS LICENSES.** The GA arm is PERMITTED — D115 no longer forbids it. But the pre-registered read
+of the reliability decomposition applies: **the plateau at the ablated ceiling is the EXPECTED outcome,
+not one of three equally live ones.** The arm's honest justification is not promise; it is that gen-0
+measurements are structurally incapable of answering whether SELECTION can build a signal path. D133,
+D135 and D136 are all statements about RANDOM connectivity, and building a path is what selection does.
+That is PJM's standing D125 objection, and the arm is the only instrument that addresses it.
+
+**PRE-REGISTRATION WRITTEN.** `PREREG_ga_arm_accumulate.md` fixes, before the arm exists: the landmarks
+(gen-0 0.522, ablated ceiling to be re-measured with matched draws, perfect integrator 1.000); the
+criterion for EXCEEDING the ceiling (best genome over >= 4 draws, beating the matched ablated ceiling by
+more than 2*SE of the paired difference, sustained 5 consecutive generations); the plateau criterion (no
+improvement above 2*SE over 10 generations); the four outcomes and their readings; and the requirement
+that **no operating-point parameter be tuned during the arm** — D136 closed the parameter space so this
+would be run at a stated point rather than a searched one. It also fixes the diagnostic that must
+accompany a plateau: **measure the evolved population's ablation gap across generations. If it shrinks
+toward zero, "selection removed interference" is confirmed directly rather than inferred.**
+
+**HONEST LIMITATIONS.** 10 genomes x 4 draws at one configuration; reliability itself has error bars
+that were not computed. The `noise_sd` of 0.072 exceeds the entire 0.007 gap between gen-0 and the
+ablated ceiling, which is why the arm's success criterion had to be fixed in advance rather than read
+off afterwards. Undeveloped random genomes, as everything since D125 has been — that is the limitation
+the arm exists to remove.
+
+**LESSON.** A gate can pass and still tell you the answer. Reliability said "selection has a gradient";
+the DECOMPOSITION said what the gradient is made of, and those are different facts with different
+consequences. **Report where the variance lives, not just how much there is.**
+
 
 
 

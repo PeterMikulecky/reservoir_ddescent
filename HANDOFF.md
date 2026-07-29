@@ -40,7 +40,7 @@ re-derivation.
 
 ---
 
-## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-27 (D136 amended -- measure selectability BEFORE the GA)*
+## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-27 (D137 -- gate passed; GA arm pre-registered)*
 
 **The recurrent network has never contributed anything, and that explains everything else.** D130
 ablated all recurrent connectivity (`genome.mag` zeroed, `tau_slow` retained) against intact networks on
@@ -94,32 +94,31 @@ coupling 0.25-8x, density 0.02-0.9, N 8-100, autapses, nmda_frac 0.5-0.98, four 
 three task classes, two readouts. **No condition exists in which recurrent synapses contribute.** No
 more parameters -- that was committed before the run and it holds.
 
-**⚠ D136's SELECTABILITY CLAIM WAS NOT MEASURED (amendment).** The "between-genome sd 0.074" came from
-six genomes at ONE noise draw each, conflating signal with measurement noise -- the decomposition D115
-exists to perform. Partial runs give signal_sd 0.010 (n=2, 300 trials) and 0.180 (n=3, 150 trials): an
-18x swing, so neither is a measurement. And driven-only reliability reads ~0.03, so whatever selectable
-variance exists sits in the NOISE-CONTRIBUTION of the ninety non-driven cells -- a gradient that points
-toward suppressing recurrent interference, i.e. toward the ablated state.
+**D137: THE GATE PASSED, BUT THE GRADIENT IS IN THE WRONG PLACE.** All-neuron reliability **0.332**
+(n=10 genomes x 4 draws) clears D115 -- the first fitness in this project to do so on a task the
+substrate can perform. But driven-only reliability is **0.148**, below the bar: the driven cells' score
+is passive leak and every genome shares tau_slow, so the selectable variance lives in the ninety
+NON-driven neurons, i.e. in how much they DEGRADE the average (per-genome means 0.429 ... 0.570).
+**Climbing that gradient means suppressing recurrent interference -- toward the ablated state.**
 
-**NEXT ACTION: `scripts/accumulate_reliability_probe.py --workers 6` FIRST.** If all-neuron reliability
-is < 0.20, D115 forbids the arm and the correct move is the write-up. If it clears, check whether
-driven-only clears too; if not, the 0.542 plateau is the EXPECTED outcome rather than one of three.
+⚠ The run's line "intact 0.522 is ABOVE ablated 0.515" is an ARTIFACT: +0.007 against a noise_sd of
+0.072, with intact measured on 4 draws and ablated on ONE. Fixed -- ablated now gets matched draws and
+the comparison is a PAIRED t against D130's |t|>4. The ablated ceiling also MOVED between runs (0.542 in
+D135, 0.515 here), so it is not a constant and must be re-measured wherever it is used as a landmark.
 
-**THEN THE GA ARM, if the gate passes. It is the one thing never done.** Every result from D125 onward is on RANDOM
-UNDEVELOPED genomes; the last arm was D124, on a task later shown to demand an unreachable conjunction.
-**Selection has never been run on a viable task with a viable readout.** The precondition D115 requires
-is now met for the first time: under the D134 fitness on `accumulate`, gen-0 reads 0.517 with
-between-genome sd 0.074, where the retired designated-cell readout read 0.068 at chance.
+**NEXT ACTION: BUILD AND RUN THE GA ARM per `PREREG_ga_arm_accumulate.md`.** It is the one thing never
+done -- everything since D125 is on random undeveloped genomes, and the last arm (D124) was on a task
+later shown to demand an unreachable conjunction. The pre-registration fixes the landmarks, the
+criterion for EXCEEDING the ablated ceiling (best genome over >=4 draws, beating a matched-draw ablated
+ceiling by >2*SE of the paired difference, sustained 5 generations), the plateau criterion, and the rule
+that NO operating-point parameter may be tuned during the arm.
 
-**READ THE ARM AGAINST THREE KNOWN LANDMARKS, not against its own starting point:**
-gen-0 **0.517** (measured) | passive-leak/ablated ceiling **0.542** (D135) | perfect integrator **1.000**.
-- climbs to ~0.542 and plateaus -> selection merely removed recurrent INTERFERENCE; a real negative,
-  and P counts synapses selection is switching off.
-- **EXCEEDS 0.542** -> recurrence contributes, P has a mechanism, and the P-sweep becomes possible.
-  Every gen-0 conclusion since D129 would then be a statement about the PRIOR, not the substrate.
-- flat at 0.517 -> no gradient despite the measured sd; D115 again at a new operating point.
-D135's variance structure (sd rising with coupling while the mean falls) is a way the first outcome
-could occur while LOOKING like progress -- which is why the 0.542 landmark matters more than the slope.
+**THE PLATEAU IS THE EXPECTED OUTCOME, not one of three equally live ones.** If it occurs, the required
+accompanying diagnostic is the evolved population's ABLATION GAP across generations: if it shrinks
+toward zero, "selection removed interference" is confirmed directly rather than inferred.
+
+**The arm's honest justification is not promise.** It is that gen-0 measurements cannot answer whether
+SELECTION can build a signal path -- D133/D135/D136 are all statements about RANDOM connectivity.
 
 **SUPERSEDED (kept for the record): `scripts/coupling_band_sweep.py`** at the study's real configuration (N=100, n_in=10),
 finer resolution across x1..x16, 8 genomes, reporting the D095 fitness AND ITS RELIABILITY -- a mean
