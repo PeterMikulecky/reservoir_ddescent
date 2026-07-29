@@ -1,0 +1,39 @@
+# analysis log: accumulate_reliability_probe
+# timestamp: 2026-07-28T15:53:57.696368
+# command: scripts/accumulate_reliability_probe.py --workers 6
+# is the D134 fitness selectable? D115 decomposition on accumulate
+#====================================================================
+
+[logging to runs/fitness_reliability\20260728-155357_accumulate_reliability_probe.log]
+N=100 n_in=10 density=0.30 w0x1 genomes=10 draws=4 trials=300 workers=6
+D124 called a task UNSELECTABLE at reliability ~0.1-0.2. Passive-leak ceiling is 0.542.
+
+   1/10 genomes done [649s]
+   2/10 genomes done [652s]
+   3/10 genomes done [652s]
+   4/10 genomes done [652s]
+   5/10 genomes done [653s]
+   6/10 genomes done [653s]
+   7/10 genomes done [1150s]
+   8/10 genomes done [1153s]
+   9/10 genomes done [1157s]
+   10/10 genomes done [1157s]
+
+  chance 0.169 | ABLATED (passive leak) 0.515 | perfect integrator 1.000
+
+  readout      | mean  | signal_sd | noise_sd | RELIABILITY
+  -------------+-------+-----------+----------+------------
+  all-neuron   | 0.522 |    0.0510 |   0.0723 |   0.332
+  driven-only  | 0.540 |    0.0069 |   0.0165 |   0.148
+
+  per-genome all-neuron means: 0.527 0.532 0.555 0.552 0.429 0.448 0.569 0.484 0.555 0.570
+
+READ:
+  all-neuron reliability 0.332 | driven-only reliability 0.148
+  Selectable (0.332) but driven-only carries almost none of it (0.148), so the gradient
+  is the NOISE-CONTRIBUTION term: selection climbs by suppressing recurrent
+  interference, walks toward the ablated ceiling 0.515, and stops. The arm remains
+  informative -- that plateau is D136's pre-registered negative -- but this is not
+  evidence that recurrence can be made to contribute.
+
+  mean 0.522 vs ablated 0.515: intact is ABOVE the passive-leak ceiling.
