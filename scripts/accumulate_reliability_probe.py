@@ -93,8 +93,15 @@ def _one(gi):
         S = net.behave(E, noise_seed=300 + k)["state"][rows]
         a.append(_agg(S, allc))
         d.append(_agg(S, drv))
-    Sa = EvoNet(replace(g, mag=np.zeros_like(g.mag)), nc).behave(E, noise_seed=300)["state"][rows]
-    return dict(gi=gi, allneu=a, driven=d, ablated=_agg(Sa, allc))
+    # ABLATED GETS THE SAME NUMBER OF DRAWS AS INTACT. The first version took ONE draw for ablated
+    # and n_draws for intact, so the two sides were measured with unequal precision and the headline
+    # "intact is ABOVE the passive-leak ceiling" (+0.007 against a noise_sd of 0.072) was an artifact
+    # of construction, not a result. Paired by genome AND by draw index, so the difference is a paired
+    # per-draw quantity with an estimable sd.
+    net_abl = EvoNet(replace(g, mag=np.zeros_like(g.mag)), nc)
+    ab = [_agg(net_abl.behave(E, noise_seed=300 + k)["state"][rows], allc)
+          for k in range(_CTX["n_draws"])]
+    return dict(gi=gi, allneu=a, driven=d, ablated=ab)
 
 
 def _decompose(X):
@@ -144,7 +151,8 @@ def main():
 
         A = np.array([r["allneu"] for r in res])
         D = np.array([r["driven"] for r in res])
-        abl = float(np.mean([r["ablated"] for r in res]))
+        AB = np.array([r["ablated"] for r in res])
+        abl = float(AB.mean())
         ch = r_null(a.trials - a.trials // 2)
 
         print("\n  chance %.3f | ABLATED (passive leak) %.3f | perfect integrator 1.000\n" % (ch, abl))
@@ -174,8 +182,20 @@ def main():
             print("  interference, walks toward the ablated ceiling %.3f, and stops. The arm remains" % abl)
             print("  informative -- that plateau is D136's pre-registered negative -- but this is not")
             print("  evidence that recurrence can be made to contribute.")
-        print("\n  mean %.3f vs ablated %.3f: intact is %s the passive-leak ceiling."
-              % (m, abl, "ABOVE" if m > abl else "BELOW"))
+        # PAIRED per-genome difference, same draws on both sides -- not a comparison of two means.
+        diff = A.mean(1) - AB.mean(1)
+        dsd = float(np.std(diff, ddof=1))
+        t = float(diff.mean() / (dsd / np.sqrt(len(diff)) + 1e-12)) if dsd > 0 else 0.0
+        print("\n  RECURRENCE CONTRIBUTION (paired, intact - ablated, same genomes and draws)")
+        print("    mean %+.4f   sd %.4f   t %+.2f   n=%d" % (diff.mean(), dsd, t, len(diff)))
+        if abs(t) > 4.0 and diff.mean() > 0:
+            print("    Recurrence CONTRIBUTES. First such result in the project -- replicate before use.")
+        elif abs(t) > 4.0:
+            print("    Recurrence DEGRADES, consistent with D133/D135/D136.")
+        else:
+            print("    Indistinguishable from zero. Intact mean %.3f vs ablated %.3f is NOT evidence"
+                  % (m, abl))
+            print("    either way at this power; |t| must exceed 4.0 (D130's measured-null threshold).")
 
 
 if __name__ == "__main__":
