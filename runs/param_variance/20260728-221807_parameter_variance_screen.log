@@ -1,0 +1,91 @@
+# analysis log: parameter_variance_screen
+# timestamp: 2026-07-28T22:18:07.615962
+# command: scripts/parameter_variance_screen.py --workers 6 --variants 10 --trials 400
+# which parameter classes generate heritable variance in function?
+#====================================================================
+
+[logging to runs/param_variance\20260728-221807_parameter_variance_screen.log]
+N=100 n_in=10 density=0.30 variants=10 sigma=0.30 trials=400 workers=6
+ONE base genome; each variant redraws exactly ONE parameter class.
+
+   1/60 done [125s]
+   2/60 done [125s]
+   3/60 done [125s]
+   4/60 done [125s]
+   5/60 done [125s]
+   6/60 done [125s]
+   7/60 done [316s]
+   8/60 done [317s]
+   9/60 done [317s]
+   10/60 done [317s]
+   11/60 done [319s]
+   12/60 done [319s]
+   13/60 done [497s]
+   14/60 done [497s]
+   15/60 done [497s]
+   16/60 done [497s]
+   17/60 done [497s]
+   18/60 done [498s]
+   19/60 done [673s]
+   20/60 done [673s]
+   21/60 done [675s]
+   22/60 done [675s]
+   23/60 done [676s]
+   24/60 done [679s]
+   25/60 done [851s]
+   26/60 done [856s]
+   27/60 done [857s]
+   28/60 done [857s]
+   29/60 done [857s]
+   30/60 done [862s]
+   31/60 done [1030s]
+   32/60 done [1038s]
+   33/60 done [1042s]
+   34/60 done [1043s]
+   35/60 done [1043s]
+   36/60 done [1047s]
+   37/60 done [1212s]
+   38/60 done [1222s]
+   39/60 done [1222s]
+   40/60 done [1227s]
+   41/60 done [1236s]
+   42/60 done [1236s]
+   43/60 done [1363s]
+   44/60 done [1368s]
+   45/60 done [1384s]
+   46/60 done [1384s]
+   47/60 done [1394s]
+   48/60 done [1394s]
+   49/60 done [1507s]
+   50/60 done [1507s]
+   51/60 done [1526s]
+   52/60 done [1526s]
+   53/60 done [1530s]
+   54/60 done [1530s]
+   55/60 done [1647s]
+   56/60 done [1647s]
+   57/60 done [1657s]
+   58/60 done [1660s]
+   59/60 done [1662s]
+   60/60 done [1662s]
+
+  MEASUREMENT NOISE FLOOR (same genome, noise seed only): mean 0.464, sd = 0.0815
+  chance |r| at n_test=200 is 0.129
+
+  class        | fitness mean |  sd     | sd / noise floor | driven-only sd | rate
+  -------------+--------------+---------+------------------+----------------+------
+  input_cols   |    0.519     | 0.0390  |       0.48       |     0.0050     | 0.213
+  recurrent    |    0.488     | 0.0477  |       0.58       |     0.0076     | 0.212
+  signs        |    0.484     | 0.0660  |       0.81       |     0.0102     | 0.241
+  bias         |    0.491     | 0.0584  |       0.72       |     0.0069     | 0.210
+  v_thresh     |    0.462     | 0.0645  |       0.79       |     0.0078     | 0.222
+  tau_m        |    0.497     | 0.0422  |       0.52       |     0.0128     | 0.219
+  (sd / noise floor > ~2 means the class produces variance selection could act on.)
+
+READ:
+  NO CLASS clears the noise floor. Nothing in this substrate can be selected on in
+  this configuration -- the strongest form of the negative result, and the end of
+  the operating-point line.
+
+  Perturbation is lognormal(sigma=0.30) applied identically to every class; read this
+  as WHICH CLASSES PRODUCE VARIANCE, not as a precise ranking between them.
