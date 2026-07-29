@@ -573,3 +573,85 @@ guards against.
 - type `exp` · stage `E9` · git `g7a01299` (20260726-161758_block_architecture_probe.log) · status **complete**
 - result: Engineered-ceiling carry validation (nmda=0.7, P=1080): selectivity 4.29(100ms)->1.69(600ms); selective=True, graceful_decay=True. VALIDATED known-positive. Carry measure = decay-across-delay (D092b).
 - _interpretation:_ 
+
+
+# ADDITION to LAB_NOTEBOOK.md — append as the newest entry
+
+## 2026-07-29 — The substrate gets a new mechanism, and the study shrinks: per-synapse timescales, N=100 → 30
+
+**Where the day started.** With a closed parameter space and no way forward. D136 had swept the last
+untested knob (`nmda_frac` × coupling, all 16 cells negative) and the standing conclusion was that no
+operating point in this architecture lets recurrent synapses contribute. D133 had located the failure
+precisely — signal dies at the first synapse — and D135 had shown recurrence actively degrading the one
+thing that worked. The honest options were: write up the negative, or design a different study.
+
+**The detour that had to be corrected first.** Two papers (Deco et al. 2013; Beiran & Ostojic 2019)
+looked like they gave the working point from theory: network timescale `tau_s/(1-J_eff)`, chaos boundary
+set by the coupling variance, and the two independently choosable. D138 recorded that our `w0` scales
+both together, so every sweep we had run traced a *diagonal* through a two-dimensional space — which is
+true, and survives. But its numbers did not: **Beiran & Ostojic's `J` is a rate-model coupling that
+includes the firing-rate gain, and I compared raw weight-matrix quantities against rate-model
+boundaries.** Measuring the gain (df/dI = 6.60 Hz per unit current, one short run — perturb `bias`, read
+the rate) inverted both conclusions: we were not six times into chaos, we were far *below* both
+bifurcations, and the fix was larger weights rather than smaller. Then the corrected target was built and
+**still produced no timescale extension** — 20 ms measured, identical to a network with recurrence
+removed. PJM's two corrections made the follow-up test possible at all: the inhibition ratio is a lever
+that buys chaos headroom (J_eff/radius falls from 4.96 at r=0 to 0.22 at our 3.84), and longer bins, not
+shorter, are what a slow mode needs. Sweeping J_eff to 0.95 at ratio 1 gave a real, monotone effect —
+ac(100 ms) rising 0.11 → 0.25 — about **15× short** of the prediction. The rate-model mechanism does not
+transfer to this substrate at this scale.
+
+**Then the strategic turn.** Asked directly whether we were in a rabbit hole, the honest answer was yes:
+four sweeps, an encoding redesign, two task changes and a dozen instrument corrections had produced a
+precise account of what the substrate does *not* do, and the last hours were a search over explanations
+for a null rather than a search for a working design. Every step since D124 had been a *repair* to a
+design fixed months ago. PJM's call: design a substrate-first study, where the task is chosen to fit
+measured dynamics and P is defined for that architecture.
+
+**The variance screen that reframed P.** `P = |W|` counts recurrent synapses that D130/D135/D136 say do
+not participate — so **a flat error-vs-P curve is the correct result for a parameter count over inert
+components**, and the flatness may never have been about double descent at all. Screening parameter
+classes for heritable variance in fitness put intrinsic parameters *above* recurrent weights (signs 0.72,
+v_thresh 0.71, bias 0.67, recurrent 0.58, input_cols 0.48, as reliability at 4 draws). My verdict rule
+was wrong — an sd/floor threshold rather than reliability at the number of draws a fitness actually uses
+— and printed "nothing is selectable" when everything was.
+
+**The literature search that supplied the mechanism.** Perez-Nieves et al. (2021) establish that
+heterogeneous time constants help *only* on tasks where information is in precise spike timing, that
+N=128 is deliberately small, and that the learned distributions are log-normal and match biology. But
+HetSyn (2025) has the thing we needed: **put the time constant on the SYNAPSE, so different inputs to
+the same neuron have different memory spans.** A long-tau synapse carries "then", a short-tau synapse
+carries "now", and the neuron is a coincidence detector — no circuit required. That is exactly the
+conjunction D128 measured at chance, and it explains *why* our substrate failed: one `tau_slow` shared by
+every synapse means no neuron can compare across time.
+
+**Step 1 passed.** A minimal Brian2 network, changing one thing — whether the probe deposits into the
+fast current or shares the slow one — took match/non-match from **0.583 to 0.917 linearly decodable** at
+a 400 ms delay. It failed at 800 ms because `tau_long` was 500 ms, which is a working range set by tau,
+and therefore the first failure mode in this project that is a parameter the study would be sweeping.
+
+**Step 2 passed, after a scare.** The P-group implementation (P current variables per neuron, synapses
+assigned to groups, equations generated from P) initially scored 0.52 at N=30 and I briefly took it for a
+broken prototype. Bisecting found the cause: **input drive, not N.** At w=0.9 the cells sit in a
+compressive regime where both conditions saturate; at w=0.3 accuracy is **0.979**, better than step 1
+ever reached. N=24 and N=30 gave *identical* results, which is independent support for the sizing
+decision.
+
+**And the study shrank.** N=100 was inherited from D131, where the argument was about cue-pair counts —
+satisfied at any N. Sized properly against the new axis (P must bracket P_crit ≈ 72–96 training trials,
+so `|W| = density·N·(N−1)` must exceed ~100) and against measured compute, **N=30 gives |W|=261 and a
+4-day sweep where N=100 gives 45 days.** Perez-Nieves' own reason for staying small cuts the same way:
+at larger N the homogeneous baseline nears ceiling and the effect being measured disappears.
+
+**The process failure PJM caught at the end.** Nearly every decisive measurement today ran from `/tmp`
+and was never committed — the gain measurement, the J_eff sweep, the aggregation comparison, step 1, the
+prototype, the bisection. The findings entered DECISIONS; the code did not. **An entry citing a number
+nobody can regenerate is a claim without evidence**, and this log's unusual care about instrument
+corrections is undermined if the instruments are deleted. Now in `scripts/prototypes/` with a README
+mapping each file to the finding and the entry, and a new standing rule: diagnostic code is committed in
+the same commit as the entry that cites it.
+
+**Owed before anything is swept.** The P=1 homogeneous control has not been re-run at w=0.3 — D139's
+separation was measured at the *bad* operating point. If P=1 also reaches ~0.98 there, the mechanism
+claim collapses and the outline fails at step 2. That single control is the next thing to run.
+

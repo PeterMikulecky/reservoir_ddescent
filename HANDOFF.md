@@ -40,7 +40,7 @@ re-derivation.
 
 ---
 
-## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-29 (D139 -- per-synapse timescales work; N drops to 30)*
+## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-29 (D140 -- P-group built; the P=1 control is owed)*
 
 **The recurrent network has never contributed anything, and that explains everything else.** D130
 ablated all recurrent connectivity (`genome.mag` zeroed, `tau_slow` retained) against intact networks on
@@ -122,8 +122,19 @@ Wrobel at 3-4 interneurons, and Perez-Nieves chose 128 deliberately because at l
 baseline nears ceiling and the heterogeneity effect becomes invisible -- **the ceiling argument cuts FOR
 small N.**
 
-**NEXT ACTION: step 2 -- reproduce HetSyn's DMTS with HAND-SET time constants at N=30**, before asking
-evolution to find them. If the published result does not reproduce in our implementation, fix that first.
+**STEP 2 IS DONE (D140).** P-group implementation works: P current variables per neuron, synapses
+assigned to groups, equations generated from P, and **P=2 reproduces the existing I_fast/I_slow structure
+exactly** -- the current substrate is the P=2 point on the new axis. DMTS at 400 ms reaches **0.979** at
+N=30. **N=24 and N=30 gave IDENTICAL results**, independent support for the sizing decision.
+
+**But input DRIVE is a newly-discovered sensitive parameter:** the same network scores 0.521 at w=0.9 and
+0.979 at w=0.3, because at high drive the cells saturate and both conditions squash together. It must be
+FIXED before the sweep, not tuned after -- "adjust the weight and re-run" is the reactive-easing move
+D136 closed the parameter space to prevent.
+
+**NEXT ACTION: RE-RUN THE P=1 HOMOGENEOUS CONTROL AT w=0.3.** D139's separation (0.583 vs 0.917) was
+measured at the BAD operating point. **If P=1 also reaches ~0.98 at w=0.3, the mechanism claim collapses
+and the outline fails at step 2.** This one control gates everything downstream and is cheap.
 Then steps 3-5 (gen-0 prior at chance, reliability at each P, mutational smoothness on log-scaled tau
 genes), each of which can end the line, before any sweep.
 
@@ -271,6 +282,11 @@ Recorded so no future turn re-opens them by accident. Each is closed by evidence
   `w0` looked like the coupling knob; it was a diagonal through (mean, variance), which control the
   network timescale and the chaos boundary respectively and must move in OPPOSITE directions. Four
   entries reported that diagonal's shape as the substrate's. A parameter is not an axis.
+- **Diagnostic code that produces a number entering DECISIONS is committed IN THE SAME COMMIT as the
+  entry.** Most of the 2026-07-29 session's decisive measurements ran from /tmp and were irreproducible
+  until the end of the day: the f-I gain that corrected D138, the J_eff sweep, the aggregation comparison
+  behind D134's amendment, step 1, the P-group prototype. An entry citing a number nobody can regenerate
+  is a claim without evidence. See `scripts/prototypes/`.
 - **Size the architecture from the axis you intend to sweep and the compute you actually have.** N=100
   came from D131's pair-split argument, which is satisfied at ANY N, and survived unexamined into a
   regime where it makes a P-sweep cost 45 days instead of 4. Re-derive N whenever the axis or the

@@ -7223,6 +7223,76 @@ changed. N=100 came from D131's pair-split argument, which is satisfied at any N
 regime where it makes the study infeasible. **Size the architecture from the axis you intend to sweep
 and the compute you actually have, and re-derive it whenever either changes.**
 
+### D140 — THE P-GROUP IMPLEMENTATION WORKS, AND N IS IRRELEVANT TO THE MECHANISM. DMTS at 400 ms reaches 0.979 at N=30 — but only at the right input drive: the same network scores 0.521 at 3x the weight. Also: every diagnostic that produced a recorded number this session ran from /tmp and was irreproducible until now.
+**2026-07-29 · Implementation + finding + process correction · scripts/prototypes/ · step 2 of the heterogeneous-timescale outline**
+
+**THE IMPLEMENTATION.** Per-synapse timescales are realised as **P synaptic current variables per
+neuron**, each with its own tau, with every synapse assigned to a group and depositing into that group's
+current. The Brian2 equations are generated from P. **P=2 reproduces the existing `I_fast`/`I_slow`
+structure exactly, so the current substrate is the P=2 point on the new axis** — the hierarchy is nested,
+as HetSyn's Propositions 1-3 require, rather than a replacement model.
+
+**THE RESULT, and the parameter that decides it.** DMTS, K=2, 400 ms delay, cue -> group 0 (tau 500 ms),
+probe -> group 1 (tau 5 ms), held-out linear decodability, chance 0.500:
+
+| config | accuracy | mean rate |
+|---|---|---|
+| step-1-like: N=24, 10 channels, w=0.9 | 0.812 | 4.04 |
+| N=30, 10 channels, w=0.9 | **0.812** | 4.04 |
+| N=30, 8 channels, w=0.9 | 0.521 | 3.51 |
+| **N=30, 8 channels, w=0.3** | **0.979** | 1.43 |
+
+1. **N IS IRRELEVANT.** N=24 and N=30 give IDENTICAL accuracy (0.812) and identical mean rate. That is
+   independent support for D139's sizing decision, arrived at from a different direction: the mechanism
+   does not care about network size in this range, so the compute argument decides N unopposed.
+2. **INPUT DRIVE IS THE SENSITIVE PARAMETER.** At w=0.9 the cells sit in a compressive regime (mean rate
+   4.0) where match and non-match both saturate the output and the coincidence is squashed. At w=0.3 the
+   rate falls to 1.43 and accuracy reaches **0.979** — better than step 1's best. **The 0.521 was a
+   badly-scaled network, not a broken prototype**, and the mechanism is stronger than D139 reported.
+3. This is the D138-amendment lesson recurring: the mechanism was fine, the operating point was not.
+   Better to find it here than inside a sweep.
+
+**⚠ WHAT THIS OBLIGES.** Input weight scale is now a KNOWN-SENSITIVE parameter spanning 0.52 to 0.98
+across a 3x change. It must be **set deliberately and fixed before the sweep**, not tuned afterwards —
+D136 closed the parameter space precisely so the arm would run at a stated point rather than a searched
+one, and "adjust the weight and re-run" is the reactive-easing move the framework forbids.
+
+**STILL OWED BEFORE THE SWEEP.** The P=1 homogeneous control has not been re-run at w=0.3. The
+separation reported in D139 (0.583 vs 0.917) was measured at the BAD operating point; it must be
+confirmed at the good one. If P=1 also reaches ~0.98 at w=0.3, the mechanism claim collapses and the
+whole outline fails at step 2.
+
+**TIMING (D066).** ~1.0 s per evaluation at N=30 with 96 DMTS trials. D139's 4-day sweep projection is
+in the right region but was extrapolated from an N=100 measurement by N^2; **this is one evaluation, not
+a generation, and the projection still needs confirming against a real generation before anything is
+committed.** Four runtime estimates in this project have been wrong.
+
+---
+
+**⚠ PROCESS CORRECTION — most of this session's evidence was irreproducible (PJM).**
+
+Nearly every decisive measurement today ran from `/tmp` and was never committed: the f-I gain that
+corrected D138, the J_eff sweep, the spontaneous-timescale measurement, the aggregation comparison behind
+D134's amendment, step 1's conjunction result, and this entry's prototype and bisection. **The FINDINGS
+entered DECISIONS; the CODE THAT PRODUCED THEM did not.** Every one of those entries cited numbers that
+nobody — including a future session of this project — could regenerate.
+
+Fixed: `scripts/prototypes/` now holds them, with a README mapping each file to the finding it produced
+and the entry that cites it. They are explicitly NOT maintained study code — they hardcode parameters and
+print rather than persist — but they are the appendix to a decision entry, and an entry without its
+appendix is a claim without evidence.
+
+**NEW STANDING RULE.** *If a diagnostic produces a number that enters DECISIONS, its code is committed in
+the same commit as the entry.* Not the next commit, not when convenient — the same one, because that is
+the only point at which the coupling is obvious.
+
+**LESSON.** A project can be rigorous about what it claims and still lose the ability to check the
+claims. This log records instrument corrections in unusual detail — four versions of the D128 probe,
+three read-rule failures, the D138 unit-conversion error — and all of that rigour is undermined if the
+instruments themselves are deleted. **Reproducibility is not a property of the record; it is a property
+of the record PLUS the code, committed together.**
+
+
 
 
 
