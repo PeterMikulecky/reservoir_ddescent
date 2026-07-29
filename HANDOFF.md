@@ -40,7 +40,7 @@ re-derivation.
 
 ---
 
-## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-28 (D138 -- every sweep measured a diagonal)*
+## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-29 (D139 -- per-synapse timescales work; N drops to 30)*
 
 **The recurrent network has never contributed anything, and that explains everything else.** D130
 ablated all recurrent connectivity (`genome.mag` zeroed, `tau_slow` retained) against intact networks on
@@ -94,37 +94,42 @@ coupling 0.25-8x, density 0.02-0.9, N 8-100, autapses, nmda_frac 0.5-0.98, four 
 three task classes, two readouts. **No condition exists in which recurrent synapses contribute.** No
 more parameters -- that was committed before the run and it holds.
 
-**D138 SUPERSEDES THE OPERATING-POINT CONCLUSIONS OF D129/D130/D135/D136.** Beiran & Ostojic (2019)
-give the formula: `tau_network = tau_s / (1 - J_eff)` where `J_eff = J(C_E - g*C_I)` is the MEAN coupling,
-while the chaos boundary is set by the coupling STANDARD DEVIATION `J*sqrt(C_E + g^2*C_I)` at 1. **These
-are different quantities with opposite requirements** -- the variance must stay BELOW 1 while the mean is
-driven TOWARD 1 -- and `w0` scales both together. Every sweep this project ran traced that diagonal.
+**THE PROJECT HAS A NEW SUBSTRATE HYPOTHESIS, AND STEP 1 PASSED (D139).** From HetSyn
+(arXiv 2508.11644): put the time constant on the SYNAPSE, not the membrane, so different inputs to the
+SAME neuron have different memory spans -- a long-tau synapse carries "then", a short-tau synapse carries
+"now", and the neuron is a coincidence detector. **That is the D128 conjunction, and our substrate could
+not compute it because ONE `tau_slow` is shared by every synapse.**
 
-**At the study's default the spectral radius is 6.28** -- six times past the transition to chaos, a
-number never computed here before. The boundary sits at w0 ~ 0.16; D130 swept 0.25-8x, D135 0.5-8x, D136
-1-8x. **The project has never operated in the non-chaotic regime.** Chaotic activity decorrelates from
-input, which is a direct mechanism for D133, D135 and D136 together. D058's balance correction controls
-the MEAN; nobody measured the variance.
+Tested minimally: routing the probe into the fast current instead of sharing the slow one takes
+match/non-match from **0.583 to 0.917 LINEARLY decodable** at a 400 ms delay (0.683 -> 0.950 at 200 ms).
+It fails at 800 ms because tau_long was 500 ms -- a working range set by tau, which is why **tau must be
+evolvable**, and the first failure mode in this project that is a parameter the study would sweep.
+CAVEAT: hand-built, feedforward, routing GIVEN not discovered, one seed. It shows the mechanism EXISTS,
+not that evolution finds it. **D132's retirement of DMTS is partially reversed** -- correct for one
+shared timescale, false for per-synapse timescales.
 
-**The obvious fix was tested and FAILED, which is what sharpened the diagnosis.** At w0x 0.05/0.10/0.15
-hop-1 reads 0.050/0.051/0.051 against chance 0.115, including at radius 0.98. Because radius and J_eff
-are DIFFERENT eigenvalues: at w0x0.15 the radius is 0.98 but J_eff is only 0.13, giving tau_network =
-115 ms. Criticality in the variance is not criticality in the mean.
+**P IS REDEFINED: the number of independently tunable time constants** (synapses partitioned into P
+groups, 1..|W|). HetSyn's Propositions 1-3 prove that axis is a nested hierarchy of published models
+(vanilla LIF at P=1, neuron-level heterogeneity at P=N, full HetSyn at P=|W|). It counts parameters the
+variance screen showed actually move fitness, unlike |W|.
 
-**THE TARGET IS OFF THE DIAGONAL AND NO `w0` REACHES IT.** For J_eff = 0.75 (tau = 400 ms, the
-`accumulate` trial length) with radius < 1: at our inhibition ratio 3.84 the radius would be 3.38
-(chaos); at ratio 2 with w_E = 0.058, w_I = 0.115 it is 0.40. Current point is w_E = 0.482, w_I = 1.852
--- ~8x too large AND too high a ratio.
+**N DROPS FROM 100 TO 30, and this is the key tractability decision.** Two constraints: P must bracket
+P_crit (~72-96 training trials), so |W| = density*N*(N-1) must exceed ~100 -- N=20 gives 114 (marginal),
+**N=30 gives 261 (comfortable)**; and compute, where a full P-sweep costs **4 days at N=30 versus ~45
+days at N=100.** N=100 makes the study impossible and was an unexamined inheritance from D131, whose
+pair-split argument is satisfied at ANY N. Literature support: HetSyn's DMTS works at N=5, Yaqoob &
+Wrobel at 3-4 interneurons, and Perez-Nieves chose 128 deliberately because at larger N the homogeneous
+baseline nears ceiling and the heterogeneity effect becomes invisible -- **the ceiling argument cuts FOR
+small N.**
 
-**NEXT ACTION, in order.** (1) Build genomes at (w_E, w_I) = (0.058, 0.115); verify achieved J_eff and
-spectral radius numerically. (2) **Measure the ACTUAL autocorrelation time of spontaneous activity
-against the predicted 400 ms** -- this is where the rate-model-to-spiking mapping either holds or fails,
-and it is the first prediction this project has made from theory rather than from a sweep. (3) Only then
-re-run the propagation and ablation probes there. **Do not skip step 2**; the predicted timescale is a
-target to verify, not a guarantee.
+**NEXT ACTION: step 2 -- reproduce HetSyn's DMTS with HAND-SET time constants at N=30**, before asking
+evolution to find them. If the published result does not reproduce in our implementation, fix that first.
+Then steps 3-5 (gen-0 prior at chance, reliability at each P, mutational smoothness on log-scaled tau
+genes), each of which can end the line, before any sweep.
 
-**AND REVISIT D058, do not override it.** Lowering the inhibition ratio moves away from a correction
-adopted because excitation swamped inhibition ~24:1 at uniform magnitudes. That problem was real.
+**MEASURE PER-GENERATION TIME BEFORE TRUSTING THE 4-DAY FIGURE** (D066). It extrapolates a measured
+N=100 cost by N^2 and has not been verified at N=30; four runtime estimates in this project have been
+wrong, and D139's central design decision rests on this one.
 
 **SUPERSEDED (kept for the record): `scripts/coupling_band_sweep.py`** at the study's real configuration (N=100, n_in=10),
 finer resolution across x1..x16, 8 genomes, reporting the D095 fitness AND ITS RELIABILITY -- a mean
@@ -266,6 +271,10 @@ Recorded so no future turn re-opens them by accident. Each is closed by evidence
   `w0` looked like the coupling knob; it was a diagonal through (mean, variance), which control the
   network timescale and the chaos boundary respectively and must move in OPPOSITE directions. Four
   entries reported that diagonal's shape as the substrate's. A parameter is not an axis.
+- **Size the architecture from the axis you intend to sweep and the compute you actually have.** N=100
+  came from D131's pair-split argument, which is satisfied at ANY N, and survived unexamined into a
+  regime where it makes a P-sweep cost 45 days instead of 4. Re-derive N whenever the axis or the
+  question changes.
 - **Ablate the mechanism before sweeping its parameter.** D130 answered in one run what three parameter
   sweeps could not: the recurrent network contributes nothing, so P — which counts recurrent synapses —
   could never have mattered. A sweep can only tell you a parameter does not move the outcome; an

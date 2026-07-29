@@ -7121,6 +7121,110 @@ entries reported the diagonal's shape as the substrate's. **Before sweeping a pa
 quantities it moves and whether they need to move together.**
 
 
+### D139 — PER-SYNAPSE TIMESCALES SOLVE THE D128 CONJUNCTION. Routing the probe into the fast current instead of sharing the slow one takes match/non-match from 0.583 to 0.917 LINEARLY DECODABLE at a 400 ms delay — no circuit, no recurrence. And the architecture is sized DOWN, from N=100 to N≈30, by the P axis and by measured compute.
+**2026-07-29 · Finding + design decision · minimal Brian2 test, not the study codebase · step 1 of the heterogeneous-timescale outline · partially rehabilitates DMTS, retired in D132**
+
+**THE MECHANISM, from HetSyn (arXiv 2508.11644).** In HetSynLIF, temporal integration moves from the
+membrane to the SYNAPSE: each synapse carries its own decay constant, so **different inputs to the SAME
+neuron have different memory spans.** A long-tau synapse carries "then", a short-tau synapse carries
+"now", and the neuron detects their coincidence. That is precisely the conjunction D128 measured at
+chance — and it explains WHY our substrate could not compute it: **one `tau_slow` shared by every synapse
+means no neuron can compare across time.** It also explains why HetSyn beats neuron-level heterogeneity
+(Perez-Nieves 2021): a per-neuron tau applies uniformly to all inputs and cannot differentiate them.
+
+**THE TEST.** Minimal Brian2 network, K=2 categories x 12 neurons, cue 100 ms / delay / probe 100 ms.
+Neuron j is tuned to category c(j) and receives the cue synapse and the probe synapse for c(j). **The
+ONLY difference between conditions is which current the probe deposits into.** Linear decodability of
+match/non-match from the population at the read stage, held out, chance 0.500:
+
+| delay | HOM (one shared tau, our substrate) | **HET (cue -> slow, probe -> fast)** |
+|---|---|---|
+| 200 ms | 0.683 | **0.950** |
+| 400 ms | 0.583 | **0.917** |
+| 800 ms | 0.600 | 0.567 |
+
+**A single routing change makes the relation linearly decodable.** D128 established that no readout of
+any order could find it in the full state; here a two-parameter-capacity linear read finds it at 0.917.
+
+**THE 800 ms FAILURE IS DIAGNOSTIC, NOT A PROBLEM.** `tau_long` was set to 500 ms, so after 800 ms the
+cue trace has decayed to exp(-800/500) ~ 20%. The mechanism has a working range set by `tau_long` —
+which is exactly why **tau must be evolvable**, and why the biological synaptic distribution (Allen
+Institute: log-normal, long-tailed past 500 ms) extends where it does. **This is the first result in the
+project whose failure mode is a parameter the study would be sweeping.**
+
+⚠ **WHAT THIS DOES AND DOES NOT ESTABLISH.** It is a HAND-BUILT FEEDFORWARD coincidence detector: cue
+and probe are wired to their own category's cells, so the routing is GIVEN, not discovered. It
+establishes that the mechanism EXISTS and is reachable by a capacity-bounded readout. It does NOT
+establish that evolution can find it — that is the study, not this test. One seed, 120 trials; the HOM
+column wanders (0.683 / 0.583 / 0.600) enough to need replication before those values are quoted.
+
+**EFFECT ON D132.** D132 concluded that relational tasks demand second-order operations this substrate
+lacks, and retired DMTS. **The conclusion was correct for a substrate with ONE shared timescale and is
+false with per-synapse timescales.** DMTS is rehabilitated as a candidate; HetSyn reports 100% at 800 ms
+and at 2500 ms, and effectiveness down to FIVE neurons.
+
+---
+
+**ARCHITECTURE SIZING — the study shrinks, and the argument is quantitative.**
+
+**Two independent constraints, pulling opposite ways.**
+
+*From below — P must BRACKET P_crit.* Under the new definition, **P = the number of independently
+tunable time constants**, ranging 1..|W| with `|W| = density*N*(N-1)`. P_crit sits near the number of
+training trials. With K=4 cue categories -> 16 ordered pairs, 12 seen, ~6-8 noise draws each, P_crit is
+~72-96. So `|W|` must comfortably exceed ~100:
+
+| N | \|W\| at density 0.3 | brackets P_crit ~72-96? |
+|---|---|---|
+| 20 | 114 | marginal — max P barely exceeds P_crit |
+| **30** | **261** | **yes, comfortable** |
+| 40 | 468 | yes |
+| 100 | 2970 | yes, but see below |
+
+*From above — compute.* Measured this session: `behave()` scales as N^2 and costs ~112 s per
+genome-draw at N=100 for 300 trials x 8 segments. DMTS trials are ~1.5x longer but ~0.3x as numerous,
+so ~0.48x. A full P-sweep (8 P-points x 5 seeds x pop 24 x 3 draws x 150 generations, 6 workers):
+
+| N | s per eval | full sweep |
+|---|---|---|
+| 20 | 2.2 | 1.8 days |
+| **30** | **4.8** | **4.0 days** |
+| 40 | 8.6 | 7.2 days |
+| 50 | 13.4 | 11.2 days |
+| 100 | 53.8 | **~45 days — NOT FEASIBLE** |
+
+**N=100 makes the study computationally impossible.** That is not a marginal cost difference; it is the
+difference between a 4-day sweep and a 6-week one, and it has been an unexamined inheritance since D131
+(where N=100 was chosen so `n_cues=4` would give 16 pairs — a TASK argument that is satisfied at any N).
+
+**DECISION: N = 30, density 0.3, |W| = 261.** It is the smallest N that comfortably brackets P_crit,
+and it costs 4 days rather than 45. Supporting evidence that this is not too small: HetSyn's DMTS is
+effective at **N=5**; Yaqoob & Wrobel solve temporal pattern recognition with **3-4 interneurons plus one
+output**; Perez-Nieves used 128 and chose small DELIBERATELY, noting that with more neurons performance
+without heterogeneity approaches ceiling and architectural effects become invisible. **Our own step-1
+test above worked at N=24.**
+
+⚠ **AND THE CEILING ARGUMENT CUTS FOR SMALL N, NOT AGAINST IT.** Perez-Nieves' reason for staying small
+is the same reason this project needs to: at large N the homogeneous baseline already performs well, so
+the heterogeneity effect — the thing being measured — shrinks. **A larger network would make the result
+harder to see, not easier.**
+
+**HONEST LIMITATION.** The cost model extrapolates a measured N=100 figure by N^2 and adjusts for trial
+geometry; it has not been verified at N=30. **Measure per-generation time before believing any
+projection** (D066) — four runtime estimates in this project have been wrong, and this entry's central
+design decision rests on one.
+
+**NEXT (step 2 of the outline).** Reproduce HetSyn's DMTS with HAND-SET time constants at N=30 before
+asking evolution to find them. If the published result does not reproduce in our implementation, fix
+that before anything else.
+
+**LESSON.** The architecture was sized before the question was known, and never resized when the question
+changed. N=100 came from D131's pair-split argument, which is satisfied at any N; it survived into a
+regime where it makes the study infeasible. **Size the architecture from the axis you intend to sweep
+and the compute you actually have, and re-derive it whenever either changes.**
+
+
+
 
 
 
