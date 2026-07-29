@@ -862,3 +862,93 @@ rule is correct and stands. But it does not settle a distinction the post-D130 r
 > evolution the ceiling's two-cluster topology.
 
 Whether that distinction survives scrutiny is a live question, recorded in HYPOTHESIS_LOG under ENCODING.
+
+# ADDITION to REFERENCES.md
+# New top-level section. Suggested placement: after the "Structure as a precondition" section added
+# 2026-07-26, which it directly continues and partly corrects.
+
+## The dynamical working point: what sets network timescales, and what sets chaos (2026-07-28)
+
+*Context: D138. Every operating-point sweep in this project (D129, D130, D135, D136) varied `w0`, which
+scales all weights and therefore moves the coupling MEAN and VARIANCE together. These two quantities
+control different things and have OPPOSITE requirements, so the sweeps traced a diagonal through a
+two-dimensional space and reported its shape as the substrate's. At the study's default the spectral
+radius of the connectivity is 6.28 — six times past the transition to chaos, a quantity that had never
+been computed here.*
+
+**Beiran, M., Ostojic, S. (2019).** Contrasting the effects of adaptation and synaptic filtering on the
+timescales of dynamics in recurrent networks. *PLoS Comput Biol* 15(3): e1006893.
+— 🔴🔴 **The most directly actionable reference this project has found.** Analyses randomly connected
+E/I networks in which each unit carries one extra slow degree of freedom, either spike-frequency
+ADAPTATION or SYNAPTIC FILTERING, and derives the resulting network timescales.
+
+Four things we needed:
+1. **Network dynamics do NOT inherit the timescale of adaptive currents.** The slow adaptive mode's
+   amplitude falls in inverse proportion to its time constant, so its contribution is masked by the fast
+   mode: a several-fold increase in adaptation time constant barely changes the response. **This closes
+   a line we came close to pursuing.** Adaptation would not have rescued D130/D135/D136.
+2. **Synaptic filtering DOES set the network timescale**, proportionally. Our `tau_slow` is a synaptic
+   filter, so the mechanism we already have is the right one — the problem was never the mechanism.
+3. **The formula.** `tau_network = tau_s / (1 - J_eff)` with `J_eff = J(C_E - g*C_I)`, the MEAN effective
+   coupling. Divergence as `J_eff -> 1` is the standard fine-tuned route to slow activity, and it is the
+   same working point Deco et al. identify from the other direction.
+4. **Mean and variance are independent knobs.** The chaotic instability is governed by the coupling
+   STANDARD DEVIATION, `J*sqrt(C_E + g^2*C_I)`, with the boundary at 1 — a different quantity from the
+   mean, and the paper says explicitly that the two can be chosen independently, so population-averaged
+   activity can be stable while individual neurons are not.
+   **This is the point our parameterisation violates: `w0` cannot separate them.**
+
+— *Model caveats for us:* theirs is a threshold-linear RATE model, N=3000, in-degree 100, constant
+in-degree (which our per-neuron top-k already matches). Ours is conductance-based spiking at N=100,
+in-degree 30. They expect the results to transfer to spiking networks via standard rate reductions, but
+**the mapping from their `J` to our synaptic weights is not exact and the predicted timescale is a
+target to verify, not a guarantee.** Finite-size fluctuations are also larger at our N.
+— *Side result worth knowing:* strong coupling with adaptation produces a distinct dynamical state —
+individual units showing mixed oscillatory and chaotic fluctuations, with damped oscillations in the
+single-unit autocorrelation, and phases uncorrelated so nothing appears in the population average. If we
+ever add adaptation, that signature is what to look for.
+
+**Deco, G., Ponce-Alvarez, A., Mantini, D., Romani, G.L., Hagmann, P., Corbetta, M. (2013).**
+Resting-State Functional Connectivity Emerges from Structurally and Dynamically Shaped Slow Linear
+Fluctuations. *J Neurosci* 33(27): 11239–11252.
+— 🔴 **Why the working point matters at all, and what development should target.** Derives a dynamic
+mean-field reduction of a spiking E/I large-scale model and shows that functional connectivity emerges
+as structured linear fluctuations around a stable low-activity state CLOSE TO DESTABILISATION. Best fit
+to empirical FC occurs at the brink of the second bifurcation — the loss of stability of the spontaneous
+state, not the appearance of multistable high-activity states. They deliberately separated the two
+bifurcations to establish which one matters.
+
+— **The mechanism gives us a measurable proxy.** As coupling increases, attraction toward the
+spontaneous state weakens, the real part of some eigenvalues approaches zero, and the decay slows — so
+**the autocorrelation time of spontaneous activity is a directly measurable criticality target.** No
+Jacobian required.
+— **On DEVELOPMENT STIMULI, which is what we asked it for.** The regime is RESTING state: no external
+stimulation. The drive is an Ornstein-Uhlenbeck background (tau = 30 ms) of uncorrelated Poisson input,
+and the noise must be WEAK — relative to their earlier model they cut the background intensity and
+reduced the noise amplitude by ~14x, and report that stronger noise moves the bifurcation and REDUCES
+the structure-function fit. Their reading: small fluctuations around the spontaneous state explain
+resting dynamics better than large excursions shaped by the attractor landscape.
+— **Robustness:** the best structure-function match occurs near the bifurcation across a wide range of
+other parameters, which is what makes criticality a viable development TARGET rather than one more
+tuning problem.
+— *Incidental confirmations for us:* their local areas use N_E = 100, and they target asynchronous
+spontaneous activity at ~3–10 Hz. Our networks measure 6.5–9.5 Hz — inside that band at every coupling
+tested, which is why the "quiescent or paroxysmal" diagnosis from the neuroevolution scaffolding
+literature does NOT describe our failure.
+
+### What the two together imply for P (recorded because it is the load-bearing consequence)
+
+**Noise-driven development to a dynamical target cannot inflate task-relevant capacity.** If the
+development stimulus is unstructured noise and the target is a property of the dynamics, development has
+no access to the task and therefore cannot encode anything task-specific. P remains the genome's
+evolvable parameter count. This is structural, not an approximation — and it holds only while the
+development stimulus stays task-blind.
+
+**And Deco's central result says such development REVEALS structure rather than supplementing it.** The
+covariance is determined by the eigen-decomposition of the Jacobian, which is fixed by the connectivity
+evaluated at the working point; at criticality, structure is maximally expressed in function. That
+inverts the H-E concern about development washing out variance: **under noise-driven criticality tuning,
+differences in P should become MORE legible after development, not less.** That is a pre-registerable
+prediction, and it distinguishes this scheme from D124's task-driven iSTDP, which was measured as a
+headwind.
+

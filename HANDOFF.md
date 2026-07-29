@@ -40,7 +40,7 @@ re-derivation.
 
 ---
 
-## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-27 (D137 -- gate passed; GA arm pre-registered)*
+## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-28 (D138 -- every sweep measured a diagonal)*
 
 **The recurrent network has never contributed anything, and that explains everything else.** D130
 ablated all recurrent connectivity (`genome.mag` zeroed, `tau_slow` retained) against intact networks on
@@ -94,31 +94,37 @@ coupling 0.25-8x, density 0.02-0.9, N 8-100, autapses, nmda_frac 0.5-0.98, four 
 three task classes, two readouts. **No condition exists in which recurrent synapses contribute.** No
 more parameters -- that was committed before the run and it holds.
 
-**D137: THE GATE PASSED, BUT THE GRADIENT IS IN THE WRONG PLACE.** All-neuron reliability **0.332**
-(n=10 genomes x 4 draws) clears D115 -- the first fitness in this project to do so on a task the
-substrate can perform. But driven-only reliability is **0.148**, below the bar: the driven cells' score
-is passive leak and every genome shares tau_slow, so the selectable variance lives in the ninety
-NON-driven neurons, i.e. in how much they DEGRADE the average (per-genome means 0.429 ... 0.570).
-**Climbing that gradient means suppressing recurrent interference -- toward the ablated state.**
+**D138 SUPERSEDES THE OPERATING-POINT CONCLUSIONS OF D129/D130/D135/D136.** Beiran & Ostojic (2019)
+give the formula: `tau_network = tau_s / (1 - J_eff)` where `J_eff = J(C_E - g*C_I)` is the MEAN coupling,
+while the chaos boundary is set by the coupling STANDARD DEVIATION `J*sqrt(C_E + g^2*C_I)` at 1. **These
+are different quantities with opposite requirements** -- the variance must stay BELOW 1 while the mean is
+driven TOWARD 1 -- and `w0` scales both together. Every sweep this project ran traced that diagonal.
 
-⚠ The run's line "intact 0.522 is ABOVE ablated 0.515" is an ARTIFACT: +0.007 against a noise_sd of
-0.072, with intact measured on 4 draws and ablated on ONE. Fixed -- ablated now gets matched draws and
-the comparison is a PAIRED t against D130's |t|>4. The ablated ceiling also MOVED between runs (0.542 in
-D135, 0.515 here), so it is not a constant and must be re-measured wherever it is used as a landmark.
+**At the study's default the spectral radius is 6.28** -- six times past the transition to chaos, a
+number never computed here before. The boundary sits at w0 ~ 0.16; D130 swept 0.25-8x, D135 0.5-8x, D136
+1-8x. **The project has never operated in the non-chaotic regime.** Chaotic activity decorrelates from
+input, which is a direct mechanism for D133, D135 and D136 together. D058's balance correction controls
+the MEAN; nobody measured the variance.
 
-**NEXT ACTION: BUILD AND RUN THE GA ARM per `PREREG_ga_arm_accumulate.md`.** It is the one thing never
-done -- everything since D125 is on random undeveloped genomes, and the last arm (D124) was on a task
-later shown to demand an unreachable conjunction. The pre-registration fixes the landmarks, the
-criterion for EXCEEDING the ablated ceiling (best genome over >=4 draws, beating a matched-draw ablated
-ceiling by >2*SE of the paired difference, sustained 5 generations), the plateau criterion, and the rule
-that NO operating-point parameter may be tuned during the arm.
+**The obvious fix was tested and FAILED, which is what sharpened the diagnosis.** At w0x 0.05/0.10/0.15
+hop-1 reads 0.050/0.051/0.051 against chance 0.115, including at radius 0.98. Because radius and J_eff
+are DIFFERENT eigenvalues: at w0x0.15 the radius is 0.98 but J_eff is only 0.13, giving tau_network =
+115 ms. Criticality in the variance is not criticality in the mean.
 
-**THE PLATEAU IS THE EXPECTED OUTCOME, not one of three equally live ones.** If it occurs, the required
-accompanying diagnostic is the evolved population's ABLATION GAP across generations: if it shrinks
-toward zero, "selection removed interference" is confirmed directly rather than inferred.
+**THE TARGET IS OFF THE DIAGONAL AND NO `w0` REACHES IT.** For J_eff = 0.75 (tau = 400 ms, the
+`accumulate` trial length) with radius < 1: at our inhibition ratio 3.84 the radius would be 3.38
+(chaos); at ratio 2 with w_E = 0.058, w_I = 0.115 it is 0.40. Current point is w_E = 0.482, w_I = 1.852
+-- ~8x too large AND too high a ratio.
 
-**The arm's honest justification is not promise.** It is that gen-0 measurements cannot answer whether
-SELECTION can build a signal path -- D133/D135/D136 are all statements about RANDOM connectivity.
+**NEXT ACTION, in order.** (1) Build genomes at (w_E, w_I) = (0.058, 0.115); verify achieved J_eff and
+spectral radius numerically. (2) **Measure the ACTUAL autocorrelation time of spontaneous activity
+against the predicted 400 ms** -- this is where the rate-model-to-spiking mapping either holds or fails,
+and it is the first prediction this project has made from theory rather than from a sweep. (3) Only then
+re-run the propagation and ablation probes there. **Do not skip step 2**; the predicted timescale is a
+target to verify, not a guarantee.
+
+**AND REVISIT D058, do not override it.** Lowering the inhibition ratio moves away from a correction
+adopted because excitation swamped inhibition ~24:1 at uniform magnitudes. That problem was real.
 
 **SUPERSEDED (kept for the record): `scripts/coupling_band_sweep.py`** at the study's real configuration (N=100, n_in=10),
 finer resolution across x1..x16, 8 genomes, reporting the D095 fitness AND ITS RELIABILITY -- a mean
@@ -237,6 +243,10 @@ Recorded so no future turn re-opens them by accident. Each is closed by evidence
   Undeveloped/birth-scored numbers are unaffected.
 - **Any test-error number from a run between D094 and D113** — void (fitness was computed from test
   error, so selection optimized the reported generalization).
+- **The operating-point conclusions of D129, D130, D135 and D136** — their MEASUREMENTS stand, but each
+  swept a one-dimensional diagonal (`w0` scales coupling mean and variance together) through a
+  two-dimensional space whose directions have opposite requirements. Correct statement: *along the `w0`
+  diagonal*, no operating point supports recurrent contribution. Not a statement about the substrate.
 - **Any "recurrence contributes" claim from a difference test alone** — a difference between two
   chance-level values is noise, not a contribution (D130 flagged +0.040 between 0.523 and 0.483, both at
   chance). STANDING RULE: a difference test is meaningful only when at least one arm clears its own null.
@@ -252,6 +262,10 @@ Recorded so no future turn re-opens them by accident. Each is closed by evidence
 
 - **Validate that code MEASURES WHAT IT CLAIMS, not just that it executes.** The audit found seven silent
   defects by reading, not running. Run `preflight.py` / `audit.py` before anything expensive.
+- **Before sweeping a parameter, ask what quantities it moves and whether they need to move together.**
+  `w0` looked like the coupling knob; it was a diagonal through (mean, variance), which control the
+  network timescale and the chaos boundary respectively and must move in OPPOSITE directions. Four
+  entries reported that diagonal's shape as the substrate's. A parameter is not an axis.
 - **Ablate the mechanism before sweeping its parameter.** D130 answered in one run what three parameter
   sweeps could not: the recurrent network contributes nothing, so P — which counts recurrent synapses —
   could never have mattered. A sweep can only tell you a parameter does not move the outcome; an

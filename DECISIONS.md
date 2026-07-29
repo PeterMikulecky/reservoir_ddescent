@@ -7022,6 +7022,104 @@ the arm exists to remove.
 the DECOMPOSITION said what the gradient is made of, and those are different facts with different
 consequences. **Report where the variance lives, not just how much there is.**
 
+### D138 — EVERY OPERATING-POINT SWEEP MEASURED A DIAGONAL. Chaos is set by the coupling VARIANCE, the network timescale by the coupling MEAN, and `w0` moves both together. At the study's default the spectral radius is 6.28 — six times past the transition to chaos. The target regime is reachable but lies off the diagonal, and no value of `w0` reaches it.
+**2026-07-28 · Finding + design correction · theory-derived, verified numerically · supersedes the operating-point conclusions of D129, D130, D135, D136 · REFERENCES updated**
+
+**THE TWO PAPERS.** Beiran & Ostojic (2019, PLoS Comput Biol 15(3):e1006893) analyse randomly connected
+E/I networks with an extra per-unit degree of freedom — either spike-frequency ADAPTATION or SYNAPTIC
+FILTERING — and derive the network timescales for each. Deco et al. (2013, J Neurosci 33(27):11239)
+show that structure expresses itself in function only at a particular dynamical working point, just
+below the destabilisation of the low-activity spontaneous state. The two agree on where to operate and
+Beiran & Ostojic supply the formula for what "there" means.
+
+**THE RESULT WE NEEDED.** Network dynamics do NOT inherit the timescale of adaptive currents; the
+timescale of network activity increases proportionally to the SYNAPTIC filter time constant. So
+`tau_slow` is the right mechanism and adaptation would not have helped — a line this project came close
+to pursuing. The population timescale is
+
+> **tau_network = tau_s / (1 - J_eff)**, with **J_eff = J(C_E - g*C_I)** the MEAN effective coupling,
+
+while the transition to chaos is set by the coupling STANDARD DEVIATION, `J*sqrt(C_E + g^2*C_I)`, with
+the boundary at 1. Beiran & Ostojic state explicitly that the mean and standard deviation of the
+connectivity can be chosen independently: while the population-averaged activity remains stable, the
+individual neurons may not.
+
+**⚠ OUR PARAMETERISATION TIES THEM, AND EVERY SWEEP MOVED ALONG THE DIAGONAL.** `w0` scales all weights,
+so it scales mean and variance proportionally. Measured on our actual genomes (N=100, density 0.3,
+ei_split 0.8, exact eigenvalues of the signed connectivity matrix):
+
+| w0x | spectral radius | J_eff | regime |
+|---|---|---|---|
+| 0.05 | 0.33 | +0.04 | ordered |
+| 0.10 | 0.65 | +0.09 | ordered |
+| 0.15 | 0.94 | +0.13 | near-critical |
+| 0.25 | 1.57 | +0.22 | **CHAOTIC** |
+| 0.50 | 3.14 | +0.44 | CHAOTIC |
+| **1.00 (the study's default)** | **6.28** | +0.89 | **CHAOTIC** |
+| 2.00 | 12.57 | +1.77 | CHAOTIC |
+
+**The chaos boundary sits at w0 ~ 0.16. D130 swept 0.25-8x, D135 swept 0.5-8x, D136 swept 1-8x. The
+project has never once operated in the non-chaotic regime**, and every "raise the coupling" sweep pushed
+further in. Chaotic activity is intrinsically generated and decorrelates from input, which is a direct
+mechanism for D133 (signal dies at the first synapse), D135 (recurrence degrades integration) and D136
+(all 16 nmda x coupling cells negative, monotone in coupling). `nmda_frac` could not have helped because
+chaos is set by the coupling variance and `tau_slow` only sets the filter.
+
+**WHY THIS WAS INVISIBLE.** D058's balance correction controls the MEAN coupling (the E/I ratio). Chaos
+is set by the VARIANCE. **We controlled one and never measured the other** — the spectral radius of the
+connectivity matrix has not appeared anywhere in this project until now.
+
+**⚠ THE FIRST FIX WAS TESTED AND FAILED, WHICH IS WHAT SHARPENED THE DIAGNOSIS.** "Move below the chaos
+boundary" is not sufficient: at w0x 0.05 / 0.10 / 0.15 the hop-1 per-neuron |r| reads 0.050 / 0.051 /
+0.051 against a chance level of 0.115, and `d_ablate` is 0.000 to -0.009. Signal does not cross the
+first synapse in the ordered regime either, INCLUDING at radius 0.98, right at criticality. The reason
+is that radius and J_eff are different eigenvalues: at w0x0.15 the radius is 0.98 but **J_eff is only
+0.13**, giving tau_network = 100/(1-0.13) = 115 ms — essentially no enhancement. Criticality in the
+VARIANCE is not criticality in the MEAN, and only the latter sets the timescale.
+
+**THE TARGET, AND WHY NO `w0` REACHES IT.** Solving for weights that give J_eff = 0.75
+(tau_network = 400 ms, the `accumulate` trial length) subject to radius < 1, at C_E = 24.6, C_I = 5.8:
+
+| w_I/w_E | w_E | w_I | radius at J_eff = 0.75 |
+|---|---|---|---|
+| 0 | 0.031 | 0.000 | 0.15 |
+| 1 | 0.040 | 0.040 | 0.22 |
+| **2** | **0.058** | **0.115** | **0.40** |
+| 3 | 0.104 | 0.313 | 0.91 |
+| **3.84 (ours)** | 0.322 | 1.237 | **3.38 — chaos** |
+
+**At our inhibition ratio, J_eff = 0.75 forces radius = 3.38.** The target is unreachable at any `w0`,
+because `w0` cannot change the ratio. Our current point is w_E = 0.482, w_I = 1.852 — roughly 8x too
+large AND at too high an inhibition ratio. At ratio 2 with w_E = 0.058 the target is comfortably met.
+
+**WHAT THIS SUPERSEDES.** D129 (input_gain and density), D130 (coupling and ablation), D135 (recurrence
+degrades integration) and D136 (nmda x coupling) each swept a one-dimensional path through a
+two-dimensional space and reported the path's shape as a property of the substrate. Their MEASUREMENTS
+stand; their conclusions about the substrate do not, because the region where the theory predicts
+function was never sampled. **The correct statement of all four is: along the diagonal parameterised by
+`w0`, no operating point supports recurrent contribution.**
+
+**WHAT IS NOT YET ESTABLISHED, and must not be assumed.**
+- Beiran & Ostojic's `J_eff` is a rate-model coupling; the mapping to our conductance-based spiking
+  weights is not exact. The predicted 400 ms is a TARGET TO VERIFY, not a guarantee.
+- Lowering the inhibition ratio moves away from D058, which was adopted because excitation swamped
+  inhibition ~24:1 at uniform magnitudes. **D058 must be revisited, not overridden** — its problem was
+  real and the new setting must be checked against it.
+- Their networks are N=3000 with in-degree 100; ours are N=100 with in-degree 30. Finite-size
+  fluctuations are correspondingly larger and the eigenvalue bulk is less well approximated.
+
+**THE TEST, in order.** (1) Build genomes at (w_E, w_I) = (0.058, 0.115); verify the achieved J_eff and
+spectral radius numerically. (2) Measure the ACTUAL autocorrelation time of spontaneous activity against
+the predicted 400 ms — this is where the rate-to-spiking mapping either holds or fails, and it is the
+first prediction this project has made from theory rather than from a sweep. (3) Only then re-run the
+propagation and ablation probes there.
+
+**LESSON.** A parameter is not an axis. `w0` looked like the coupling knob and was in fact a diagonal
+through a two-dimensional space whose two directions have opposite requirements — the variance must stay
+below 1 while the mean is driven toward 1. Sweeping it could only ever trace that diagonal, and four
+entries reported the diagonal's shape as the substrate's. **Before sweeping a parameter, ask what
+quantities it moves and whether they need to move together.**
+
 
 
 
