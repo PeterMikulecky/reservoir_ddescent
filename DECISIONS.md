@@ -7292,6 +7292,72 @@ three read-rule failures, the D138 unit-conversion error — and all of that rig
 instruments themselves are deleted. **Reproducibility is not a property of the record; it is a property
 of the record PLUS the code, committed together.**
 
+### D141 — VARIABLE DELAY CREATES THE DEMAND FOR MULTIPLE TIMESCALES, AND LOCATES WHERE THE P AXIS LIVES. P=1's ceiling falls 0.819 → 0.667 across two delays, but P=2 COLLAPSES to chance — because P=2 has only ONE memory timescale. P counts timescales in the MEMORY pathway; the probe pathway needs one fast constant.
+**2026-07-29 · Finding + design principle · scripts/prototypes/hetsyn_variable_delay.py · follows the D139 amendment · contains a known implementation bug, recorded below**
+
+**WHY THIS WAS RUN.** The D139 amendment found P=1's best (0.850 at tau=250) close enough to P=2's 0.983
+that the task is "too simple" in FRAMING's precise sense: P_crit sits near 1 and most of the axis is
+overparameterised. PJM asked whether a more complex stimulus would help. The principled answer is that
+difficulty alone does not create demand for multiple timescales — more cue categories or a longer delay
+remain solvable by ONE well-chosen tau, which is exactly what produced the 0.850. **What creates demand
+is a task where no single tau is optimal across trials**, and the cleanest instance is VARIABLE DELAY.
+
+**THE RESULT** (w=0.3, N=30, chance 0.500, P=1 swept over tau in {100, 250, 400, 600} and its BEST
+reported):
+
+| delays | P=1 best | P=2 (500, 5) | P=3 (500, 150, 5) |
+|---|---|---|---|
+| [400] | 0.819 (tau=250) | **0.963** | 0.602 |
+| [200, 800] | **0.667** (tau=100) | **0.509** | 0.546 |
+
+1. **The demand is created.** P=1's ceiling falls 0.819 -> 0.667 when a second delay is added. A single
+   timescale can no longer cover the task, which is what the design argument required.
+2. **But P=2 COLLAPSES to chance (0.509).** This is the informative failure. With tau = 500 ms the
+   surviving cue trace is exp(-200/500) = 0.67 at the short delay and exp(-800/500) = 0.20 at the long
+   one — a **3.3x difference in the match signal's amplitude** — so no single linear boundary separates
+   match from non-match at both delays.
+
+**THE DESIGN PRINCIPLE THIS ESTABLISHES.** P=2 has exactly ONE cue-side (memory) timescale; the second
+group is the probe's fast channel. Spanning two delays needs TWO memory timescales:
+
+> **P counts timescales in the MEMORY pathway. The probe pathway needs one fast constant. A task with
+> m distinct delays needs roughly m memory timescales, so P ~ m + 1.**
+
+That is the P_crit-positioning property the outline was built for, now with a mechanism rather than an
+analogy: **the interpolation threshold should MOVE with the number of delays**, which is directly
+testable and is a prediction the sweep can falsify.
+
+**⚠ IMPLEMENTATION BUG — the P=3 column is MEANINGLESS and must not be read.** The prototype routes the
+probe to group 1 regardless of P (`tgt = "I0" if P==1 else "I1"`), so at P=3 with taus (500, 150, 5) the
+probe lands on the 150 ms group and **group 2 is never used at all.** The P=3 numbers (0.602, 0.546)
+measure a badly-assigned two-group network, not a three-group one. Recorded in
+`scripts/prototypes/README.md` alongside the file.
+
+**AND THE BUG EXPOSES A REAL CONSTRAINT ON THE SWEEP.** With only two input pathways (cue and probe),
+**P > 2 has nothing to assign** — there are no other synapses to distribute across groups. A meaningful P
+axis requires a large synapse population, which in the study comes from recurrent connectivity and
+multiple input channels. **The hand-built feedforward prototype cannot test P > 2 at all**, and this was
+better found here than at P=16.
+
+**TWO FIXES OWED BEFORE THE NEXT RUN.**
+1. **Group assignment must distribute CUE synapses across all memory groups**, with the probe on a single
+   fast group — not hardcode group 0 for cue and group 1 for probe.
+2. **The readout must be aligned to PROBE OFFSET, not trial end.** With variable delay, "the last 60 ms"
+   occurs at a different absolute time per trial, and more importantly a fixed trial-end window confounds
+   delay with read position. This may be part of why P=2 collapsed, and it must be excluded before the
+   collapse is attributed to the timescale argument.
+
+**HONEST STATUS.** One seed, 144 trials, hand-built feedforward, decode averaged over 3 train/test
+partitions. The P=1 -> P=2 collapse is large enough to survive that, but the readout-alignment confound
+in fix (2) is NOT excluded, so the mechanism attribution is provisional.
+
+**LESSON.** A task-difficulty knob and a task-STRUCTURE knob are different things. Adding delays does not
+merely make DMTS harder — it changes what KIND of solution is required, from one timescale to several.
+**When choosing how to make a task harder, ask what the harder version demands MORE OF, and check that it
+is the quantity your parameter axis counts.**
+
+
+
 
 
 

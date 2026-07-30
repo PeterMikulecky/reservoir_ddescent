@@ -40,7 +40,7 @@ re-derivation.
 
 ---
 
-## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-29 (D140 -- P-group built; the P=1 control is owed)*
+## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-29 (D141 -- P lives in the memory pathway; two fixes owed)*
 
 **The recurrent network has never contributed anything, and that explains everything else.** D130
 ablated all recurrent connectivity (`genome.mag` zeroed, `tau_slow` retained) against intact networks on
@@ -132,15 +132,35 @@ N=30. **N=24 and N=30 gave IDENTICAL results**, independent support for the sizi
 FIXED before the sweep, not tuned after -- "adjust the weight and re-run" is the reactive-easing move
 D136 closed the parameter space to prevent.
 
-**NEXT ACTION: RE-RUN THE P=1 HOMOGENEOUS CONTROL AT w=0.3.** D139's separation (0.583 vs 0.917) was
-measured at the BAD operating point. **If P=1 also reaches ~0.98 at w=0.3, the mechanism claim collapses
-and the outline fails at step 2.** This one control gates everything downstream and is cheap.
-Then steps 3-5 (gen-0 prior at chance, reliability at each P, mutational smoothness on log-scaled tau
-genes), each of which can end the line, before any sweep.
+**THE CONTROL RAN, AND IT SHRANK THE CLAIM (D139 amendment).** With P=1 SWEPT over tau at the good
+operating point, its best is **0.850** (tau=250), not the 0.583 D139 reported against an un-tuned
+tau=100. P=2 reaches 0.983, so the mechanism holds, but **the gap is 0.13, not 0.33** -- D139 overstated
+it ~2.5x by comparing against a baseline nobody had optimised. Consequences: tau matters more than P at
+the low end (the P=1 column spans 0.556-0.850 by tau choice alone); the sweep's power must be recomputed
+against a ~0.15 effect; and P_crit sits near 1, i.e. the task was TOO SIMPLE in FRAMING's sense.
 
-**MEASURE PER-GENERATION TIME BEFORE TRUSTING THE 4-DAY FIGURE** (D066). It extrapolates a measured
-N=100 cost by N^2 and has not been verified at N=30; four runtime estimates in this project have been
-wrong, and D139's central design decision rests on this one.
+**VARIABLE DELAY FIXES THAT, AND LOCATES THE AXIS (D141).** Across delays [200, 800]: P=1's ceiling
+falls 0.819 -> 0.667, so the demand for multiple timescales is real. But **P=2 COLLAPSES to 0.509** --
+with tau=500 the surviving cue trace is 0.67 at the short delay and 0.20 at the long one, a 3.3x
+amplitude difference no single linear boundary spans. P=2 has only ONE memory timescale.
+
+> **P counts timescales in the MEMORY pathway; the probe pathway needs one fast constant. A task with m
+> delays needs ~m memory timescales, so P ~ m + 1.** The interpolation threshold should MOVE with the
+> number of delays -- a falsifiable prediction, and the P_crit-positioning property the outline needed.
+
+**TWO FIXES OWED BEFORE ANY FURTHER RUN.**
+1. **Group assignment must distribute CUE synapses across all memory groups** (probe on one fast group).
+   The prototype hardcodes cue->group0, probe->group1 regardless of P, so **the P=3 column is meaningless
+   and P>2 is untestable in the current code.**
+2. **Align the readout to PROBE OFFSET, not trial end.** Variable delay makes "last 60 ms" fall at a
+   different absolute time per trial; this confound is NOT excluded and may be part of the P=2 collapse.
+
+**⚠ AND THE PROTOTYPE CANNOT TEST P > 2 AT ALL.** With only two input pathways there are no other
+synapses to assign to further groups. A real P axis needs the recurrent connectivity and multiple input
+channels of the study proper.
+
+**WORKING SPLIT (PJM, 2026-07-29):** substantial runs happen LOCALLY so results and files stay on PJM's
+machine; the sandbox is for smoke tests, quick checks, and building.
 
 **SUPERSEDED (kept for the record): `scripts/coupling_band_sweep.py`** at the study's real configuration (N=100, n_in=10),
 finer resolution across x1..x16, 8 genomes, reporting the D095 fitness AND ITS RELIABILITY -- a mean

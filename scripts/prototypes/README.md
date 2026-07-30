@@ -18,6 +18,13 @@ not as tools.
 | `hetsyn_step1_conjunction.py` | cue->slow / probe->fast: 0.583 -> 0.917 at 400 ms delay | D139 |
 | `hetsyn_pgroup_prototype.py` | P-group synaptic timescales; generated equations, P currents per neuron | D140 |
 | `hetsyn_drive_bisection.py` | the 0.52 vs 0.98 difference is INPUT DRIVE, not N (24 and 30 identical) | D140 |
+| `hetsyn_p1_control.py` | P=1 swept over tau reaches 0.850, not 0.583 -- the gap is 0.13, not 0.33 | D139 amendment |
+| `hetsyn_variable_delay.py` | variable delay lowers P=1 (0.819 -> 0.667) but COLLAPSES P=2 to chance | D141 |
+
+**KNOWN BUG in `hetsyn_variable_delay.py` and `hetsyn_pgroup_prototype.py`:** the probe is routed to
+group 1 regardless of P, so for P>2 the extra groups are never used and those columns are meaningless.
+Fixed understanding in D141: cue synapses must be distributed across the MEMORY groups; the probe needs
+only one fast group.
 
 **Standing rule earned here (D140):** if a diagnostic produces a number that enters DECISIONS, its code
 is committed in the same commit as the entry. Otherwise the log accumulates claims whose evidence has
