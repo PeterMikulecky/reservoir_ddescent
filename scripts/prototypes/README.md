@@ -22,7 +22,8 @@ not as tools.
 | `hetsyn_variable_delay.py` | variable delay lowers P=1 (0.819 -> 0.667) but COLLAPSES P=2 to chance | D141 |
 | `hetsyn_probe_aligned.py` | probe-aligned readout reproduces the P=2 collapse (0.509); P=3 recovers to 0.690 | D141 amendment |
 | `hetsyn_core.py` | **the single source** of `run_block` and `decode`; everything downstream imports it | (infrastructure) |
-| `hetsyn_tau_sweep.py` | sweeps taus at P=1/2/3 with seed replication, so each is compared at its BEST | (pending) |
+| `hetsyn_tau_sweep.py` | swept properly, P=1 (0.707) BEATS P=3 (0.662) beats P=2 (0.534) -- `P ~ m+1` refuted | D142 |
+| `hetsyn_phase_check.py` | **NOT YET RUN** -- is D142 confounded by commensurate delay/tau lattices? | (pending) |
 
 **A BUG IN `hetsyn_tau_sweep.py` INVALIDATED AN 80-JOB RUN (2026-07-29).** Cue synapses were held in a
 LIST and passed to `b2.run()`, whose magic collection scans the calling frame's VARIABLES -- so they were

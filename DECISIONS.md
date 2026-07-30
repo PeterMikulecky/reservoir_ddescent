@@ -7419,6 +7419,73 @@ honestly and then reasoned as though naming it were enough; excluding it took on
 — but the entry's central claim was unsupported until it did. **Flagging a confound creates an
 obligation, not an exemption.**
 
+### D142 — SWEPT PROPERLY, P DOES NOT PRODUCE A FIRST DESCENT. P=1 best (0.707) BEATS P=3 (0.662) beats P=2 (0.534). The `P ~ m + 1` ordering is refuted, the earlier rising curve was a tau artifact, and what actually matters is having ONE tau long enough that the delays stop mattering.
+**2026-07-29 · Finding, negative · scripts/prototypes/hetsyn_tau_sweep.py · runs locally on PJM's machine · overturns the design premise of D141 and its amendment**
+
+**THE RESULT** (delays [200, 800], N=30, w=0.3, 4 seeds, every condition swept over its OWN taus so each
+is compared at its best — the D139-amendment discipline applied up front):
+
+| P | best taus | mean | sd |
+|---|---|---|---|
+| **1** | **(1600)** | **0.707** | 0.020 |
+| 2 | (1600, 5) | 0.534 | 0.037 |
+| 3 | (1600, 200, 5) | 0.662 | 0.034 |
+
+**The curve is NON-MONOTONE with P=1 ON TOP.** `P ~ m + 1` predicted the opposite ordering and is
+refuted on this task.
+
+**THE EARLIER RISING CURVE WAS A TAU ARTIFACT.** D141 and its amendment reported 0.495 / 0.509 / 0.690
+from HAND-PICKED taus. Swept, P=1 goes 0.495 -> **0.707** and P=3 goes 0.690 -> 0.662. The apparent
+first descent was P=1 being handicapped by a bad tau — **exactly the error the D139 amendment caught
+once, and which I allowed to recur two entries later.** The D141 amendment even flagged 0.690 as "a
+LOWER BOUND, not a ceiling" for P=3 while failing to apply the same caution to P=1's 0.495.
+
+**WHAT ACTUALLY MATTERS IS TAU MAGNITUDE, NOT TAU COUNT.** `tau = 1600 ms` is the best P=1 value and is
+the long constant in ALL FOUR top P=3 rows. The mechanism is not spanning: at 1600 ms the surviving cue
+trace is exp(-800/1600) = 0.61 at the long delay and 0.88 at the short one, so **the amplitude barely
+differs across delays and a single linear boundary works.** One tau long enough makes the delay
+difference negligible — the opposite of the basis story D141 proposed.
+
+**AND P=2 IS WORST FOR A CONSISTENT REASON.** At P=2 half the cue synapses are diverted to the fast
+group, so the memory pathway loses half its drive and gains nothing. P=3 recovers partially by having
+two memory groups but still splits the cue input. The ordering 1 > 3 > 2 is what drive-splitting
+predicts, not what timescale coverage predicts.
+
+**⚠ TWO CAVEATS THAT COULD CHANGE THE TABLE.**
+1. **tau = 1600 ms is at the GRID EDGE**, so P=1 may not have peaked. The ordering could shift with a
+   wider grid. Note also that 1600 ms is beyond the biological synaptic range (Allen Institute data are
+   long-tailed past 500 ms but not to 1600), so a P=1 solution living at the edge is closer to a
+   boundary artifact than a finding.
+2. **⚠ COMMENSURATE LATTICES (PJM).** The delays [200, 400, 800] and the tau grid
+   [100, 200, 400, 800, 1600] are ALL powers of two apart, so the two lattices are commensurate. Two
+   mechanisms could exploit that: aliasing, where exp(-D/tau) takes values related by a common ratio and
+   a readout latches onto that structure rather than onto timescale coverage; and ENTRAINMENT, since
+   `tau_m` = 20 ms with 40 Hz input gives a natural periodicity, and delays related by factors of two
+   leave the network in comparable phase, so match/non-match could be read partly from PHASE rather than
+   trace amplitude. **This confound is not excluded and the table must not be treated as final until it
+   is.**
+
+**WHAT IS ALSO TRUE AND LARGER THAN ANY P EFFECT.** Every condition here is far below the **0.963** that
+P=2 reached at a SINGLE fixed delay. Variable delay costs ~0.25 at every P — a bigger effect than any
+difference between P values in this table.
+
+**CONSEQUENCE FOR THE DESIGN.** The delay-based task was adopted (D141) because it appeared to create
+demand for multiple timescales and therefore a placeable P_crit. **It does not.** It creates demand for
+one LONG timescale. So the task design is back in question, and no first descent has been observed on
+any P definition in this project.
+
+**NEXT, IN ORDER.** (1) Exclude the commensurability confound with INCOMMENSURATE delays (e.g.
+[230, 370, 610]) and a tau grid off the powers-of-two lattice. A cheap pre-check first: if the readout is
+exploiting entrainment, performance should be sensitive to SMALL delay changes (400 vs 420 ms); if it is
+pure trace amplitude, a 5% change should barely register. (2) Only if the ordering survives is the
+conclusion about P safe.
+
+**LESSON, and it is the second time in three entries.** A baseline must be granted its best
+configuration before any margin over it is claimed. D139's amendment established this, D141 restated it
+for P=3, and D142 shows it was still not applied to P=1. **Sweep every arm, including the one you expect
+to lose.**
+
+
 
 
 
