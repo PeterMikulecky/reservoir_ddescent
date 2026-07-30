@@ -11,6 +11,16 @@ WHAT THIS DOES. Sweeps the two MEMORY time constants at P=3 over a grid, replica
 reports P=1 and P=2 baselines with THEIR taus swept too -- so every condition is compared at its own
 best, not at one arbitrary point.
 
+WARNING - A BUG IN THE FIRST VERSION INVALIDATED AN ENTIRE 80-JOB RUN. The cue synapses were stored in
+a LIST and passed to `b2.run()`, which uses magic collection: it scans the calling frame's VARIABLES, so
+a Synapses object held only inside a list is invisible to it. Every trial therefore ran with probe input
+and NO CUE INPUT AT ALL, silently, while printing plausible progress. Brian2 does warn
+("getting deleted, but was never included in a network") but only at GARBAGE COLLECTION -- after the
+results are computed, and after the window a short smoke test would inspect. Now fixed with an explicit
+`b2.Network(*objs)` plus an assertion on the synapse count, which fails at construction rather than
+after the run. Verified against `hetsyn_probe_aligned.py` (which escaped the bug by stashing synapses in
+`globals()`, which collection DOES scan): P=1 0.495, P=2 0.509, P=3 0.690, reproduced exactly.
+
 RUN LOCALLY (PJM's machine, --workers 6). This is the first result in the project that genuinely
 benefits from parallelism; the sandbox is for smoke tests.
 
@@ -28,88 +38,16 @@ PRE-REGISTERED READ:
 Run:  python scripts/prototypes/hetsyn_tau_sweep.py --workers 6
 """
 from __future__ import annotations
-import argparse, itertools, time, warnings
+import argparse, itertools, time
 import numpy as np
 
-warnings.filterwarnings("ignore")
-import brian2 as b2
-from brian2 import ms
-b2.prefs.codegen.target = "numpy"
-b2.BrianLogger.suppress_name("resolution_conflict")
-
-CUE, PROBE, RATE = 100, 100, 40.0
-
-
-def run_block(P, taus, delays, seed, w=0.3, N=30, per_cat=15, nch=8, n_trials=144):
-    """One (P, taus, seed) cell. Probe-aligned readout; cue synapses spread over the MEMORY groups."""
-    rng = np.random.default_rng(seed)
-    K = 2
-    cue = rng.integers(0, K, n_trials)
-    probe = rng.integers(0, K, n_trials)
-    dsel = rng.integers(0, len(delays), n_trials)
-    rel = (cue == probe).astype(int)
-    out = np.zeros((n_trials, N))
-    cur = " + ".join("I%d" % k for k in range(P))
-    eqs = "\n".join(
-        ["dv/dt = (-v + %s)/tau_m : 1 (unless refractory)" % cur]
-        + ["dI%d/dt = -I%d/tau%d : 1" % (k, k, k) for k in range(P)]
-        + ["dr/dt = -r/tau_r : 1"])
-    ns = dict(tau_m=20 * ms, tau_r=30 * ms)
-    for k, t_ in enumerate(taus):
-        ns["tau%d" % k] = t_ * ms
-    T_MAX = CUE + max(delays) + PROBE
-    for t in range(n_trials):
-        D = delays[dsel[t]]
-        probe_on = CUE + D
-        b2.start_scope()
-        G = b2.NeuronGroup(N, eqs, threshold="v>1", reset="v=0; r+=1", refractory=2 * ms,
-                           method="euler", namespace=ns)
-        def sp(t0, t1):
-            ii, tt = [], []
-            for ch in range(nch):
-                m = max(1, int(RATE * (t1 - t0) / 1000))
-                tt += list(rng.uniform(t0, t1, size=m)); ii += [ch] * m
-            ii = np.array(ii); tt = np.round(np.array(tt), 1)
-            _, k = np.unique(np.stack([ii, tt]), axis=1, return_index=True)
-            ii, tt = ii[k], tt[k]
-            o = np.argsort(tt)
-            return ii[o], tt[o]
-        ci, ct = sp(1.0, CUE)
-        pi, pt = sp(probe_on, probe_on + PROBE - 1.0)
-        CU = b2.SpikeGeneratorGroup(nch, ci, ct * ms)
-        PR = b2.SpikeGeneratorGroup(nch, pi, pt * ms)
-        ctg = np.arange(cue[t] * per_cat, (cue[t] + 1) * per_cat)
-        ptg = np.arange(probe[t] * per_cat, (probe[t] + 1) * per_cat)
-        keep = []
-        mem = list(range(max(1, P - 1)))          # all groups but the last are MEMORY groups
-        for gi, grp in enumerate(mem):
-            sub = ctg[gi::len(mem)]
-            if len(sub) == 0:
-                continue
-            S = b2.Synapses(CU, G, on_pre="I%d += w" % grp, namespace=dict(w=w))
-            S.connect(i=np.repeat(np.arange(nch), len(sub)), j=np.tile(sub, nch))
-            keep.append(S)
-        fast = P - 1 if P > 1 else 0              # the last group is the PROBE's fast channel
-        Sp = b2.Synapses(PR, G, on_pre="I%d += w" % fast, namespace=dict(w=w))
-        Sp.connect(i=np.repeat(np.arange(nch), len(ptg)), j=np.tile(ptg, nch))
-        keep.append(Sp)
-        M = b2.StateMonitor(G, "r", record=True, dt=5 * ms)
-        b2.run(T_MAX * ms)
-        i1 = int((probe_on + PROBE) / 5.0)        # PROBE-ALIGNED: 60 ms after probe offset
-        out[t] = M.r[:, max(0, i1 - 12):i1].mean(1)
-    return out, rel
-
-
-def decode(X, y, n_part=3):
-    n = len(y); acc = []
-    for s in range(n_part):
-        idx = np.random.default_rng(s).permutation(n)
-        f, e = idx[:n // 2], idx[n // 2:]
-        Z = (X - X[f].mean(0)) / (X[f].std(0) + 1e-9)
-        A = np.hstack([Z[f], np.ones((len(f), 1))])
-        c, *_ = np.linalg.lstsq(A, y[f] * 2.0 - 1, rcond=None)
-        acc.append(np.mean(((np.hstack([Z[e], np.ones((len(e), 1))]) @ c) > 0) == (y[e] > 0)))
-    return float(np.mean(acc))
+# THE BLOCK-RUNNER AND DECODER LIVE IN ONE PLACE. Two prototypes with apparently-identical synapse
+# construction diverged invisibly once already -- one used globals() (which Brian2's magic collection
+# scans) and worked, this one used a list (which it does not) and silently ran an entire 80-job run
+# with NO CUE INPUT. Importing rather than reimplementing is the fix for that class of divergence.
+import os, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from hetsyn_core import run_block, decode
 
 
 def _job(args):

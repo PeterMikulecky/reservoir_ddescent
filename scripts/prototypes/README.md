@@ -21,7 +21,16 @@ not as tools.
 | `hetsyn_p1_control.py` | P=1 swept over tau reaches 0.850, not 0.583 -- the gap is 0.13, not 0.33 | D139 amendment |
 | `hetsyn_variable_delay.py` | variable delay lowers P=1 (0.819 -> 0.667) but COLLAPSES P=2 to chance | D141 |
 | `hetsyn_probe_aligned.py` | probe-aligned readout reproduces the P=2 collapse (0.509); P=3 recovers to 0.690 | D141 amendment |
-| `hetsyn_tau_sweep.py` | **NOT YET RUN** -- sweeps taus at P=1/2/3 with seed replication, so each is compared at its BEST | (pending) |
+| `hetsyn_core.py` | **the single source** of `run_block` and `decode`; everything downstream imports it | (infrastructure) |
+| `hetsyn_tau_sweep.py` | sweeps taus at P=1/2/3 with seed replication, so each is compared at its BEST | (pending) |
+
+**A BUG IN `hetsyn_tau_sweep.py` INVALIDATED AN 80-JOB RUN (2026-07-29).** Cue synapses were held in a
+LIST and passed to `b2.run()`, whose magic collection scans the calling frame's VARIABLES -- so they were
+never added to the network and every trial ran with NO CUE INPUT, silently. Brian2 warns only at garbage
+collection, after the results exist. Fixed with an explicit `b2.Network(*objs)` and an assertion on the
+synapse count -- and the simulation code was extracted to `hetsyn_core.py`, since DUPLICATED simulation
+code is how two prototypes with apparently-identical construction diverged invisibly in the first place. `hetsyn_probe_aligned.py` escaped it by using `globals()`, which collection DOES scan, and
+was used to verify the fix (P=1 0.495 / P=2 0.509 / P=3 0.690 reproduced exactly).
 
 `hetsyn_tau_sweep.py` is the exception to "not maintained": it is intended to be RUN LOCALLY with
 `--workers 6` (~25 min; 80 jobs at ~106 s each, measured -- an earlier 7 s estimate was wrong by 15x,
