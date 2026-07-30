@@ -20,6 +20,12 @@ not as tools.
 | `hetsyn_drive_bisection.py` | the 0.52 vs 0.98 difference is INPUT DRIVE, not N (24 and 30 identical) | D140 |
 | `hetsyn_p1_control.py` | P=1 swept over tau reaches 0.850, not 0.583 -- the gap is 0.13, not 0.33 | D139 amendment |
 | `hetsyn_variable_delay.py` | variable delay lowers P=1 (0.819 -> 0.667) but COLLAPSES P=2 to chance | D141 |
+| `hetsyn_probe_aligned.py` | probe-aligned readout reproduces the P=2 collapse (0.509); P=3 recovers to 0.690 | D141 amendment |
+| `hetsyn_tau_sweep.py` | **NOT YET RUN** -- sweeps taus at P=1/2/3 with seed replication, so each is compared at its BEST | (pending) |
+
+`hetsyn_tau_sweep.py` is the exception to "not maintained": it is intended to be RUN LOCALLY with
+`--workers 6` (~25 min; 80 jobs at ~106 s each, measured -- an earlier 7 s estimate was wrong by 15x,
+which is D066 again). Its reporting path was exercised on synthetic results before hand-off.
 
 **KNOWN BUG in `hetsyn_variable_delay.py` and `hetsyn_pgroup_prototype.py`:** the probe is routed to
 group 1 regardless of P, so for P>2 the extra groups are never used and those columns are meaningless.

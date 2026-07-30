@@ -7356,6 +7356,70 @@ merely make DMTS harder — it changes what KIND of solution is required, from o
 **When choosing how to make a task harder, ask what the harder version demands MORE OF, and check that it
 is the quantity your parameter axis counts.**
 
+### D141 — AMENDMENT (2026-07-29): the readout confound is EXCLUDED and the `P ~ m + 1` prediction has its first support. Probe-aligned readout reproduces the P=2 collapse exactly (0.509), and P=3 with TWO memory timescales recovers to 0.690.
+**Appended to D141 · scripts/prototypes/hetsyn_probe_aligned.py · resolves the provisional flag D141 raised against itself**
+
+**WHAT D141 LEFT PROVISIONAL.** It attributed P=2's collapse under variable delay (0.963 -> 0.509) to a
+timescale mismatch, while flagging that the readout was the last 60 ms of the TRIAL — which under
+variable delay falls at a different absolute time per trial. That confound was not excluded, so the
+mechanism attribution was explicitly marked provisional.
+
+**IT IS NOW EXCLUDED.** Reading at a fixed lag after PROBE OFFSET (the natural choice, since a response
+follows the probe) reproduces the collapse exactly:
+
+| P | taus | **probe-aligned** | trial-end (see caveat) |
+|---|---|---|---|
+| 1 | (250) | 0.495 | 0.505 |
+| 2 | (500, 5) | **0.509** | 0.764 |
+| **3** | **(800, 250, 5)** | **0.690** | 0.824 |
+
+*(delays [200, 800], w=0.3, N=30, 144 trials, chance 0.500, decode averaged over 3 train/test
+partitions.)*
+
+**P=2 probe-aligned reads 0.509 — identical to D141's original 0.509.** The collapse is real and the
+timescale-mismatch attribution stands: with tau = 500 ms the surviving cue trace is exp(-200/500) = 0.67
+at the short delay and exp(-800/500) = 0.20 at the long one, and no single linear boundary spans both.
+
+⚠ **The trial-end column here is NOT a control and must not be read as one.** This run pads every trial
+to a common duration, so "last 60 ms" now falls at a read position that VARIES with delay — which is the
+confound itself, not its absence. D141's original structure ended each trial at probe offset, making it
+already probe-aligned, which is why probe-aligned reproduces it. **My comparison was mis-specified; only
+the probe-aligned column is interpretable.** The trial-end values (0.764, 0.824) EXCEED probe-aligned and
+I have no account of why a delay-dependent read position should help. Recorded as an unexplained loose
+thread, not a result.
+
+**THE `P ~ m + 1` PREDICTION HAS ITS FIRST SUPPORT.** D141 argued that P counts timescales in the MEMORY
+pathway, so a task with m delays needs ~m memory timescales. With two delays: **one memory timescale
+gives chance (P=2: 0.509), two give 0.690 (P=3).** The assignment bug is also fixed — cue synapses are
+now distributed across groups 0 and 1 while the probe uses group 2, where previously group 2 was never
+used at all.
+
+**THIS IS THE PROPERTY THE STUDY DEPENDS ON.** If P_crit tracks the number of delays, the interpolation
+threshold can be POSITIONED inside the swept range rather than hoped for — FRAMING's two-failure-mode
+problem solved by construction. This is the first evidence for it.
+
+**THREE THINGS THAT TEMPER IT.**
+1. **0.690 is far short of the 0.963 P=2 reached at a SINGLE fixed delay.** Two memory timescales do not
+   fully span two delays here. That may mean (800, 250) are badly chosen for delays of 200 and 800, or
+   that spanning needs more than one timescale per delay. **The taus were picked by hand and never
+   swept, so 0.690 is a LOWER BOUND on P=3, not its ceiling** — the same error the D139 amendment caught,
+   and it must not be repeated by quoting 0.690 as what P=3 achieves.
+2. **Single seed, 144 trials, hand-built feedforward.** The 0.18 step from P=2 to P=3 is large relative
+   to differences that have survived replication today, but it has not been replicated.
+3. The prototype remains a two-pathway feedforward network. **It still cannot test P > 3 meaningfully**,
+   since there are only cue and probe synapses to distribute.
+
+**NEXT: a tau sweep at P=3 to find what two memory timescales can actually achieve, then replication
+across seeds.** Run locally (PJM's machine, 6 workers) per the working split — this is the first result
+today that genuinely benefits from parallelism, and quoting a hand-picked tau as a ceiling is exactly
+what the D139 amendment was written to prevent.
+
+**LESSON.** A confound flagged is not a confound excluded. D141 named the readout-alignment problem
+honestly and then reasoned as though naming it were enough; excluding it took one run and changed nothing
+— but the entry's central claim was unsupported until it did. **Flagging a confound creates an
+obligation, not an exemption.**
+
+
 
 
 
