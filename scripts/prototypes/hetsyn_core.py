@@ -109,23 +109,28 @@ def run_stream(P, taus, lam, seed, w=0.3, N=30, n_seg=8, seg_ms=100, nch=8, n_tr
 
     target = sum(all segments) + lam * (final segment)
 
-    WHY THIS FORCES TAU COUNT RATHER THAN MAGNITUDE. With a single tau, the trace at read time weights
-    segment k by exp(-(T - t_k)/tau). Matching `alpha*sum(x) + beta*x_last` would require that weighting
-    to be simultaneously FLAT across the trial (for the sum) and PEAKED at the end (for recency). One
-    exponential cannot be both; two can approximate it. This is a provable requirement for the NUMBER of
-    time constants -- unlike DMTS, where the delay is dead time and one long tau simply survives it
-    (D142).
+    WHY THIS FORCES TAU COUNT RATHER THAN MAGNITUDE. Matching `alpha*sum(x) + beta*x_last` requires a
+    weighting that is simultaneously FLAT across the trial (for the sum) and PEAKED at the end (for
+    recency). A single exponential exp(-(T-t_k)/tau) cannot be both; two can approximate it. Contrast
+    DMTS (D142), where the delay is dead time so a timescale only has to SURVIVE it and one long tau
+    wins.  `lam` is the knob: 0 = pure accumulation, large = pure recency, only intermediate needs both.
 
-    `lam` is the knob: lam=0 is pure accumulation (one LONG tau optimal), lam large is pure recency (one
-    SHORT tau optimal), and only intermediate lam needs both. That gives a built-in falsification.
-
-    Evidence is delivered as a Poisson RATE modulation on a single channel group, so all neurons see the
-    same stream and the task is not about routing.
+    PERFORMANCE (rewritten 2026-07-29). The first version rebuilt the whole Brian2 network INSIDE the
+    trial loop -- 144 network constructions per job, ~36,000 across a 252-job run. Per-job cost was
+    ~400 s and RISING (batches of 10 went 668 s -> 1815 s) because Brian2's code-generation cache grows
+    monotonically within a worker process. Now the network is built ONCE and each trial is run by
+    restoring state and swapping the input spike times, which is what `EvoNet.behave` already does.
     """
     rng = np.random.default_rng(seed)
-    ev = rng.standard_normal((n_trials, n_seg))                  # independent evidence per segment
+    ev = rng.standard_normal((n_trials, n_seg))
     y = ev.sum(1) + lam * ev[:, -1]
     T = n_seg * seg_ms
+
+    b2.start_scope()
+    # NOTE: the default clock (0.1 ms) is retained deliberately. Raising dt to 1 ms is a 10x speedup on
+    # paper but SpikeGeneratorGroup rejects two spikes from one channel inside a timestep, and at
+    # 40-100 Hz per channel that happens; deduplicating at the coarser grid would silently drop real
+    # spikes and lower the effective rate, changing the stimulus. Not a safe optimisation.
     cur = " + ".join("I%d" % k for k in range(P))
     eqs = "\n".join(
         ["dv/dt = (-v + %s)/tau_m : 1 (unless refractory)" % cur]
@@ -134,14 +139,29 @@ def run_stream(P, taus, lam, seed, w=0.3, N=30, n_seg=8, seg_ms=100, nch=8, n_tr
     ns = dict(tau_m=20 * ms, tau_r=30 * ms)
     for k, t_ in enumerate(taus):
         ns["tau%d" % k] = t_ * ms
+    G = b2.NeuronGroup(N, eqs, threshold="v>1", reset="v=0; r+=1", refractory=2 * ms,
+                       method="euler", namespace=ns)
+    SG = b2.SpikeGeneratorGroup(nch, np.array([0]), np.array([0.0]) * ms)
+    objs = [G, SG]
+    for grp in range(P):
+        sub = np.arange(grp, N, P)          # input synapses split evenly across the P groups
+        if len(sub) == 0:
+            continue
+        S = b2.Synapses(SG, G, on_pre="I%d += w" % grp, namespace=dict(w=w))
+        S.connect(i=np.repeat(np.arange(nch), len(sub)), j=np.tile(sub, nch))
+        objs.append(S)
+    # Monitor dt left at 5 ms. Coarsening it to 20 ms was TRIED as an optimisation and REVERTED: it
+    # produced no measurable speedup (134-149 s/job either way in a quiet sandbox) and did shift the
+    # scores slightly (0.468/0.790 -> 0.460/0.756), so it cost comparability for nothing.
+    M = b2.StateMonitor(G, "r", record=True, dt=5 * ms, when="end")
+    objs.append(M)
+    net = b2.Network(*objs)
+    net.store("init")
+
     out = np.zeros((n_trials, N))
     for t in range(n_trials):
-        b2.start_scope()
-        G = b2.NeuronGroup(N, eqs, threshold="v>1", reset="v=0; r+=1", refractory=2 * ms,
-                           method="euler", namespace=ns)
         ii, tt = [], []
         for k in range(n_seg):
-            # evidence sets the Poisson rate in this segment (shifted positive)
             r_hz = max(2.0, rate_gain * (1.0 + 0.5 * ev[t, k]))
             for ch in range(nch):
                 m = max(1, rng.poisson(r_hz * seg_ms / 1000.0))
@@ -150,22 +170,11 @@ def run_stream(P, taus, lam, seed, w=0.3, N=30, n_seg=8, seg_ms=100, nch=8, n_tr
         ii = np.array(ii); tt = np.round(np.array(tt), 1)
         _, kp = np.unique(np.stack([ii, tt]), axis=1, return_index=True)
         ii, tt = ii[kp], tt[kp]
-        o = np.argsort(tt); ii, tt = ii[o], tt[o]
-        SG = b2.SpikeGeneratorGroup(nch, ii, tt * ms)
-        objs = [G, SG]
-        # input synapses split EVENLY across all P groups -- every group sees the same stream, so the
-        # only thing distinguishing them is their tau.
-        for grp in range(P):
-            sub = np.arange(grp, N, P)
-            if len(sub) == 0:
-                continue
-            S = b2.Synapses(SG, G, on_pre="I%d += w" % grp, namespace=dict(w=w))
-            S.connect(i=np.repeat(np.arange(nch), len(sub)), j=np.tile(sub, nch))
-            objs.append(S)
-        M = b2.StateMonitor(G, "r", record=True, dt=5 * ms)
-        objs.append(M)
-        b2.Network(*objs).run(T * ms)
-        out[t] = M.r[:, -12:].mean(1)                            # last 60 ms of the stream
+        o = np.argsort(tt)
+        net.restore("init")
+        SG.set_spikes(ii[o], tt[o] * ms)     # swap the stimulus WITHOUT rebuilding the network
+        net.run(T * ms)
+        out[t] = M.r[:, -12:].mean(1)     # last 60 ms
     return out, y
 
 

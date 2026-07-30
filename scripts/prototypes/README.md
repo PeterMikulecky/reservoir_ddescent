@@ -26,6 +26,17 @@ not as tools.
 | `hetsyn_phase_check.py` | commensurability EXCLUDED: incommensurate delays give the same P=1 > P=3 > P=2 ordering | D142 amendment |
 | `hetsyn_stream_demand.py` | **NOT YET RUN** -- does structured accumulate create a real demand for tau COUNT? | (pending) |
 
+**PERFORMANCE FIX (2026-07-29).** The first `run_stream` rebuilt the entire Brian2 network INSIDE the
+trial loop -- 144 constructions per job, ~36,000 across a 252-job run. Per-job cost was ~400 s and
+RISING (batches of 10 went 668 s -> 783 -> 634 -> 1815 -> 1708) because Brian2's code-generation cache
+grows monotonically within a worker process. Now the network is built ONCE and each trial swaps the
+input spikes via `SpikeGeneratorGroup.set_spikes` after `net.restore("init")` -- the same pattern
+`EvoNet.behave` uses. Measured ~80-150 s/job (sandbox timings are noisy), a 3-5x speedup that should
+also not drift. Also: pool `maxtasksperchild=4` as insurance, and a 5-value tau grid (180 jobs, not
+252). Two optimisations were TRIED AND REVERTED -- `dt=1 ms` (SpikeGeneratorGroup rejects two spikes
+from one channel in a timestep, and deduplicating would silently lower the effective rate) and a 20 ms
+monitor (no measurable gain, and it shifted the scores).
+
 `hetsyn_stream_demand.py` is the first task design in this project with an ANALYTIC PRE-CHECK: an
 ideal-observer calculation (no spikes, 4000 trials) showing the two-tau advantage peaks at lam~4
 (+0.081) and vanishes at lam=0 and lam=100 -- the inverted-U signature -- BEFORE any simulation was run.

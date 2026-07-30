@@ -41,7 +41,9 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from hetsyn_core import run_stream, decode_reg
 
-TAU_GRID = [20., 50., 120., 300., 700., 1600.]
+# 5 values, not 6: P=2 pairs drop from 15 to 10 and the run by a third. The grid spans 20-1600 ms and
+# we are looking for a SHAPE across lam, not an optimum, so one fewer interior point costs little.
+TAU_GRID = [20., 60., 200., 700., 1600.]
 
 
 def _job(args):
@@ -74,7 +76,11 @@ def main():
     t0 = time.time()
     if a.workers > 1:
         import multiprocessing as mp
-        with mp.get_context("spawn").Pool(a.workers) as pool:
+        # maxtasksperchild recycles workers periodically. Brian2's code-generation cache grows within a
+        # process, and the FIRST version of this script (which rebuilt the network every trial) showed
+        # batches of 10 jobs going 668 s -> 1815 s across a run. The rebuild is fixed, but recycling is
+        # cheap insurance against any residual growth.
+        with mp.get_context("spawn").Pool(a.workers, maxtasksperchild=4) as pool:
             res = []
             for k, r in enumerate(pool.imap_unordered(_job, jobs), 1):
                 res.append(r)
