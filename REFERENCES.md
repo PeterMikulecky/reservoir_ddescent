@@ -952,3 +952,104 @@ differences in P should become MORE legible after development, not less.** That 
 prediction, and it distinguishes this scheme from D124's task-driven iSTDP, which was measured as a
 headwind.
 
+# ADDITION to REFERENCES.md
+# New top-level section. Suggested placement: after "The dynamical working point" (added 2026-07-28),
+# which it extends and partly corrects.
+
+## Noise-induced timescale heterogeneity, and the coupling regime (2026-07-29)
+
+*Context: the project has moved to P = the number of independently tunable time constants (D139-D142).
+These two papers bear directly on that axis — one is the closest prior art to the study we are
+designing, and it names our contribution as its own stated limitation.*
+
+---
+
+**Rungratsameetaweemana, N., Kim, R., Chotibut, T., Sejnowski, T. J. (2025).** Random noise promotes
+slow heterogeneous synaptic dynamics important for robust working memory computation.
+*PNAS* 122(3): e2316745122.
+— 🔴🔴 **The closest prior art to our study, and the source of six concrete design changes.**
+
+Firing-rate RNNs (N=200, 80/20 E/I, Dale's principle) trained by BPTT on delayed match-to-sample, with
+the per-unit synaptic decay time constant `tau_i` as a TRAINABLE parameter. Random Gaussian noise
+injected during training through C independent channels.
+
+1. **THEIR STATED LIMITATION IS OUR CONTRIBUTION.** They write that the study lacks comparison with
+   learning algorithms not based on gradient descent, and that **FORCE cannot train the synaptic decay
+   time constant at all**. A GA can. This is a stronger framing of our gap than Perez-Nieves' "learned
+   in a lifetime OR found by evolution" — here the inability is specific and named.
+2. **TAU RANGE: 20-125 ms**, chosen to model heterogeneous receptor dynamics in cortex, initialised as
+   `sigmoid(N(0,1)) * 105 + 20`. ⚠ **Our D142 winner was tau = 1600 ms** — an order of magnitude
+   outside. Independent evidence that the grid-edge solution D142 found is exploiting something
+   unbiological, and an argument for capping the sweep near 125-500 ms.
+3. **⚠ THE HETEROGENEITY THAT MATTERS IS E/I, NOT ARBITRARY.** Noise selectively increases INHIBITORY
+   tau; `tau_inh - tau_exc` is maximised at the optimal noise level (C=10). And increasing `tau_exc`
+   actively IMPAIRS memory — at C=50 only 8/50 networks trained, but fixing `tau_exc` rescued that to
+   40/50. **Our P groups have NO E/I structure**: synapses are assigned to groups regardless of whether
+   the presynaptic cell is excitatory or inhibitory, so the axis cannot express the distinction that
+   carries the entire effect here. Cheapest fix: partition tau groups by E/I, or at minimum report tau
+   separately for E and I synapses.
+4. **NOISE STRUCTURE.** More channels with smaller variance beats fewer channels with larger variance.
+   Directly usable for the noise-driven development scheme, and consistent with Deco et al.'s finding
+   that strong noise degrades the structure-function fit.
+5. **⚠ THE EFFECT IS WORKING-MEMORY SPECIFIC, AND THIS IS A WARNING ABOUT OUR CURRENT TASK.** On their
+   go/no-go and CONTEXT-DEPENDENT SENSORY INTEGRATION tasks — neither with a delay — noise produced no
+   `tau_inh - tau_exc` modulation. **Their CTX task is close to our `accumulate`**: integration of noisy
+   evidence toward a decision. If tau heterogeneity buys nothing there, that is a caution about the
+   structured-accumulate demand test. The distinguishing feature is that our target has a sum-PLUS-
+   RECENCY structure theirs lacks, and the ideal-observer pre-check says that structure forces two
+   timescales (gap +0.081 at lam=4, vanishing at lam=0 and lam=100). But if the demand test comes back
+   flat, **this paper predicted it**, and the reason would be that integration tasks do not need tau
+   DIVERSITY the way maintenance tasks do.
+6. **THE MECHANISM, AND A MEASURE WE SHOULD ADOPT.** Linear stability analysis of the delay-period
+   steady state: noise pushes the top left eigenmodes toward the EDGE OF INSTABILITY, with slowly
+   relaxing modes acquiring nonzero IMAGINARY parts (oscillatory). They quantify robustness with the
+   **inverse participation ratio (IPR) of the LEFT eigenvectors** — low IPR meaning a delocalised
+   perturbation across many units is required to destabilise the steady state. Networks trained with
+   noise have significantly LOWER IPR, i.e. are more robust. Dominant units (nonzero in the top 50 left
+   eigenvectors) have significantly LARGER tau.
+   — This is a published, principled measure that connects directly to D127's participation-ratio
+   framing, and it is defined on the Jacobian rather than on activity, so it is a property of the
+   solution rather than of the stimulus.
+   — Their oscillatory slow modes also bear on the commensurability concern (D142 amendment): if slow
+   modes are oscillatory, delays related by small integer ratios can leave the network in comparable
+   phase.
+
+*Follow-up worth tracking: arXiv 2512.12767 analyses the Jacobian spectra of these trained networks as
+sparse non-Hermitian rectangular-block random matrices modified by heterogeneous decay timescales, with
+an inhibitory-core / excitatory-periphery motif emerging post-training.*
+
+---
+
+**Sanzeni, A., Histed, M. H., Brunel, N. (2022).** Emergence of Irregular Activity in Networks of
+Strongly Coupled Conductance-Based Neurons. *Phys. Rev. X* 12, 011044.
+— 🟡 **Primarily a CORRECTION to our own record, and a caution about biological realism.**
+
+The balanced state emerges dynamically in networks of CURRENT-based neurons when synaptic efficacy
+scales as 1/sqrt(K) with in-degree K. In CONDUCTANCE-based networks that argument fails: current
+fluctuations are SUPPRESSED at strong coupling, and asynchronous irregular activity with broad rate
+distributions requires a different efficacy scaling.
+
+⚠ **CORRECTION TO D138 AND TO THE 2026-07-28 REFERENCES SECTION.** Both describe our substrate as
+"conductance-based". **It is not.** `dv/dt = (-v + I_fast + I_slow + ...)/tau_m` adds synaptic currents
+directly rather than as `g*(V - E)`, so ours is CURRENT-based. The mislabel matters because it
+determines which scaling regime applies: `w0_for_density` uses `w0 ~ 1/sqrt(density*N)`, which is the
+correct choice for a current-based network. **The code is right; the label was wrong**, and the D138
+amendment's arithmetic is unaffected.
+
+— *What it costs us in realism:* real cortical synapses are conductance-based, so a current-based model
+is a simplification whose consequences this paper makes explicit. Worth stating in any write-up rather
+than leaving implicit, particularly since the project's claims are about spiking networks as a minimal
+model of cortex.
+
+---
+
+### Design changes these imply, pending the demand-test result
+
+| change | source | cost |
+|---|---|---|
+| Cap the tau sweep near 125-500 ms, not 1600 | PNAS §2 | none — narrows the grid |
+| Partition tau groups by E/I, or report tau separately for E and I | PNAS §3 | small |
+| Development noise: many channels, low variance | PNAS §4 + Deco 2013 | none |
+| Adopt IPR of left eigenvectors as a robustness measure | PNAS §6 | small; connects to D127 |
+| State the current-vs-conductance simplification explicitly | PRX | none |
+
