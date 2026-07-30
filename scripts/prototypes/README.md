@@ -23,7 +23,16 @@ not as tools.
 | `hetsyn_probe_aligned.py` | probe-aligned readout reproduces the P=2 collapse (0.509); P=3 recovers to 0.690 | D141 amendment |
 | `hetsyn_core.py` | **the single source** of `run_block` and `decode`; everything downstream imports it | (infrastructure) |
 | `hetsyn_tau_sweep.py` | swept properly, P=1 (0.707) BEATS P=3 (0.662) beats P=2 (0.534) -- `P ~ m+1` refuted | D142 |
-| `hetsyn_phase_check.py` | **NOT YET RUN** -- is D142 confounded by commensurate delay/tau lattices? | (pending) |
+| `hetsyn_phase_check.py` | commensurability EXCLUDED: incommensurate delays give the same P=1 > P=3 > P=2 ordering | D142 amendment |
+| `hetsyn_stream_demand.py` | **NOT YET RUN** -- does structured accumulate create a real demand for tau COUNT? | (pending) |
+
+`hetsyn_stream_demand.py` is the first task design in this project with an ANALYTIC PRE-CHECK: an
+ideal-observer calculation (no spikes, 4000 trials) showing the two-tau advantage peaks at lam~4
+(+0.081) and vanishes at lam=0 and lam=100 -- the inverted-U signature -- BEFORE any simulation was run.
+D126, D141 and the variable-delay design were all adopted on mechanistic arguments without such a check,
+and all three failed on contact. Smoke test at lam=4, 1 seed, 60 trials: P=1 r=0.485, P=2 r=0.796, a gap
+of +0.31 -- LARGER than the ideal observer's, because spiking noise punishes a compromise tau more than
+it punishes a matched pair.
 
 **A BUG IN `hetsyn_tau_sweep.py` INVALIDATED AN 80-JOB RUN (2026-07-29).** Cue synapses were held in a
 LIST and passed to `b2.run()`, whose magic collection scans the calling frame's VARIABLES -- so they were
