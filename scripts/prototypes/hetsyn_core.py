@@ -18,6 +18,16 @@ Conventions fixed here:
 """
 from __future__ import annotations
 
+# THREAD PINNING -- MUST precede the numpy import. NumPy's BLAS is multithreaded by default, so N
+# worker processes each spawn N threads and oversubscribe the machine. Measured 2026-07-29: a job took
+# 134 s single-process in a sandbox but ~312 s of wall time per job under a 6-worker pool on a ~6-core
+# machine -- a 2.3x loss to contention that no amount of per-job optimisation would have recovered.
+# Set here, in the module every prototype imports, rather than per-script where it gets forgotten.
+import os
+for _v in ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS",
+           "NUMEXPR_NUM_THREADS", "VECLIB_MAXIMUM_THREADS"):
+    os.environ.setdefault(_v, "1")
+
 import warnings
 import numpy as np
 

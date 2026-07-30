@@ -62,6 +62,19 @@ group 1 regardless of P, so for P>2 the extra groups are never used and those co
 Fixed understanding in D141: cue synapses must be distributed across the MEMORY groups; the probe needs
 only one fast group.
 
+**THREAD PINNING (2026-07-29).** `hetsyn_core.py` sets `OMP_NUM_THREADS` and friends to 1 BEFORE
+importing numpy, and every prototype inherits it through the import. Reason: NumPy's BLAS is
+multithreaded by default, so N worker processes each spawn N threads and oversubscribe the machine.
+Measured: a job took **134 s single-process** in a sandbox but **~312 s of wall time per job under a
+6-worker pool** on a ~6-core machine -- a 2.3x loss to contention that no per-job optimisation would
+have recovered. It lives in the shared module, not per-script, so it cannot be forgotten.
+
+**Standing rule earned here (2026-07-29): MEASURE IN THE CONFIGURATION YOU WILL RUN.** Three runtime
+estimates were wrong today by 15x, 5x and 2.3x. The first two were arithmetic; the third was measuring
+single-process and extrapolating to a parallel pool, which is a different machine state. D066 says
+measure rather than estimate; the extension is that a measurement in the wrong configuration is still
+an estimate.
+
 **Standing rule earned here (D140):** if a diagnostic produces a number that enters DECISIONS, its code
 is committed in the same commit as the entry. Otherwise the log accumulates claims whose evidence has
 been deleted.

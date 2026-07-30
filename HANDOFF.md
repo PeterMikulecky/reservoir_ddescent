@@ -299,6 +299,12 @@ Recorded so no future turn re-opens them by accident. Each is closed by evidence
   `w0` looked like the coupling knob; it was a diagonal through (mean, variance), which control the
   network timescale and the chaos boundary respectively and must move in OPPOSITE directions. Four
   entries reported that diagonal's shape as the substrate's. A parameter is not an axis.
+- **Measure runtime IN THE CONFIGURATION YOU WILL RUN.** Three estimates were wrong on 2026-07-29 by
+  15x, 5x and 2.3x. The last was a clean single-process measurement extrapolated to a 6-worker pool --
+  a different machine state, because NumPy's BLAS is multithreaded and N workers oversubscribe N cores.
+  Thread pinning now lives in `scripts/prototypes/hetsyn_core.py` ahead of the numpy import so every
+  prototype inherits it. D066 says measure rather than estimate; the extension is that a measurement in
+  the wrong configuration is still an estimate.
 - **Diagnostic code that produces a number entering DECISIONS is committed IN THE SAME COMMIT as the
   entry.** Most of the 2026-07-29 session's decisive measurements ran from /tmp and were irreproducible
   until the end of the day: the f-I gain that corrected D138, the J_eff sweep, the aggregation comparison
