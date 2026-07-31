@@ -7590,6 +7590,87 @@ derived, checked analytically for its predicted SIGNATURE before any simulation,
 difference was not the quality of the argument — D141's was just as plausible — but the existence of a
 cheap test the argument could fail.** State the signature, test for the signature, and only then build.
 
+### D144 — DEVELOPMENT IS REMOVED FROM THE DESIGN, AND THE GA BECOMES THE SOLE OPTIMIZER. Under the tau framework the computation comes from the time constants, not from organized weights, so the plasticity phase has nothing left to do — and if it were kept it would give the network a SECOND route to the task that confounds the P axis. Weights are fixed. The preconditions for an informative sweep are stated here.
+**2026-07-29 · Design decision · no code yet · supersedes the development scheme in the heterogeneous-timescale outline and narrows D104's scope**
+
+**WHAT DEVELOPMENT WAS FOR, AND WHY IT IS NO LONGER NEEDED.** Development (within-lifetime plasticity —
+Vogels iSTDP, D086/D087 — applied before the fitness assay) had one functional job in this project:
+**organize the weights**, turning a random connectivity matrix into something carrying task-relevant
+structure. That was necessary when the computation had to come from recurrent dynamics, and D092/D130
+established that random weights alone do not get there.
+
+**Under the tau framework the computation comes from the TIME CONSTANTS**, which the genome specifies
+directly. The prototype networks reach 0.85-0.89 with uniform weights, no plasticity, and no
+organization at all (D143) — the weights are effectively a fixed random projection and the tau values do
+the work. **The thing development was needed for is not needed here.**
+
+**⚠ AND KEEPING IT WOULD ACTIVELY DAMAGE THE MEASUREMENT.** A plasticity rule that reorganizes weights
+gives the network a SECOND route to the task, one that does not run through tau. Performance at each P
+would then be part timescale-count and part development, P_crit's meaning would blur, and the curve
+would no longer be a curve of the axis it claims to plot. **If any developmental process is reinstated
+it must be one that CANNOT substitute for tau** — homeostatic rate normalisation, say, rather than
+anything that builds task structure.
+
+**WHAT IS LOST, STATED PLAINLY.** D104 treats development as this project's implementation of Frank's
+mechanism (1), implicit regularization. Removing it removes that implementation, so **the only remaining
+source of implicit bias is the GA's own search dynamics.** That is a genuine narrowing of the framing and
+should be stated in any write-up rather than left implicit. It also sets aside the Deco noise-driven
+working-point scheme and the PNAS finding that tau heterogeneity EMERGES from training noise — under
+this design tau is specified genetically rather than emerging, which is a different (and simpler) claim.
+
+---
+
+**THE GA'S ROLE, NARROWED.** It is the sole optimizer, and its job is exactly: **at each P, find the
+best genome the substrate admits.** The curve is error against P with each point optimized — the
+standard ML setup (train to convergence at each model size, plot the result) with the GA in place of
+SGD. **No evolutionary claim is made or intended** (PJM, and consistent with FRAMING: the parameter axis
+is the INSTRUMENT).
+
+**THE GENOME.**
+- **The P time constants** — the axis.
+- **Synapse-to-group assignment** — which synapse carries which tau.
+- **Weights: FIXED, not evolvable.** Drawn once and shared across the population, like D131's xi
+  scaffold. Rationale: if weights evolve, the GA can improve performance at every P through weight
+  tuning alone, adding a second capacity dimension confounded with the first. The prototype shows
+  weights are not the bottleneck (uniform weights already give 0.85-0.89), so fixing them costs little
+  and buys an unambiguous axis. `P_gene` is then the tau count plus the assignment genes, nothing else.
+
+---
+
+**PRECONDITIONS FOR AN INFORMATIVE SWEEP, in order of how likely each is to ruin it.**
+
+1. **⚠ CONVERGENCE MUST BE DEMONSTRATED, NOT ASSUMED.** The failure that would silently invalidate
+   everything: poor convergence at high P read as substrate regularization. **We are unusually well
+   placed here — the ideal-observer calculation gives a COMPUTED CEILING at each P**, so convergence is
+   measurable as distance from that ceiling rather than judged from the shape of a plateau. **Make it a
+   gate: no P point enters the curve unless the GA reaches within a stated fraction of its own ceiling.**
+2. **Fix the weights.** Decided above, not yet implemented.
+3. **The peak must be RESOLVABLE.** Held-out gains at P=m were +0.05 to +0.12 with seed sd of 0.02-0.06
+   (D143). An interpolation peak could be smaller than that. **The seed-to-seed spread of CONVERGED GA
+   fitness is unknown and must be measured before the sweep is sized** — it sets the seed count.
+4. **Plot TEST error, not fitness.** D113's split already requires it. With development gone the only
+   overfitting available is tau fitted to the training trials — **which is precisely the mechanism
+   double descent needs**, so the split is doing real work here rather than serving as hygiene.
+5. **Decide the P range and m.** `P_crit = m` and m is ours to choose. At m=3 the interesting region is
+   P in 1-3 with the overparameterized arm running 4-12 — a short axis. Larger m gives more points below
+   the peak but costs performance everywhere (m=3 already drops P=1 to 0.66). Decide before writing the
+   sweep runner.
+
+**IMMEDIATE NEXT STEP: build the GA at a SINGLE P and measure two things** — distance from the ideal
+ceiling, and seed-to-seed spread of the converged result. Both are required to design the sweep, neither
+needs the full apparatus, and **if the GA cannot approach the ceiling at one P then nothing downstream
+matters.**
+
+**HONEST STATUS.** No GA exists. Every result so far uses hand-set taus from a 5-value grid. The task
+and axis are settled (D143) and that was the hard part, but the optimizer — the thing that makes each
+point on the curve mean "the best this P can do" — is entirely unbuilt.
+
+**LESSON.** A design element can become unnecessary without anyone deciding to remove it. Development
+quietly vanished from the prototypes because they had no plasticity phase, and it would have stayed gone
+by omission rather than by decision. **When a component disappears from the implementation, either
+restore it or record why it is not needed** — the second is a decision, the first is drift.
+
+
 
 
 

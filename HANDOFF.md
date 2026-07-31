@@ -40,7 +40,7 @@ re-derivation.
 
 ---
 
-## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-29 (D143 -- P_crit = m, positionable, survives spiking)*
+## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-29 (D144 -- development removed; GA is the sole optimizer, unbuilt)*
 
 **The recurrent network has never contributed anything, and that explains everything else.** D130
 ablated all recurrent connectivity (`genome.mag` zeroed, `tau_slow` retained) against intact networks on
@@ -151,16 +151,39 @@ design were all adopted on arguments just as plausible, with no cheap test they 
 ⚠ The script's "partial diagonal" verdict is WRONG: m=1 has no P=0 to compare against, so the argmax of
 its per-P gains cannot contain the predicted answer ("no gain anywhere", which is what it shows).
 
-**NEXT, in order.** (1) Check the SECOND-best P=3 cell against P=2's best from the persisted raw rows
-(`runs/prototypes/*.json`) -- arithmetic, not a re-run; the m=3 gain is 2.2 sd on 4 seeds. (2) Measure
-whether the diagonal survives capping tau at ~500 ms -- the PNAS biological range is 20-125 ms and our
-m=2 winner uses 1600, so **capping may weaken the effect and must be measured, not assumed.**
-(3) Only then design the sweep, with m as the knob positioning P_crit.
+**D143 IS CONFIRMED BY RE-ANALYSIS.** Per-seed consistency: the largest gain lands at P=m in **4/4
+seeds at m=2 and 3/4 at m=3** (D126's majority rule, and the check that matters most). Held-out-seed
+selection PRESERVES the gains (+0.051 at m=2, +0.125 at m=3) and the chosen taus are stable across
+selection methods. Second-best cells clear the previous P everywhere on the diagonal. **Plan against
+~+0.05 to +0.10, not +0.125** -- the held-out m=3 number rose above the biased one, which is noise in
+our favour rather than a real improvement.
 
-**ALSO CARRIED FROM THE 2026-07-29 REFERENCES SECTION:** partition tau groups by E/I (the PNAS effect
-lives entirely in `tau_inh - tau_exc`, and our groups have no E/I structure); development noise as many
-channels at low variance; and IPR of the LEFT eigenvectors as a robustness measure defined on the
-Jacobian rather than on activity.
+**CONFIGURATION SETTLED: 320 ms trial (8 x 40 ms), tau grid 20-125 ms.** Trial length and cap chosen
+TOGETHER from a stated ratio, `T/tau_max <~ 3`, with 8 segments to keep components separable. Below that
+ratio the "sum" component must be reconstructed from several short taus and P_crit stops tracking m.
+Side effects: 3.5x cheaper to simulate, and every tau is inside the PNAS biological band, so D142's
+grid-edge 1600 ms winner is impossible by construction.
+
+**D144: DEVELOPMENT IS REMOVED, AND THE GA IS THE SOLE OPTIMIZER.** Under the tau framework the
+computation comes from the TIME CONSTANTS, not from organized weights -- prototypes reach 0.85-0.89 with
+uniform weights and no plasticity -- so the plasticity phase has nothing left to do. **And keeping it
+would give the network a second route to the task that confounds the axis.** Cost, stated: D104 treated
+development as this project's implementation of implicit regularization, so the only remaining source of
+implicit bias is the GA's search dynamics. **Weights are FIXED** (drawn once, shared, like D131's xi) so
+that tau is the only thing selection can change.
+
+**NEXT ACTION: BUILD THE GA AT A SINGLE P.** Measure two things: distance from the ideal-observer
+ceiling, and seed-to-seed spread of the converged result. Both are needed to size the sweep, neither
+needs the full apparatus, and **if the GA cannot approach the ceiling at one P, nothing downstream
+matters.** No GA exists yet -- every result so far uses hand-set taus from a 5-value grid.
+
+**FIVE PRECONDITIONS FOR AN INFORMATIVE SWEEP (D144), in order of risk.** (1) **Convergence must be
+DEMONSTRATED**, gated on distance from the computed ideal ceiling -- poor convergence at high P read as
+substrate regularization is the failure that would silently invalidate everything. (2) Fix the weights.
+(3) **The peak must be resolvable**: held-out gains were +0.05-0.12 against seed sd 0.02-0.06, and the
+spread of CONVERGED GA fitness is unknown. (4) Plot TEST error, not fitness -- with development gone the
+only overfitting available is tau fitted to training trials, which is exactly the mechanism double
+descent needs. (5) Decide m and the P range before writing the sweep runner.
 
 **SUPERSEDED (kept for the record): `scripts/coupling_band_sweep.py`** at the study's real configuration (N=100, n_in=10),
 finer resolution across x1..x16, 8 genomes, reporting the D095 fitness AND ITS RELIABILITY -- a mean
