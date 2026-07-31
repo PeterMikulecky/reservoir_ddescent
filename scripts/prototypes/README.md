@@ -25,7 +25,8 @@ not as tools.
 | `hetsyn_tau_sweep.py` | swept properly, P=1 (0.707) BEATS P=3 (0.662) beats P=2 (0.534) -- `P ~ m+1` refuted | D142 |
 | `hetsyn_phase_check.py` | commensurability EXCLUDED: incommensurate delays give the same P=1 > P=3 > P=2 ordering | D142 amendment |
 | `hetsyn_stream_demand.py` | YES: inverted U, gap +0.055 at lam=4 (2.7 sd), shrinking to +0.019 / +0.027 at the extremes | (pending entry) |
-| `hetsyn_component_scaling.py` | **NOT YET RUN** -- does P_crit track the NUMBER OF TARGET COMPONENTS? | (pending) |
+| `hetsyn_component_scaling.py` | YES: only P=2/m=2 (+0.055, 2.7 sd) and P=3/m=3 (+0.096, 2.2 sd) clear 2 sd | D143 |
+| `hetsyn_analyze.py` | re-analyses a persisted run WITHOUT re-simulating: second-best cell, held-out-seed selection, per-seed consistency | (tool) |
 
 **RESULTS ARE NOW PERSISTED (PJM, 2026-07-29).** `hetsyn_core.save_results` writes the RAW per-job rows
 to a timestamped JSON under `runs/prototypes/`, so a sweep can be re-analysed -- second-best cells,
