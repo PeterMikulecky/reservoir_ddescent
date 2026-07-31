@@ -7670,6 +7670,78 @@ quietly vanished from the prototypes because they had no plasticity phase, and i
 by omission rather than by decision. **When a component disappears from the implementation, either
 restore it or record why it is not needed** — the second is a decision, the first is drift.
 
+### D145 — THE ANALYTIC PRE-CHECK GAVE A CONFIDENT WRONG ANSWER. At 320 ms with tau capped at 125 ms the diagonal is GONE — nothing clears 0.4 sd, every winning tau set sits at the grid edge, and m=2's seed sd rises fivefold to 0.104. The ratio constraint `T/tau_max <~ 3` holds in the ideal observer and FAILS in spiking.
+**2026-07-29 · Finding, negative + method correction · scripts/prototypes/hetsyn_component_scaling.py · runs/prototypes/20260731-123635_component_scaling.json · corrects the configuration adopted after D143**
+
+**WHAT WAS PREDICTED.** An ideal-observer scan over (trial length, tau cap) pairs identified
+**320 ms (8 x 40 ms) with a 20-125 ms grid** as the only configuration where the diagonal survives at
+both m=2 and m=3 AND every tau sits inside the PNAS biological band (20-125 ms). The constraint was
+stated as a ratio, `T/tau_max <~ 3`, with 8 segments to keep components separable. It was adopted
+directly on that basis.
+
+**WHAT HAPPENED.**
+
+| m | P=1 | P=2 | P=3 | gain@2 | gain@3 | best taus at P=3 |
+|---|---|---|---|---|---|---|
+| 1 | 0.781 | 0.785 | 0.790 | +0.004 (0.1 sd) | +0.005 (0.2 sd) | (20, 35, 125) |
+| 2 | 0.517 | 0.500 | 0.534 | **-0.017** | +0.034 (0.3 sd) | (20, 35, 125) |
+| 3 | 0.744 | 0.742 | 0.742 | -0.002 | -0.000 | (20, 55, 125) |
+
+**Nothing clears 0.4 sd.** The largest gain is +0.034 at 0.3 sd. This is not a weakened diagonal, it is
+noise. Two independent signatures confirm the configuration is broken rather than merely marginal:
+
+1. **Every winning tau set contains 125 — the grid edge.** At 800 ms the "sum" component wanted
+   tau=1600; here the longest available is 125 against a 320 ms trial, so the cap binds in every cell.
+   (Contrast D143, where the winners were an interior spread: (20, 1600) at m=2, (20, 60, 200) at m=3.)
+2. **m=2's seed sd rises to 0.104**, five times the 0.019-0.022 seen at 800 ms. Individual runs land
+   anywhere between chance and 0.65 — the task has moved close to the noise floor.
+
+**WHY THE IDEAL OBSERVER MISSED IT.** It has no spiking noise and no readout filter. Two effects it
+cannot represent:
+- **Shorter segments mean fewer spikes per segment.** At 40 ms rather than 100 ms, each segment's
+  evidence is carried by ~40% as many spikes, so the per-segment SNR falls and the whole task moves
+  toward the floor.
+- **The effective integration window is shorter than tau suggests.** The `tau_r` = 30 ms readout filter
+  and the threshold nonlinearity both truncate integration, so a nominal tau=125 ms integrates over
+  materially less than 125 ms of evidence. `T/tau_max = 2.6` satisfied the analytic ratio while the
+  EFFECTIVE ratio was much larger.
+
+**THE CORRECTION TO THE METHOD, WHICH MATTERS MORE THAN THE CONFIGURATION.** The analytic pre-check has
+been this design's main safeguard — it is what distinguished D143's task from the four designs that
+failed on contact (D126, D141, and the variable-delay design). **This is the first time it gave a
+confident wrong answer**, and the failure mode is specific and worth stating: *the ideal observer is a
+reliable guide to whether a demand EXISTS, and an unreliable guide to whether that demand is MEASURABLE
+in a noisy substrate.* It correctly predicted the diagonal at 800 ms and correctly predicted the shape
+at each m; it cannot predict the noise floor, and the noise floor is what killed this configuration.
+
+**Revised rule: use the analytic check to rule designs OUT, not to rule them IN.** A design that fails
+it is dead cheaply. A design that passes it still needs the spiking measurement before adoption — which
+is what happened here, and is why this cost one run rather than a sweep.
+
+**WHERE THIS LEAVES THE CONFIGURATION.** The **800 ms / uncapped** configuration (D143) remains the only
+one demonstrated to work in spiking, and its winning taus reach 1600 ms — above the PNAS band and above
+the long tail of the Allen synaptic data. **The biological tau cap and a measurable diagonal are
+currently incompatible**, and that is a real tension, not an oversight to be fixed by a better derivation.
+
+**DECISION (PJM): find an intermediate configuration BY MEASURING.** The analytic scan has just proven
+unreliable for this question, so the (trial length, tau cap) pair should be found empirically — a small
+grid of configurations run in spiking, reading the diagonal directly. Candidates between the two known
+points: 800 ms with a 500 ms cap; 600 ms with 250-500; 480 ms (8 x 60) with 250. Longer segments should
+also be preferred over shorter at equal trial length, since segment duration drives per-segment SNR.
+
+⚠ **AND THE GA MAY MOVE THE ANSWER AGAIN (PJM).** Every configuration result so far uses HAND-SET taus
+from a 5-value grid. A GA searches continuously and will find tau combinations the grid cannot express,
+so **the configuration that best supports a diagonal under grid search is not necessarily the one that
+best supports it under selection.** The configuration scan should therefore be treated as provisional
+until at least one GA arm has run, and the eventual configuration decision may need revisiting after
+D144's single-P GA test.
+
+**LESSON.** An analytic check earns its keep by being cheap and falsifiable, not by being right. This one
+has now killed three bad designs and endorsed one bad configuration — a good record that does not make
+it authoritative. **A cheap test is a filter, not an oracle: it should gate what you bother to measure,
+never replace measuring.**
+
+
 
 
 

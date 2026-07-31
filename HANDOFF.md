@@ -40,7 +40,7 @@ re-derivation.
 
 ---
 
-## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-29 (D144 -- development removed; GA is the sole optimizer, unbuilt)*
+## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-29 (D145 -- the analytic check gave a wrong answer; configuration by measurement)*
 
 **The recurrent network has never contributed anything, and that explains everything else.** D130
 ablated all recurrent connectivity (`genome.mag` zeroed, `tau_slow` retained) against intact networks on
@@ -158,11 +158,20 @@ selection methods. Second-best cells clear the previous P everywhere on the diag
 ~+0.05 to +0.10, not +0.125** -- the held-out m=3 number rose above the biased one, which is noise in
 our favour rather than a real improvement.
 
-**CONFIGURATION SETTLED: 320 ms trial (8 x 40 ms), tau grid 20-125 ms.** Trial length and cap chosen
-TOGETHER from a stated ratio, `T/tau_max <~ 3`, with 8 segments to keep components separable. Below that
-ratio the "sum" component must be reconstructed from several short taus and P_crit stops tracking m.
-Side effects: 3.5x cheaper to simulate, and every tau is inside the PNAS biological band, so D142's
-grid-edge 1600 ms winner is impossible by construction.
+**⚠ THE CONFIGURATION IS NOT SETTLED -- D145 REVERSED IT.** The 320 ms / cap-125 configuration, chosen
+from an ideal-observer ratio, **collapsed in spiking**: nothing cleared 0.4 sd, every winning tau set
+sat at the grid edge, and m=2's seed sd rose fivefold to 0.104. The ideal observer cannot represent
+fewer spikes per segment at 40 ms segments, nor the effective integration window shortened by the
+`tau_r`=30 ms filter and the threshold nonlinearity.
+
+**METHOD CORRECTION, which matters more than the configuration: the analytic pre-check is a reliable
+guide to whether a demand EXISTS and an unreliable guide to whether it is MEASURABLE. Use it to rule
+designs OUT, never to rule them IN.** It killed three bad designs and endorsed one bad configuration --
+a good record that does not make it authoritative.
+
+**Only 800 ms / uncapped is demonstrated to work (D143), and its winning taus reach 1600 ms** -- above
+the PNAS band and above the Allen synaptic long tail. The biological cap and a measurable diagonal are
+currently incompatible; that is a real tension, not a derivation error.
 
 **D144: DEVELOPMENT IS REMOVED, AND THE GA IS THE SOLE OPTIMIZER.** Under the tau framework the
 computation comes from the TIME CONSTANTS, not from organized weights -- prototypes reach 0.85-0.89 with
@@ -172,7 +181,15 @@ development as this project's implementation of implicit regularization, so the 
 implicit bias is the GA's search dynamics. **Weights are FIXED** (drawn once, shared, like D131's xi) so
 that tau is the only thing selection can change.
 
-**NEXT ACTION: BUILD THE GA AT A SINGLE P.** Measure two things: distance from the ideal-observer
+**NEXT ACTION: `scripts/prototypes/hetsyn_config_scan.py --workers 6`** (450 jobs, ~1.5-2 h). Finds the
+(trial, cap) pair BY MEASURING, laddering between the two anchors -- 800/cap500, 800/cap250, 480/cap250
+at 60 ms segments -- and scoring each by how far the gain at P=m exceeds the best off-diagonal gain in
+pooled seed sd. ⚠ **PROVISIONAL BY CONSTRUCTION (PJM):** every configuration result so far uses hand-set
+taus from a 5-value grid, and a GA searches continuously, so the configuration that best supports a
+diagonal under GRID SEARCH need not be the one that best supports it under SELECTION. Expect to revisit
+after the single-P GA test.
+
+**THEN: BUILD THE GA AT A SINGLE P.** Measure two things: distance from the ideal-observer
 ceiling, and seed-to-seed spread of the converged result. Both are needed to size the sweep, neither
 needs the full apparatus, and **if the GA cannot approach the ceiling at one P, nothing downstream
 matters.** No GA exists yet -- every result so far uses hand-set taus from a 5-value grid.

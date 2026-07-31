@@ -28,7 +28,15 @@ not as tools.
 | `hetsyn_component_scaling.py` | YES: only P=2/m=2 (+0.055, 2.7 sd) and P=3/m=3 (+0.096, 2.2 sd) clear 2 sd | D143 |
 | `hetsyn_analyze.py` | re-analyses a persisted run WITHOUT re-simulating: second-best cell, held-out-seed selection, per-seed consistency | (tool) |
 
-**RECONFIGURED 2026-07-29: 320 ms trial (8 x 40 ms), tau grid 20-125 ms.** Trial length and tau cap were
+⚠ **THE 320 ms / cap 125 CONFIGURATION FAILED IN SPIKING (D145).** Nothing cleared 0.4 sd, every
+winning tau set sat at the grid edge, and m=2's seed sd rose fivefold to 0.104. The ideal observer
+cannot represent the two effects that killed it: fewer spikes per segment at 40 ms segments, and an
+effective integration window shortened by the tau_r=30 ms filter and the threshold nonlinearity. **The
+analytic check is a reliable guide to whether a demand EXISTS and an unreliable guide to whether it is
+MEASURABLE** -- use it to rule designs OUT, never to rule them IN. `hetsyn_config_scan.py` now finds the
+(trial, cap) pair by MEASURING, laddering between the two known anchors.
+
+**THE FAILED RATIONALE, kept for the record: 320 ms trial (8 x 40 ms), tau grid 20-125 ms.** Trial length and tau cap were
 chosen TOGETHER from a stated ratio rather than capping tau for realism and leaving the trial where it
 happened to be (D139's lesson). Analytic scan of (trial, cap) pairs:
 
