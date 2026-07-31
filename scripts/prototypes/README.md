@@ -28,6 +28,22 @@ not as tools.
 | `hetsyn_component_scaling.py` | YES: only P=2/m=2 (+0.055, 2.7 sd) and P=3/m=3 (+0.096, 2.2 sd) clear 2 sd | D143 |
 | `hetsyn_analyze.py` | re-analyses a persisted run WITHOUT re-simulating: second-best cell, held-out-seed selection, per-seed consistency | (tool) |
 
+**RECONFIGURED 2026-07-29: 320 ms trial (8 x 40 ms), tau grid 20-125 ms.** Trial length and tau cap were
+chosen TOGETHER from a stated ratio rather than capping tau for realism and leaving the trial where it
+happened to be (D139's lesson). Analytic scan of (trial, cap) pairs:
+
+    trial            cap   m=2 peak   m=3 peak
+    800 ms (8x100)   250     P=2         P=3     diagonal holds, but tau=250 exceeds the PNAS band
+    400 ms (8x50)    125     P=3 (X)     P=3     near-miss: m=2 gains +0.037 vs +0.042, essentially tied
+    320 ms (8x40)    125     P=2         P=3     HOLDS, and 20-125 ms is exactly the PNAS range
+    300 ms (6x50)    125     P=2         P=3 (X) only 6 segments: the middle bump overlaps the others
+
+The constraint is a RATIO, **T/tau_max <~ 3**, with enough segments (8, not 6) to keep the components
+separable. Below that the "sum" component cannot be captured by one long tau and must be reconstructed
+from several short ones, so P_crit stops tracking m and starts tracking how many short taus fake a long
+one -- the axis measuring the wrong thing. Side benefits: 3.5x cheaper to simulate (~35-41 s/job vs
+~134 s), and the D142 embarrassment of a 1600 ms winner is gone by construction.
+
 **RESULTS ARE NOW PERSISTED (PJM, 2026-07-29).** `hetsyn_core.save_results` writes the RAW per-job rows
 to a timestamped JSON under `runs/prototypes/`, so a sweep can be re-analysed -- second-best cells,
 different statistics, plots -- without re-simulating. Every prototype result before this lived only in a

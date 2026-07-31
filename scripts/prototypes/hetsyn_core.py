@@ -135,7 +135,8 @@ def stream_target(ev, n_comp, lam=4.0):
     if n_comp >= 2:
         y = y + lam * ev[:, -1]
     if n_comp >= 3:
-        y = y + lam * ev[:, 3:6].sum(1)
+        n = ev.shape[1]
+        y = y + lam * ev[:, n // 2 - 1:n // 2 + 2].sum(1)   # middle three, tracks n_seg
     return y
 
 

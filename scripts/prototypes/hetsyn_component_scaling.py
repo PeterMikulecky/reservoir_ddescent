@@ -37,13 +37,26 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # hetsyn_core pins BLAS threads (before numpy) and provides run_stream / decode_reg / save_results.
 from hetsyn_core import run_stream, decode_reg, save_results
 
-TAU_GRID = [20., 60., 200., 700., 1600.]
+# TAU GRID AND TRIAL LENGTH ARE CHOSEN TOGETHER, from a stated ratio -- not capped for realism with the
+# trial left where it happened to be (D139's lesson). Analytic scan of (trial, cap) pairs:
+#
+#   trial            cap   m=2 peak   m=3 peak
+#   800 ms (8x100)   250     P=2         P=3      diagonal holds, but tau=250 is above the PNAS band
+#   400 ms (8x50)    125     P=3 (X)     P=3      near-miss: m=2 gains +0.037 vs +0.042, essentially tied
+#   320 ms (8x40)    125     P=2         P=3      HOLDS, and 20-125 ms is exactly the PNAS range
+#   300 ms (6x50)    125     P=2         P=3 (X)  only 6 segments: the middle bump overlaps the others
+#
+# The constraint is a RATIO, T/tau_max <~ 3, with enough segments (8, not 6) to keep the three
+# components separable. 320 ms is also 2.5x cheaper to simulate than 800 ms.
+TAU_GRID = [20., 35., 55., 85., 125.]
+SEG_MS, N_SEG = 40, 8
 
 
 def _job(args):
     """TOP-LEVEL and picklable -- Windows spawn cannot ship a closure (D007)."""
     n_comp, P, taus, seed = args
-    X, y = run_stream(P, list(taus), 4.0, seed, n_comp=n_comp)
+    X, y = run_stream(P, list(taus), 4.0, seed, n_comp=n_comp,
+                      n_seg=N_SEG, seg_ms=SEG_MS)
     return n_comp, P, taus, seed, decode_reg(X, y)
 
 
@@ -62,8 +75,10 @@ def main():
                 for s in range(a.seeds):
                     jobs.append((m, P, taus, s))
 
-    print("components=%s  P=%s  seeds=%d  tau grid=%s" % (a.comps, a.ps, a.seeds,
-                                                          [int(t) for t in TAU_GRID]))
+    print("components=%s  P=%s  seeds=%d" % (a.comps, a.ps, a.seeds))
+    print("trial = %d x %d ms = %d ms; tau grid %s (T/tau_max = %.1f)"
+          % (N_SEG, SEG_MS, N_SEG * SEG_MS, [int(t) for t in TAU_GRID],
+             N_SEG * SEG_MS / max(TAU_GRID)))
     print("jobs=%d  workers=%d   (BLAS threads pinned to 1 in hetsyn_core)" % (len(jobs), a.workers))
     print("Every P swept over its OWN taus -- each compared at its best (D142's lesson).")
     print("Looking for a DIAGONAL: gap peaking at P = m.\n")
@@ -83,7 +98,8 @@ def main():
             print("   %d/%d [%.0fs]" % (k, len(jobs), time.time() - t0), flush=True)
 
     save_results("component_scaling", res,
-                 meta=dict(comps=a.comps, ps=a.ps, seeds=a.seeds, tau_grid=TAU_GRID))
+                 meta=dict(comps=a.comps, ps=a.ps, seeds=a.seeds, tau_grid=TAU_GRID,
+                           seg_ms=SEG_MS, n_seg=N_SEG))
 
     best = {}
     print("\n   m  |  P  | best taus            | mean  |  sd   | gap vs P-1 | n sd")
