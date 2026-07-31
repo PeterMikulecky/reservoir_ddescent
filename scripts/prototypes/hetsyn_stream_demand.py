@@ -39,7 +39,7 @@ import argparse, itertools, os, sys, time
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from hetsyn_core import run_stream, decode_reg
+from hetsyn_core import run_stream, decode_reg, save_results
 
 # 5 values, not 6: P=2 pairs drop from 15 to 10 and the run by a third. The grid spans 20-1600 ms and
 # we are looking for a SHAPE across lam, not an optimum, so one fewer interior point costs little.
@@ -91,6 +91,9 @@ def main():
         for k, j in enumerate(jobs, 1):
             res.append(_job(j))
             print("   %d/%d [%.0fs]" % (k, len(jobs), time.time() - t0), flush=True)
+
+    save_results("stream_demand", res,
+                 meta=dict(lams=a.lams, seeds=a.seeds, tau_grid=TAU_GRID))
 
     print("\n  lam  | P=1 best (tau)        | P=2 best (taus)            |  gap   | pooled sd | n sd")
     print("  -----+-----------------------+----------------------------+--------+-----------+------")

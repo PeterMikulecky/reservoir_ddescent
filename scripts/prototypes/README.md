@@ -24,7 +24,24 @@ not as tools.
 | `hetsyn_core.py` | **the single source** of `run_block` and `decode`; everything downstream imports it | (infrastructure) |
 | `hetsyn_tau_sweep.py` | swept properly, P=1 (0.707) BEATS P=3 (0.662) beats P=2 (0.534) -- `P ~ m+1` refuted | D142 |
 | `hetsyn_phase_check.py` | commensurability EXCLUDED: incommensurate delays give the same P=1 > P=3 > P=2 ordering | D142 amendment |
-| `hetsyn_stream_demand.py` | **NOT YET RUN** -- does structured accumulate create a real demand for tau COUNT? | (pending) |
+| `hetsyn_stream_demand.py` | YES: inverted U, gap +0.055 at lam=4 (2.7 sd), shrinking to +0.019 / +0.027 at the extremes | (pending entry) |
+| `hetsyn_component_scaling.py` | **NOT YET RUN** -- does P_crit track the NUMBER OF TARGET COMPONENTS? | (pending) |
+
+**RESULTS ARE NOW PERSISTED (PJM, 2026-07-29).** `hetsyn_core.save_results` writes the RAW per-job rows
+to a timestamped JSON under `runs/prototypes/`, so a sweep can be re-analysed -- second-best cells,
+different statistics, plots -- without re-simulating. Every prototype result before this lived only in a
+terminal buffer, which meant hours of re-running to answer arithmetic.
+
+**THE DIAGONAL, derived analytically before any simulation** (ideal observer, 4000 trials):
+
+    target         | P=1   | P=2   | P=3   | 2-1    | 3-2
+    1 component    | 0.998 | 1.000 | 1.000 | +0.002 | +0.000
+    2 components   | 0.919 | 1.000 | 1.000 | +0.081 | +0.000
+    3 components   | 0.874 | 0.884 | 0.983 | +0.011 | +0.098
+
+The advantage appears exactly at P = m and vanishes beyond it, so **P_crit = m and is POSITIONABLE by
+task construction** -- the property D141's `P ~ m + 1` claimed for delay count and failed to deliver.
+The difference is that this one was checked analytically first and would have died for twenty lines.
 
 **PERFORMANCE FIX (2026-07-29).** The first `run_stream` rebuilt the entire Brian2 network INSIDE the
 trial loop -- 144 constructions per job, ~36,000 across a 252-job run. Per-job cost was ~400 s and

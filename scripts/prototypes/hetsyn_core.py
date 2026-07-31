@@ -113,8 +113,34 @@ def run_block(P, taus, delays, seed, w=0.3, N=30, per_cat=15, nch=8, n_trials=14
     return out, rel
 
 
+def stream_target(ev, n_comp, lam=4.0):
+    """The target for an m-COMPONENT stream task. Components live at DISTINCT timescales by design.
+
+      m=1 : sum(all segments)                      -- flat weighting, wants one LONG tau
+      m=2 : + lam * (final segment)                -- peaked at the end, wants a SHORT tau
+      m=3 : + lam * (sum of the middle 3 segments) -- a bump in the middle, wants an INTERMEDIATE tau
+
+    Analytic pre-check (ideal observer, 4000 trials, tau grid 20-4000 ms) shows the advantage appears
+    exactly at P = m and vanishes beyond it:
+
+        target         | P=1   | P=2   | P=3   | 2-1    | 3-2
+        1 component    | 0.998 | 1.000 | 1.000 | +0.002 | +0.000
+        2 components   | 0.919 | 1.000 | 1.000 | +0.081 | +0.000
+        3 components   | 0.874 | 0.884 | 0.983 | +0.011 | +0.098
+
+    So P_crit = m, DERIVED rather than analogised -- the property D141's `P ~ m + 1` claimed for delay
+    count and failed to deliver. Adding a component moves the threshold, so P_crit is positionable.
+    """
+    y = ev.sum(1)
+    if n_comp >= 2:
+        y = y + lam * ev[:, -1]
+    if n_comp >= 3:
+        y = y + lam * ev[:, 3:6].sum(1)
+    return y
+
+
 def run_stream(P, taus, lam, seed, w=0.3, N=30, n_seg=8, seg_ms=100, nch=8, n_trials=144,
-               rate_gain=40.0):
+               rate_gain=40.0, n_comp=2):
     """STRUCTURED ACCUMULATE: evidence arrives throughout the trial; the target needs TWO timescales.
 
     target = sum(all segments) + lam * (final segment)
@@ -133,7 +159,7 @@ def run_stream(P, taus, lam, seed, w=0.3, N=30, n_seg=8, seg_ms=100, nch=8, n_tr
     """
     rng = np.random.default_rng(seed)
     ev = rng.standard_normal((n_trials, n_seg))
-    y = ev.sum(1) + lam * ev[:, -1]
+    y = stream_target(ev, n_comp, lam)
     T = n_seg * seg_ms
 
     b2.start_scope()
@@ -211,3 +237,27 @@ def decode(X, y, n_part=3):
     return float(np.mean(acc))
 
 
+
+
+# ==================================================================================================
+# PERSISTENCE -- results must survive the terminal window (PJM, 2026-07-29)
+# ==================================================================================================
+def save_results(name, rows, meta=None, out_dir="runs/prototypes"):
+    """Write raw per-job results to a timestamped JSON, and tee a copy of stdout alongside it.
+
+    Every prototype result up to now lived only in a terminal buffer. Re-analysing a sweep (checking a
+    second-best cell, recomputing a statistic, plotting) meant RE-RUNNING it -- hours, for arithmetic.
+    The main project has `ddescent.runlog.tee` for this; the prototypes never used it.
+
+    Saves the RAW per-job rows, not the summary table, so any later question can be asked of the data
+    without re-simulating.
+    """
+    import datetime, json, pathlib
+    d = pathlib.Path(out_dir); d.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+    path = d / ("%s_%s.json" % (stamp, name))
+    payload = dict(name=name, timestamp=stamp, meta=meta or {},
+                   rows=[list(r) if isinstance(r, tuple) else r for r in rows])
+    path.write_text(json.dumps(payload, indent=1, default=float), encoding="utf-8")
+    print("\n[raw results saved: %s  (%d rows)]" % (path, len(rows)))
+    return str(path)
