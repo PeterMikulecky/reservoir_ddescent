@@ -40,7 +40,7 @@ re-derivation.
 
 ---
 
-## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-29 (D142 -- P does NOT give a first descent; commensurability unexcluded)*
+## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-29 (D143 -- P_crit = m, positionable, survives spiking)*
 
 **The recurrent network has never contributed anything, and that explains everything else.** D130
 ablated all recurrent connectivity (`genome.mag` zeroed, `tau_slow` retained) against intact networks on
@@ -132,32 +132,35 @@ N=30. **N=24 and N=30 gave IDENTICAL results**, independent support for the sizi
 FIXED before the sweep, not tuned after -- "adjust the weight and re-run" is the reactive-easing move
 D136 closed the parameter space to prevent.
 
-**D142: SWEPT PROPERLY, P DOES NOT PRODUCE A FIRST DESCENT.** With every condition given its own best
-tau (4 seeds, delays [200,800]): **P=1 0.707 > P=3 0.662 > P=2 0.534.** Non-monotone with P=1 on top --
-`P ~ m + 1` is REFUTED. D141's rising 0.495/0.509/0.690 came from HAND-PICKED taus; swept, P=1 goes
-0.495 -> 0.707. **The apparent first descent was P=1 being handicapped** -- the same error the D139
-amendment caught, recurring two entries later.
+**D143: P_crit = m, AND IT SURVIVES SPIKING.** The structured-accumulate task -- evidence arriving
+throughout the trial, target built from components at distinct timescales -- produces a DIAGONAL: the
+gain from an extra time constant appears exactly at P = m and vanishes beyond it. Analytically
+(ideal observer): m=2 gives +0.081 at P=2 and +0.000 at P=3; m=3 gives +0.011 at P=2 and +0.098 at P=3.
+In spiking (N=30, 4 seeds, every P swept over its own taus): **the only two cells clearing 2 sd are
+P=2 for m=2 (+0.055, 2.7 sd) and P=3 for m=3 (+0.096, 2.2 sd)**, everything off-diagonal under 1.1 sd.
+The winning taus confirm the mechanism -- (20, 1600) at m=2, a SPREAD (20, 60, 200) at m=3.
 
-**What matters is tau MAGNITUDE, not tau COUNT.** tau=1600 ms is P=1's best and the long constant in all
-four top P=3 rows: at 1600 ms the cue trace is 0.61 at the long delay and 0.88 at the short one, so the
-amplitude difference nearly vanishes and one boundary works. Not spanning -- making the delays
-irrelevant. P=2 is worst because it diverts half the cue synapses to the fast group and gains nothing;
-the ordering 1 > 3 > 2 is what DRIVE-SPLITTING predicts, not timescale coverage.
+**So P_crit = m, with m under our control: adding a target component MOVES the interpolation
+threshold.** That is FRAMING's two-failure-mode problem solved by construction, and the property D141's
+`P ~ m + 1` claimed for delay count and failed to deliver.
 
-**⚠ AND THE TABLE MAY BE A LATTICE ARTIFACT (PJM).** Delays [200,400,800] and taus [100..1600] are all
-powers of two apart. Aliasing or ENTRAINMENT (tau_m=20 ms, 40 Hz input) could let the readout use PHASE
-rather than trace amplitude. **Not excluded.**
+**Why this design held where four others failed:** it was DERIVED and its predicted SIGNATURE was
+checked analytically -- for twenty lines -- before anything was built. D126, D141 and the variable-delay
+design were all adopted on arguments just as plausible, with no cheap test they could fail.
 
-**NEXT ACTION: `scripts/prototypes/hetsyn_phase_check.py --workers 6`** (~28 min, 96 jobs). Test (A) is
-the cheap discriminator -- 400 vs 420 ms at a single delay: if a 5% delay change barely moves performance
-the mechanism is amplitude, not phase. Test (B) re-runs the P ordering on incommensurate delays
-(230, 370, 610) with taus off the powers-of-two lattice. **If the ordering changes, D142's table is an
-artifact; if it holds, D142 stands.**
+⚠ The script's "partial diagonal" verdict is WRONG: m=1 has no P=0 to compare against, so the argmax of
+its per-P gains cannot contain the predicted answer ("no gain anywhere", which is what it shows).
 
-**AND THE LARGER FACT:** every condition in D142 is far below the **0.963** P=2 reached at a SINGLE fixed
-delay. Variable delay costs ~0.25 at every P -- larger than any difference between P values. **The
-delay-based task was adopted because it appeared to create demand for multiple timescales. It does not.
-No first descent has been observed on any P definition in this project.**
+**NEXT, in order.** (1) Check the SECOND-best P=3 cell against P=2's best from the persisted raw rows
+(`runs/prototypes/*.json`) -- arithmetic, not a re-run; the m=3 gain is 2.2 sd on 4 seeds. (2) Measure
+whether the diagonal survives capping tau at ~500 ms -- the PNAS biological range is 20-125 ms and our
+m=2 winner uses 1600, so **capping may weaken the effect and must be measured, not assumed.**
+(3) Only then design the sweep, with m as the knob positioning P_crit.
+
+**ALSO CARRIED FROM THE 2026-07-29 REFERENCES SECTION:** partition tau groups by E/I (the PNAS effect
+lives entirely in `tau_inh - tau_exc`, and our groups have no E/I structure); development noise as many
+channels at low variance; and IPR of the LEFT eigenvectors as a robustness measure defined on the
+Jacobian rather than on activity.
 
 **SUPERSEDED (kept for the record): `scripts/coupling_band_sweep.py`** at the study's real configuration (N=100, n_in=10),
 finer resolution across x1..x16, 8 genomes, reporting the D095 fitness AND ITS RELIABILITY -- a mean
@@ -299,12 +302,14 @@ Recorded so no future turn re-opens them by accident. Each is closed by evidence
   `w0` looked like the coupling knob; it was a diagonal through (mean, variance), which control the
   network timescale and the chaos boundary respectively and must move in OPPOSITE directions. Four
   entries reported that diagonal's shape as the substrate's. A parameter is not an axis.
-- **Measure runtime IN THE CONFIGURATION YOU WILL RUN.** Three estimates were wrong on 2026-07-29 by
-  15x, 5x and 2.3x. The last was a clean single-process measurement extrapolated to a 6-worker pool --
-  a different machine state, because NumPy's BLAS is multithreaded and N workers oversubscribe N cores.
-  Thread pinning now lives in `scripts/prototypes/hetsyn_core.py` ahead of the numpy import so every
-  prototype inherits it. D066 says measure rather than estimate; the extension is that a measurement in
-  the wrong configuration is still an estimate.
+- **Measure runtime IN THE CONFIGURATION YOU WILL RUN, and do not diagnose a gap you have not
+  confirmed exists.** Four runtime claims were wrong on 2026-07-29: estimates off by 15x and 5x, then a
+  BLAS-contention DIAGNOSIS inferred by comparing a single-process timing against a multi-worker
+  wall-clock rate -- two different quantities. Thread pinning was applied and produced no speedup
+  (~53 s/job vs ~56 s). The real cost is Python interpreter overhead per timestep; untested levers are
+  batching trials into one `net.run()` and the cython codegen target. D066 says measure rather than
+  estimate; the extensions are that a measurement in the wrong configuration is still an estimate, and
+  that an explanation for a gap is worthless until the gap is measured.
 - **Diagnostic code that produces a number entering DECISIONS is committed IN THE SAME COMMIT as the
   entry.** Most of the 2026-07-29 session's decisive measurements ran from /tmp and were irreproducible
   until the end of the day: the f-I gain that corrected D138, the J_eff sweep, the aggregation comparison

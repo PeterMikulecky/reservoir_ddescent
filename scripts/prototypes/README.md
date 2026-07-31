@@ -79,12 +79,21 @@ group 1 regardless of P, so for P>2 the extra groups are never used and those co
 Fixed understanding in D141: cue synapses must be distributed across the MEMORY groups; the probe needs
 only one fast group.
 
-**THREAD PINNING (2026-07-29).** `hetsyn_core.py` sets `OMP_NUM_THREADS` and friends to 1 BEFORE
-importing numpy, and every prototype inherits it through the import. Reason: NumPy's BLAS is
-multithreaded by default, so N worker processes each spawn N threads and oversubscribe the machine.
-Measured: a job took **134 s single-process** in a sandbox but **~312 s of wall time per job under a
-6-worker pool** on a ~6-core machine -- a 2.3x loss to contention that no per-job optimisation would
-have recovered. It lives in the shared module, not per-script, so it cannot be forgotten.
+**THREAD PINNING (2026-07-29).** `hetsyn_core.py` sets `OMP_NUM_THREADS` and friends to 1 before
+importing numpy. Harmless and conventional for multiprocessing, and it stays.
+
+⚠ **BUT THE STATED REASON WAS WRONG AND IS WITHDRAWN.** It was introduced on a claim that BLAS
+oversubscription cost 2.3x, inferred by comparing a single-process sandbox timing (134 s/job) against a
+6-worker wall-clock rate (~312 s/job) -- **two different quantities**. Measured after the fix: ~53 s
+wall per job vs ~56 s before. **No speedup.** Brian2's `numpy` codegen target does small-array work
+(30 neurons, a few hundred spikes) that never enters multithreaded BLAS paths, so there was no
+contention to remove. A diagnosis constructed to explain a gap that may not have existed.
+
+**Where the time actually goes:** Python interpreter overhead per timestep, ~8000 timesteps x 144
+trials per job. Two real levers, untested: BATCHING trials into one long `net.run()` (removes the
+per-trial Python loop, and is compatible with cython), and the `cython` codegen target -- though PJM
+notes cython constrains interwoven Python logic, which is exactly what `set_spikes` + `restore` in a
+loop is. Batching first, since it helps either way and does not constrain Python.
 
 **Standing rule earned here (2026-07-29): MEASURE IN THE CONFIGURATION YOU WILL RUN.** Three runtime
 estimates were wrong today by 15x, 5x and 2.3x. The first two were arithmetic; the third was measuring

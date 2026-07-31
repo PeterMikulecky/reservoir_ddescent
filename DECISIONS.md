@@ -7485,6 +7485,112 @@ configuration before any margin over it is claimed. D139's amendment established
 for P=3, and D142 shows it was still not applied to P=1. **Sweep every arm, including the one you expect
 to lose.**
 
+### D143 — P_crit = m, AND IT SURVIVES SPIKING. The advantage from an extra time constant appears exactly at P = the number of target components and vanishes beyond it, analytically and in simulation. The interpolation threshold is POSITIONABLE by task construction — the property this project has been trying to establish since D126.
+**2026-07-29 · Finding, positive · scripts/prototypes/hetsyn_component_scaling.py, hetsyn_stream_demand.py · runs/prototypes/*.json · the first task design in this project to survive its own pre-registered test**
+
+**THE TASK.** Structured accumulate: evidence arrives THROUGHOUT the trial (8 segments x 100 ms), and
+the target is built from components at distinct timescales —
+`m=1`: sum of all segments (flat weighting, wants one LONG tau);
+`m=2`: + lam * final segment (peaked at the end, wants a SHORT tau);
+`m=3`: + lam * sum of the middle three (a bump in the middle, wants an INTERMEDIATE tau).
+
+**WHY THIS SUCCEEDS WHERE DMTS FAILED (D142).** In DMTS the delay is DEAD TIME, so a timescale only has
+to SURVIVE it — one long tau does that and extra taus are redundant, which is why P=1 won there.
+Here information arrives continuously, and matching `alpha*sum(x) + beta*x_last` requires a weighting
+that is simultaneously FLAT across the trial and PEAKED at the end. **A single exponential
+exp(-(T-t_k)/tau) cannot be both; two can approximate it.** The demand is on tau COUNT and it is forced
+by geometry rather than argued.
+
+---
+
+**THE ANALYTIC PRE-CHECK, RUN BEFORE ANY SIMULATION** (ideal observer, 4000 trials, tau grid 20-4000 ms):
+
+| target | P=1 | P=2 | P=3 | 2-1 | 3-2 |
+|---|---|---|---|---|---|
+| 1 component | 0.998 | 1.000 | 1.000 | +0.002 | +0.000 |
+| 2 components | 0.919 | 1.000 | 1.000 | **+0.081** | +0.000 |
+| 3 components | 0.874 | 0.884 | 0.983 | +0.011 | **+0.098** |
+
+**A DIAGONAL: the gain appears exactly at P = m and vanishes beyond it.** This is the check D126, D141
+and the variable-delay design never had — three task designs adopted on mechanistic arguments, all of
+which failed on contact. **It cost twenty lines and would have killed the design outright** had the
+diagonal not appeared.
+
+**AND IT SURVIVES SPIKING** (N=30, 4 seeds, every P swept over its OWN taus per D142's lesson):
+
+| m | gain at P=2 | gain at P=3 | best taus at P=m |
+|---|---|---|---|
+| 1 | +0.019 (1.1 sd) | **+0.000** | (1600) |
+| 2 | **+0.055 (2.7 sd)** | +0.015 (0.9 sd) | (20, 1600) |
+| 3 | +0.049 (0.8 sd) | **+0.096 (2.2 sd)** | (20, 60, 200) |
+
+**Only two cells clear 2 sd, and they are exactly the diagonal.** Everything off-diagonal is under
+1.1 sd, and the saturation is right: m=1 gains nothing from a third tau, m=2 gains little.
+
+⚠ **THE SCRIPT'S "PARTIAL DIAGONAL" VERDICT IS WRONG, AND THE FAULT IS THE RULE'S.** It flagged m=1 as
+a mismatch because it takes the argmax of the per-P gains — but **m=1 has no P=0 to compare against, so
+the smallest P at which it can report a gain is P=2.** The prediction for m=1 is "no gain anywhere",
+which is what the numbers show (+0.019 at 1.1 sd, then +0.000). The verdict logic took the argmax of a
+set that could not contain the predicted answer. Same error class as the read-rule failures of D130 and
+D142: a criterion that cannot express the outcome it is meant to test.
+
+**THE TAU VALUES CONFIRM THE MECHANISM INDEPENDENTLY.** At m=2 the winner is **(20, 1600)** — the short
+and long constants the two components want. At m=3 it is **(20, 60, 200)**, a SPREAD rather than the
+extremes, which is what a middle-bump component should demand. The task is being solved the way the
+derivation says, not by some other route. (Contrast D142, where the winner was a single tau at the grid
+edge in every condition — the signature of a task solved by making its structure irrelevant.)
+
+**LEVELS MOVE AS PREDICTED TOO**: m=1 tops at 0.869, m=2 at 0.890, m=3 at 0.841. More components is
+harder for everyone, so **the diagonal is about where the GAINS land, not about comparing rows.**
+
+---
+
+**WHAT THIS ESTABLISHES.** `P_crit = m`, with m under our control. **Adding a target component moves the
+interpolation threshold.** That is FRAMING's two-failure-mode problem (a flat curve meaning "too hard"
+or "too simple") solved by construction rather than by argument, and it is the property D141's
+`P ~ m + 1` claimed for delay count and failed to deliver (D142: swept properly, P=1 beat P=3 beat P=2).
+The difference is not luck — **this relation was derived and checked analytically before anything was
+built on it.**
+
+**HONEST LIMITATIONS.**
+- **m=3's P=3 gain is 2.2 sd on 4 seeds** — suggestive, not settled. The raw per-job rows are now
+  persisted (`runs/prototypes/*.json`), so checking whether the SECOND-best P=3 cell also beats P=2's
+  best is arithmetic rather than a re-run. Do that before the sweep.
+- **m=3's sd's are much larger** (0.065, 0.058 at P=1, P=2) than m=1's and m=2's (~0.02). A sweep at
+  higher m inherits that noise and will need more seeds.
+- Maximum-over-grid bias is larger for higher P (10 pairs vs 5 singles vs 10 triples), so part of any
+  gain is selection noise. The diagonal is protection against this — bias would inflate high P at EVERY
+  m equally, and cannot produce a peak that moves with m.
+- Hand-set taus from a 5-value grid, no optimiser. This measures what P is WORTH, not what selection
+  would find.
+
+**⚠ A PUBLISHED WARNING THAT THIS RESULT ARGUES AGAINST.** Rungratsameetaweemana et al. (2025, PNAS)
+find the tau-heterogeneity effect to be WORKING-MEMORY SPECIFIC: their context-dependent sensory
+integration task — structurally close to plain `accumulate` — showed no `tau_inh - tau_exc` modulation.
+**Our result does not contradict theirs**; the difference is that our target has a sum-PLUS-RECENCY
+structure theirs lacks, which is exactly the structure that forces two timescales. Worth stating in any
+write-up: integration alone does not create the demand, integration ACROSS DISTINCT TIMESCALES does.
+
+**DESIGN CHANGES CARRIED FROM THAT PAPER, to apply before the sweep** (REFERENCES, 2026-07-29):
+1. **Cap the tau grid near 125-500 ms**, not 1600. Their biological range is 20-125 ms, and our current
+   winners at 1600 sit an order of magnitude outside it. ⚠ Note this interacts with the present result —
+   (20, 1600) wins at m=2 — so capping may WEAKEN the effect and must be measured, not assumed.
+2. **Partition tau groups by E/I, or at minimum report tau separately for E and I synapses.** Their
+   entire effect lives in `tau_inh - tau_exc`, and raising `tau_exc` actively impairs performance. Our
+   P groups have no E/I structure at all.
+3. **Development noise: many channels at low variance**, consistent with Deco et al. (2013).
+4. **Adopt IPR of the LEFT eigenvectors** as a robustness measure — defined on the Jacobian rather than
+   on activity, so it is a property of the solution rather than of the stimulus.
+
+**NEXT.** (1) Check the second-best P=3 cell from the persisted JSON. (2) Measure whether the diagonal
+survives a tau cap at ~500 ms. (3) Only then design the sweep, with m as the knob positioning P_crit.
+
+**LESSON.** Four task designs were adopted on mechanistic arguments and all four failed. The fifth was
+derived, checked analytically for its predicted SIGNATURE before any simulation, and held. **The
+difference was not the quality of the argument — D141's was just as plausible — but the existence of a
+cheap test the argument could fail.** State the signature, test for the signature, and only then build.
+
+
 
 
 
