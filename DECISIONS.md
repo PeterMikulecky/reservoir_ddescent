@@ -7741,6 +7741,102 @@ has now killed three bad designs and endorsed one bad configuration — a good r
 it authoritative. **A cheap test is a filter, not an oracle: it should gate what you bother to measure,
 never replace measuring.**
 
+### D146 — THE PROJECT REFRAMES. Chasing double descent in tractable SNNs has repeatedly hit hard stops or required compromises that destroy the result's utility. The tools built along the way — effective rank of a parameter class, delays vs weights, task structure as an independent variable — point at a different and better-posed question: **is the cortical synergy gradient a consequence of DELAY DISPERSION rather than of functional specialisation?**
+**2026-07-29/30 · Strategic reframing (PJM) · no code · supersedes the study outline and the sweep design of D131-D145**
+
+**WHY THE DOUBLE-DESCENT FRAMING IS SET ASIDE.** Five task designs, four parameter definitions of P, and
+roughly twenty decision entries produced no error-vs-P curve on a task the substrate can perform. The
+proximate blockers were real and were measured, not guessed:
+- **The kernel-rank ceiling.** Exponential synaptic kernels have effective rank ~4 and participation
+  ratio 1.41 against an 8-dimensional stimulus. Beyond P~4 the added time constants are near-duplicates,
+  so there is no mechanism for a post-peak recovery — which is exactly what the analytic test showed
+  (fall, rise, then FLAT at every n_train).
+- **P_crit = m is a SOLVABILITY threshold, not an interpolation threshold.** Under a capacity-bounded
+  readout, changing P changes what the features can express, not the number of fitted parameters. The
+  measured step at P = m is the target becoming representable; that is not double descent.
+- Each fix that made a curve conceivable (uncapped tau, larger n, more components) compromised
+  biological grounding or measurability, usually both.
+
+**WHAT SURVIVES AND IS WORTH KEEPING.** The task machinery, the substrate at N=30, persistence and
+re-analysis tooling, held-out selection discipline — and above all **the effective-rank calculation**,
+which is analytic, free, and turned out to be a numerical instance of an established theorem:
+**Maass & Schmitt (1999, Information and Computation 153:26-46) prove that k adjustable DELAYS compute a
+much richer class of functions than k adjustable WEIGHTS**, with tight VC-dimension bounds. Our rank
+numbers say WHY: pure delays give rank 8 / PR 8.00 against an 8-dimensional stimulus, delayed
+exponentials rank 8 / PR 4.40, exponential decay alone rank 4 / PR 1.41.
+
+---
+
+**THE NEW QUESTION.** Luppi, Rosas, Mediano, Menon & Stamatakis (2024, *Trends Cogn Sci* 28:352-368)
+establish that information decomposes into **redundant** (each source alone suffices — LOCAL) and
+**synergistic** (only the joint state carries it — IRREDUCIBLY DISTRIBUTED) components, and that their
+relative predominance follows a **unimodal-transmodal gradient**: primary sensory/motor cortex is
+redundancy-dominated, association cortex synergy-dominated. They review how this balance "might arise
+over evolution and development" and can only address it observationally.
+
+**Synergy is collective logic, formalised.** It is the precise statement of "the computation lives in the
+joint state rather than in the parts" — the lab's standing interest, with an established measure and an
+empirical cortical target.
+
+> **HYPOTHESIS: the synergy gradient is a consequence of INPUT DELAY DISPERSION, not of regional
+> functional specialisation.** Primary cortex receives temporally aligned input — a thalamic volley from
+> a compact structure with short, uniform conduction delays. Association cortex receives convergent
+> input from many areas with widely dispersed delays, tens of milliseconds apart. A neuron receiving
+> ALIGNED inputs sees a sum, and a sum is redundantly encoded across its sources. A neuron receiving
+> DISPERSED inputs can only extract information from their joint temporal pattern — which is synergy by
+> construction.
+
+**MECHANISTIC ACCOUNT VIA EFFECTIVE RANK.** Dispersed arrival times supply a high-rank temporal basis;
+aligned inputs a low-rank one. Rank is what determines whether joint structure is expressible at all.
+This is the same measurement that closed the double-descent line, redeployed on a question it fits.
+
+---
+
+**⚠ THERE IS AN ESTABLISHED COMPETING EXPLANATION, AND THAT IS WHAT MAKES THIS TESTABLE.** The accepted
+account of the sensory-to-association gradient is a gradient of **LOCAL RECURRENT EXCITATION STRENGTH**
+(Chaudhuri et al. 2015, grounded in Elston's spine-density data; eigenvector-localisation analysis in
+PNAS 2022; Gao et al. eLife 2020 tying timescales to microarchitecture). Delays appear in a third
+literature, on SYNCHRONISATION of coupled oscillators (Petkoski & Jirsa), not on information structure.
+
+The two accounts are **DISSOCIABLE**:
+- *Recurrent-excitation gradient* predicts longer TIMESCALES, and says nothing about synergy.
+- *Delay dispersion* predicts higher SYNERGY, and can be arranged to leave timescale unchanged.
+
+**THE EXPERIMENT: build networks matched on intrinsic timescale but differing in input delay dispersion,
+and measure PID.** If synergy tracks dispersion while timescale is held constant, the two mechanisms are
+separable and synergy has a structural source the current account does not supply. One independent
+variable, an established dependent measure, a named competitor.
+
+**AND IT MAKES A PREDICTION ABOUT CORTEX** checkable against existing data: synergy should track
+inter-areal delay dispersion, which is computable from tractography-derived tract lengths (the same data
+Petkoski & Jirsa use). If that correlation holds, the functional explanation of the gradient becomes at
+least partly structural.
+
+---
+
+**WHAT IS OPEN, HONESTLY.**
+- **Feasibility is unproven.** PID has competing definitions of redundancy and is estimation-hungry.
+  Sherrill et al. (2021, PLOS Comp Biol) estimated it on triads from hundreds of neurons in organotypic
+  culture — the closest precedent, and they linked synergy to RECURRENT vs FEEDFORWARD information flow,
+  i.e. topology, not delays. **Whether PID is estimable at N=30 is the first gate.**
+- **Causality needs care.** Showing dispersed-delay networks are synergistic does not establish that
+  delays caused it rather than the task; the timescale-matched control is what carries that weight.
+- **A framing error to avoid, recorded because it was made twice today (PJM).** "Which parameter classes
+  are AVAILABLE to selection" is a modelling choice, not a biological one — selection acts on the
+  phenotype, so every heritable parameter reaching it is under selection jointly. Restricting the
+  mutable genome is an ABLATION establishing what a class CAN do, and must be described as such.
+
+**NEXT ACTION: the feasibility gate.** Estimate PID on networks we already have — delay-kernel versus
+exponential-kernel configurations at N=30 — and determine whether a synergy difference is measurable at
+this scale at all. Same discipline that has repeatedly saved runs: test the instrument before building
+on it.
+
+**LESSON.** A negative programme can still produce its own successor. Nothing about double descent
+survived, but the measurement built to diagnose why — effective rank of a parameter class — turned out
+to be the tool the next question needs, and the literature that killed the first framing (Maass &
+Schmitt on delays; Luppi on synergy) supplied the second. **When a line of work fails, inventory what it
+BUILT before deciding what it proved.**
+
 
 
 

@@ -40,7 +40,7 @@ re-derivation.
 
 ---
 
-## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-29 (D145 -- the analytic check gave a wrong answer; configuration by measurement)*
+## §1. STATE — the one-paragraph read  ·  *volatile, last updated 2026-07-29 (D146 -- PROJECT REFRAMED: delay dispersion and synergy)*
 
 **The recurrent network has never contributed anything, and that explains everything else.** D130
 ablated all recurrent connectivity (`genome.mag` zeroed, `tau_slow` retained) against intact networks on
@@ -150,6 +150,49 @@ design were all adopted on arguments just as plausible, with no cheap test they 
 
 ⚠ The script's "partial diagonal" verdict is WRONG: m=1 has no P=0 to compare against, so the argmax of
 its per-P gains cannot contain the predicted answer ("no gain anywhere", which is what it shows).
+
+**⚠ D146 REFRAMES THE PROJECT. Read this before anything below.** Chasing double descent in tractable
+SNNs is set aside. Five task designs, four definitions of P and ~20 entries produced no error-vs-P curve
+on a performable task, and the blockers were measured rather than guessed: exponential synaptic kernels
+have **effective rank ~4 / PR 1.41** against an 8-dimensional stimulus, so past P~4 the added time
+constants are near-duplicates and no post-peak recovery is possible; and **P_crit = m is a SOLVABILITY
+threshold, not an interpolation threshold** -- under a capacity-bounded readout, changing P changes what
+the features express, not the count of fitted parameters.
+
+**The tool that survives is the effective-rank calculation**, which turned out to be a numerical
+instance of Maass & Schmitt (1999): k adjustable DELAYS compute a richer function class than k
+adjustable WEIGHTS. Our numbers say why -- pure delays rank 8 / PR 8.00, delayed exponentials rank 8 /
+PR 4.40, exponential decay rank 4 / PR 1.41.
+
+**THE NEW QUESTION.** Luppi et al. (2024, TiCS) establish a cortical **synergy gradient**: primary
+sensory cortex redundancy-dominated (LOCAL), association cortex synergy-dominated (irreducibly
+DISTRIBUTED). Synergy is collective logic formalised. **Hypothesis: that gradient is a consequence of
+INPUT DELAY DISPERSION, not of functional specialisation.** Aligned inputs (thalamic volley, compact
+source, uniform delays) are seen as a SUM, and a sum is redundantly encoded across its sources.
+Dispersed inputs (convergent, many areas, tens of ms apart) can only be read through their joint
+temporal pattern -- synergy by construction. Effective rank is the mechanism: dispersion supplies a
+high-rank temporal basis, alignment a low-rank one.
+
+**⚠ THERE IS AN ESTABLISHED COMPETITOR, AND THAT IS WHAT MAKES IT TESTABLE.** The accepted account of the
+gradient is **local recurrent excitation strength** (Chaudhuri 2015; Elston spine density; PNAS 2022
+eigenvector localisation). It predicts longer TIMESCALES and says nothing about synergy. Delay dispersion
+predicts higher SYNERGY and can leave timescale unchanged. **The experiment: networks matched on
+intrinsic timescale, differing in input delay dispersion, measure PID.** Plus a cortical prediction
+checkable against tractography tract lengths.
+
+**NEXT ACTION: THE FEASIBILITY GATE.** Estimate PID on networks we already have -- delay-kernel vs
+exponential-kernel at N=30 -- and find out whether a synergy difference is measurable at this scale at
+all. PID has competing redundancy definitions and is estimation-hungry; the closest precedent (Sherrill
+et al. 2021) used triads from hundreds of neurons. **Test the instrument before building on it.**
+
+**A FRAMING ERROR TO AVOID (PJM, made twice).** "Which parameter classes are AVAILABLE to selection" is
+a modelling choice, not a biological one -- selection acts on the phenotype, so every heritable parameter
+reaching it is under selection jointly. Restricting the mutable genome is an ABLATION establishing what a
+class CAN do, and must be described as such.
+
+---
+
+*Everything below predates the reframing and is retained for the record.*
 
 **D143 IS CONFIRMED BY RE-ANALYSIS.** Per-seed consistency: the largest gain lands at P=m in **4/4
 seeds at m=2 and 3/4 at m=3** (D126's majority rule, and the check that matters most). Held-out-seed
